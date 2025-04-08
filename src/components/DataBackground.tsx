@@ -11,7 +11,7 @@ const DataBackground: React.FC = () => {
 
       {/* Animated Pipeline Lines */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
-        {[...Array(5)].map((_, i) => (
+        {/* {[...Array(5)].map((_, i) => (
           <div
             key={i}
             className="absolute w-full h-0.5 bg-gradient-to-r from-transparent via-pipeline-light to-transparent animate-pipeline"
@@ -21,7 +21,7 @@ const DataBackground: React.FC = () => {
               opacity: 0.3 + (i * 0.1),
             }}
           />
-        ))}
+        ))} */}
         
         {/* Pipeline Particles */}
         {[...Array(8)].map((_, i) => (
