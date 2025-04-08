@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-dark text-dark-600;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-dark-800 font-bold;
+  }
+}
+
+@layer components {
+  .data-card {
+    @apply bg-dark-100 rounded-lg p-6 shadow-lg border border-dark-200 hover:border-data transition-all duration-300;
+  }
+
+  .data-button {
+    @apply bg-data hover:bg-data-dark text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-300;
+  }
+
+  .pipeline-line {
+    @apply h-1 bg-pipeline animate-pulse-slow;
+  }
+
+  .data-flow {
+    @apply relative overflow-hidden;
+  }
+
+  .data-flow::after {
+    content: '';
+    @apply absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-data-light to-transparent animate-data-flow;
+  }
+}
