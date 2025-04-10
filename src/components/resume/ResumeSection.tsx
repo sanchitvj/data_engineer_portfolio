@@ -30,7 +30,7 @@ const experiences: Experience[] = [
     title: "Data Engineer",
     company: <a href="https://www.opalhtm.tech/" target="_blank" rel="noopener noreferrer" className="text-data hover:text-data-light transition-colors">Opal HTM</a>,
     period: "Oct 2023 - Present",
-    base_description: "Modernized healthcare analytics for medical device data, designing cloud-native pipelines to process 50M+ daily records with 85% faster insights. Built scalable serverless systems and Spark optimizations to reduce costs by 30% while ensuring HIPAA compliance and real-time operational decisions.",
+    base_description: "Modernized healthcare analytics for medical device data, designing cloud-native pipelines with predictive ML algorithms to process 50M+ daily records with 85% faster insights. Built scalable serverless systems and Spark optimizations to reduce costs by 30% while ensuring HIPAA compliance and enabling ML-powered utilization tracking for device maintenance and operational decisions.",
     detail_description: {
       data_engineering: [
         "Architected lakehouse pipeline for 50M+/day medical device data, reducing predictive analysis latency by 85%.",
@@ -42,24 +42,33 @@ const experiences: Experience[] = [
         "Automated CI/CD (GitHub Actions/Terraform), 3x deployment frequency and slashing cloud costs by 30%."
       ],
       machine_learning: [
-        "Trained ML models (Spark/Databricks) for predictive maintenance and utilization-tracking achieving 89% failure prediction accuracy.",
-        "Conducted A/B testing for temporal data sampling, preserving timewise behavior in model training.",
-        "Partnered with clinicians to translate device state hierarchies into automated labeling workflows."
+        "Engineered Spark pipelines to process 300M+ records (100+ GB) with 40% improved throughput on Databricks.",
+        "Designed multi-trial feature store separating 60% training/40% evaluation data, enabling robust model validation protocols.",
+        "Implemented MLflow tracking across 35+ experiments, reducing model debugging time by 25% and ensuring reproducibility.",
+        "Developed temporal component preservation technique for A/B testing across 20+ device trials and multiple states.",
+        "Boosted prediction accuracy by 15% through temporal context retention, saving $120K annually in false negative costs.",
+        "Achieved 90% accuracy in device state prediction, a 30% improvement over previous rule-based system implementation.",
+        "Reduced incorrect state transition latency from 3 seconds to 0.2 seconds, decreasing operational errors by 93%."
       ]
     },
-    technologies: ["Apache Spark", "AWS", "Airflow", "GitHub Actions", "Terraform", "Iceberg", "Athena", "Glue", "DynamoDB", "EMR", "ECS Fargate"]
+    technologies: ["Apache Spark", "Databricks", "AWS", "Airflow", "GitHub Actions", "Terraform", "Iceberg", "Athena", "Glue", "DynamoDB", "EMR", "ECS Fargate"]
   },
   {
     title: "Creator",
     company: <a href="https://github.com/sanchitvj/sports_betting_analytics_engine" target="_blank" rel="noopener noreferrer" className="text-data hover:text-data-light transition-colors">Betflow</a>,
     period: "Nov 2024 - Present",
-    base_description: "Architected sports betting platform using Lambda architecture, processing 400K+ records daily with Kafka, Spark Streaming, and Druid on local infrastructure enabling sub-second market analysis.",
+    base_description: "Developed advanced ML-driven sports analytics platform with Lambda architecture, processing 400K+ daily events through real-time and batch pipelines. Built predictive models for market inefficiency detection, reducing decision latency by 95% while cutting infrastructure costs by 60%. Implemented scalable data processing with Kafka, Spark, and Snowflake, enabling sub-second analysis across multiple sports markets.",
     detail_description: {
       data_engineering: [
-        "Engineered data pipelines integrating real-time streams (games, odds, weather) with OLAP-based historical analysis using Snowflake and DBT, reducing analytics latency to 5 seconds.",
-        "Accelerated analytics using incremental strategy, SCD Type-2, and CDC patterns in DBT, reducing daily warehouse compute cost by 60% while enabling betting market inefficiency detection.",
-        "Orchestrated batch ETL using Airflow and optimized Snowflake external tables with Glue catalog integration, reducing warehouse storage costs by 90% while maintaining query performance for 1TB+ data.",
-        "Designed multi-sport Grafana dashboards handling 1M+ daily events across betting analytics and market trends, enabling stakeholders to analyze patterns with sub-5 second refresh rate."
+        "Built Lambda architecture processing 400K+ daily records for sports betting platform.",
+        "Integrated Kafka and Spark Streaming for sub-second market analysis.",
+        "Engineered real-time data pipelines combining game, odds, and weather data.",
+        "Reduced analytics latency to 5 seconds for time-sensitive betting decisions.",
+        "Implemented SCD Type-2 and CDC patterns in DBT for historical trend analysis.",
+        "Decreased daily warehouse compute costs by 60% using incremental processing strategies.",
+        "Reduced storage costs by 90% while maintaining query performance on 1TB+ data.",
+        "Designed multi-sport Grafana dashboards visualizing 1M+ daily betting events.",
+        "Enabled sub-5 second dashboard refresh rates for real-time pattern detection."
       ],
       machine_learning: []
     },
@@ -222,80 +231,84 @@ const ResumeSection = () => {
                         <div className="p-6 border-t border-data/20 detail-description">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                             {/* Data Engineering Block */}
-                            <div className="relative group">
-                              <div
-                                className="bg-dark-200/30 p-4 rounded-lg border border-[#ff7700] cursor-pointer hover:border-[#ff7700] transition-colors"
-                                onMouseEnter={() => setHoveredBlock({expIndex: index, blockType: 'data_engineering'})}
-                                onMouseLeave={() => setHoveredBlock({expIndex: null, blockType: null})}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setClickedBlocks(prev => ({
-                                    expIndex: index,
-                                    blocks: prev.blocks.includes('data_engineering')
-                                      ? prev.blocks.filter(b => b !== 'data_engineering')
-                                      : [...prev.blocks, 'data_engineering']
-                                  }));
-                                }}
-                              >
-                                <div className="flex items-center gap-2 mb-2">
-                                  <FaDatabase className="text-[#ff7700]" />
-                                  <h5 className="text-[#ff7700] font-semibold">Data Engineering</h5>
+                            {exp.detail_description.data_engineering.length > 0 && (
+                              <div className={`relative group ${exp.detail_description.machine_learning.length === 0 ? 'md:col-span-2 md:max-w-2xl md:mx-auto' : ''}`}>
+                                <div
+                                  className="bg-dark-200/30 p-4 rounded-lg border border-[#ff7700] cursor-pointer hover:border-[#ff7700] transition-colors"
+                                  onMouseEnter={() => setHoveredBlock({expIndex: index, blockType: 'data_engineering'})}
+                                  onMouseLeave={() => setHoveredBlock({expIndex: null, blockType: null})}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setClickedBlocks(prev => ({
+                                      expIndex: index,
+                                      blocks: prev.blocks.includes('data_engineering')
+                                        ? prev.blocks.filter(b => b !== 'data_engineering')
+                                        : [...prev.blocks, 'data_engineering']
+                                    }));
+                                  }}
+                                >
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <FaDatabase className="text-[#ff7700]" />
+                                    <h5 className="text-[#ff7700] font-semibold">Data Engineering</h5>
+                                  </div>
+                                  <AnimatePresence>
+                                    {(hoveredBlock.expIndex === index && hoveredBlock.blockType === 'data_engineering') || 
+                                     (clickedBlocks.expIndex === index && clickedBlocks.blocks.includes('data_engineering')) ? (
+                                      <motion.ul
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 10 }}
+                                        className="list-disc list-inside space-y-2 text-gray-300 text-sm"
+                                      >
+                                        {exp.detail_description.data_engineering.map((item, i) => (
+                                          <li key={i}>{item}</li>
+                                        ))}
+                                      </motion.ul>
+                                    ) : null}
+                                  </AnimatePresence>
                                 </div>
-                                <AnimatePresence>
-                                  {(hoveredBlock.expIndex === index && hoveredBlock.blockType === 'data_engineering') || 
-                                   (clickedBlocks.expIndex === index && clickedBlocks.blocks.includes('data_engineering')) ? (
-                                    <motion.ul
-                                      initial={{ opacity: 0, y: 10 }}
-                                      animate={{ opacity: 1, y: 0 }}
-                                      exit={{ opacity: 0, y: 10 }}
-                                      className="list-disc list-inside space-y-2 text-gray-300 text-sm"
-                                    >
-                                      {exp.detail_description.data_engineering.map((item, i) => (
-                                        <li key={i}>{item}</li>
-                                      ))}
-                                    </motion.ul>
-                                  ) : null}
-                                </AnimatePresence>
                               </div>
-                            </div>
+                            )}
 
                             {/* Machine Learning Block */}
-                            <div className="relative group">
-                              <div
-                                className="bg-dark-200/30 p-4 rounded-lg border border-[#DAA520] cursor-pointer hover:border-[#FFD700] transition-colors"
-                                onMouseEnter={() => setHoveredBlock({expIndex: index, blockType: 'machine_learning'})}
-                                onMouseLeave={() => setHoveredBlock({expIndex: null, blockType: null})}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setClickedBlocks(prev => ({
-                                    expIndex: index,
-                                    blocks: prev.blocks.includes('machine_learning')
-                                      ? prev.blocks.filter(b => b !== 'machine_learning')
-                                      : [...prev.blocks, 'machine_learning']
-                                  }));
-                                }}
-                              >
-                                <div className="flex items-center gap-2 mb-2">
-                                  <FaBrain className="text-[#DAA520]" />
-                                  <h5 className="text-[#DAA520] font-semibold">Machine Learning</h5>
+                            {exp.detail_description.machine_learning.length > 0 && (
+                              <div className={`relative group ${exp.detail_description.data_engineering.length === 0 ? 'md:col-span-2 md:max-w-2xl md:mx-auto' : ''}`}>
+                                <div
+                                  className="bg-dark-200/30 p-4 rounded-lg border border-[#DAA520] cursor-pointer hover:border-[#FFD700] transition-colors"
+                                  onMouseEnter={() => setHoveredBlock({expIndex: index, blockType: 'machine_learning'})}
+                                  onMouseLeave={() => setHoveredBlock({expIndex: null, blockType: null})}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setClickedBlocks(prev => ({
+                                      expIndex: index,
+                                      blocks: prev.blocks.includes('machine_learning')
+                                        ? prev.blocks.filter(b => b !== 'machine_learning')
+                                        : [...prev.blocks, 'machine_learning']
+                                    }));
+                                  }}
+                                >
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <FaBrain className="text-[#DAA520]" />
+                                    <h5 className="text-[#DAA520] font-semibold">Machine Learning</h5>
+                                  </div>
+                                  <AnimatePresence>
+                                    {(hoveredBlock.expIndex === index && hoveredBlock.blockType === 'machine_learning') || 
+                                     (clickedBlocks.expIndex === index && clickedBlocks.blocks.includes('machine_learning')) ? (
+                                      <motion.ul
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 10 }}
+                                        className="list-disc list-inside space-y-2 text-gray-300 text-sm"
+                                      >
+                                        {exp.detail_description.machine_learning.map((item, i) => (
+                                          <li key={i}>{item}</li>
+                                        ))}
+                                      </motion.ul>
+                                    ) : null}
+                                  </AnimatePresence>
                                 </div>
-                                <AnimatePresence>
-                                  {(hoveredBlock.expIndex === index && hoveredBlock.blockType === 'machine_learning') || 
-                                   (clickedBlocks.expIndex === index && clickedBlocks.blocks.includes('machine_learning')) ? (
-                                    <motion.ul
-                                      initial={{ opacity: 0, y: 10 }}
-                                      animate={{ opacity: 1, y: 0 }}
-                                      exit={{ opacity: 0, y: 10 }}
-                                      className="list-disc list-inside space-y-2 text-gray-300 text-sm"
-                                    >
-                                      {exp.detail_description.machine_learning.map((item, i) => (
-                                        <li key={i}>{item}</li>
-                                      ))}
-                                    </motion.ul>
-                                  ) : null}
-                                </AnimatePresence>
                               </div>
-                            </div>
+                            )}
                           </div>
 
                           {/* Technologies Section */}
