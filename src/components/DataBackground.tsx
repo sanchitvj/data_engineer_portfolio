@@ -102,7 +102,7 @@ const DataBackground: React.FC = () => {
             }}
             transition={{
               y: {
-                duration: 25,
+                duration: 15,
                 repeat: Infinity,
                 ease: "easeInOut"
               },
@@ -112,7 +112,7 @@ const DataBackground: React.FC = () => {
                 ease: "easeInOut"
               },
               rotate: {
-                duration: 20,
+                duration: 10,
                 repeat: Infinity,
                 ease: "linear"
               },
@@ -122,7 +122,7 @@ const DataBackground: React.FC = () => {
                 ease: "easeInOut"
               },
               scale: {
-                duration: 25,
+                duration: 30,
                 repeat: Infinity,
                 ease: "easeInOut"
               }

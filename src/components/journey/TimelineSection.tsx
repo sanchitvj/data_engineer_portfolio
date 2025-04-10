@@ -10,8 +10,10 @@ import { SiKaggle } from 'react-icons/si';
 interface Activity {
   title: string;
   description: string;
-  link?: string; // Optional link
-  linkText?: React.ReactNode; // Text for the link
+  links?: Array<{
+    url: string;
+    text: string | React.ReactNode;
+  }>;
 }
 
 // Updated interface for a timeline year entry
@@ -54,8 +56,10 @@ const timelineData: TimelineEntry[] = [
       {
         title: 'Data Science & ML Exploration',
         description: 'Started exploring data science, ML and deep learning. Participated in Kaggle competitions and won multiple medals.',
-        link: 'https://www.kaggle.com/sanchitvj',
-        linkText: <SiKaggle className="text-2xl text-data hover:text-data-light transition-colors" />
+        links: [{
+          url: 'https://www.kaggle.com/sanchitvj',
+          text: <SiKaggle className="text-2xl text-data hover:text-data-light transition-colors" />
+        }]
       },
       {
         title: 'First Data Engineering Role',
@@ -72,14 +76,22 @@ const timelineData: TimelineEntry[] = [
     year: 2022,
     activities: [
       {
-        title: 'Research Publications 📚',
-        description: 'Published 2 research papers in the field of data science and machine learning.',
-        link: 'https://research-paper-link.com',
-        linkText: 'View Research Papers'
+        title: 'Research Publications',
+        description: 'Published two significant research papers in healthcare and natural language processing:\n• "MRI brain tumor segmentation using residual Spatial Pyramid Pooling-powered 3D U-Net" in Frontiers in Public Health\n• "A Novel Approach for Tamil Text Classification using Deep Learning" at DravidianLangTech 2022',
+        links: [
+          {
+            url: 'https://scholar.google.com/citations?user=1rsn3wsAAAAJ&hl=en&authuser=2',
+            text: 'Google Scholar'
+          },
+        //   {
+        //     url: 'https://aclanthology.org/2022.dravidianlangtech-1.4/',
+        //     text: 'View NLP Paper'
+        //   }
+        ]
       },
       {
         title: 'Career Transition',
-        description: 'Completed tenure at Bytelearn and embarked on a new journey to the US for Masters in Data Science.',
+        description: 'Completed a year at Bytelearn and embarked on a new journey to the US for Masters in Data Science.',
       },
       {
         title: 'Masters Journey Begins',
@@ -93,7 +105,7 @@ const timelineData: TimelineEntry[] = [
     activities: [
       {
         title: 'Teaching Assistant Role',
-        description: 'Served as a Teaching Assistant for the Data Science department, helping students understand complex concepts.',
+        description: 'Mentored graduate students in Data Science courses, leading weekly lab sessions and office hours to clarify statistical concepts and data visualization techniques.',
       },
       {
         title: 'Research Project Experience',
@@ -101,7 +113,7 @@ const timelineData: TimelineEntry[] = [
       },
       {
         title: 'Professional Growth',
-        description: 'Joined Opal HTM as a Data and ML Engineer, combining data engineering with machine learning expertise.',
+        description: 'Joined Opal HTM as a Data and ML Engineer, combining data engineering with machine learning expertise for big data in health-tech.',
       }
     ]
   },
@@ -115,11 +127,23 @@ const timelineData: TimelineEntry[] = [
       },
       {
         title: 'Professional Development',
-        description: 'Continued contributing to Opal HTM while joining Zach\'s Bootcamp, earning a superbness certificate.',
+        description: 'Continued contributing to Opal HTM as a Data and ML Engineer, focusing on health-tech solutions. Simultaneously, completed Zach\'s Bootcamp, earning a superbness certificate.',
+        links: [
+          {
+            url: 'https://drive.google.com/file/d/1p3Fr4oFL9U55M7T0f_L_OMSfhf3P5dJz/view?usp=sharing',
+            text: 'View Certificate'
+          }
+        ],
       },
       {
-        title: 'Entrepreneurial Venture',
-        description: 'Founded Betflow, applying data engineering and ML expertise to create innovative solutions.',
+        title: 'Open Source Contribution',
+        description: 'Launched Betflow, an open-source project leveraging data engineering to build scalable data pipelines and analytics solutions.',
+        links: [
+          {
+            url: 'https://github.com/sanchitvj/betflow',
+            text: 'View on GitHub'
+          }
+        ]
       }
     ]
   },
@@ -129,23 +153,30 @@ const timelineData: TimelineEntry[] = [
     activities: [
       {
         title: 'Brand Building & Growth',
-        description: 'Focusing on establishing personal brand as a data engineer through articles and technical content.',
+        description: 'Focusing on establishing personal brand as a data engineer through articles and technical content writing.',
       },
       {
         title: 'Full-Stack Evolution',
-        description: 'Expanding skillset beyond data engineering, working towards becoming a full-stack developer.',
+        description: 'Expanding skillset beyond data engineering, working towards adding full-stack development to my skillset.',
       },
       {
         title: 'Project Portfolio',
-        description: 'Actively working on multiple projects, embracing the coding journey while exploring new opportunities.',
+        description: 'Actively working on multiple projects, embracing the journey while exploring new opportunities.',
       }
     ]
   },
 ];
 // --- End Sample Data ---
 
-const PENGUIN_WIDTH = 60; // Adjust if your SVG has a different natural width
-const PENGUIN_HEIGHT = 60; // Add a height for the SVG container
+// Make penguin dimensions responsive
+const getPenguinDimensions = () => {
+  if (typeof window === 'undefined') return { width: 60, height: 60 };
+  const width = window.innerWidth;
+  if (width < 640) return { width: 30, height: 30 }; // sm
+  if (width < 768) return { width: 45, height: 45 }; // md
+  if (width < 1024) return { width: 50, height: 50 }; // lg
+  return { width: 60, height: 60 }; // xl and above
+};
 
 const TimelineSection: React.FC = () => {
   // Sort data by year just in case it's not
@@ -157,16 +188,24 @@ const TimelineSection: React.FC = () => {
   const constraintsRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const [trackWidth, setTrackWidth] = useState(0);
+  const [penguinDimensions, setPenguinDimensions] = useState(getPenguinDimensions());
 
+  // Initialize track width and update on resize
   useEffect(() => {
+    // Initial setup
     if (trackRef.current) {
       setTrackWidth(trackRef.current.offsetWidth);
     }
+    setPenguinDimensions(getPenguinDimensions());
+
+    // Resize handler
     const handleResize = () => {
-        if (trackRef.current) {
-            setTrackWidth(trackRef.current.offsetWidth);
-        }
+      if (trackRef.current) {
+        setTrackWidth(trackRef.current.offsetWidth);
+      }
+      setPenguinDimensions(getPenguinDimensions());
     };
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -175,8 +214,8 @@ const TimelineSection: React.FC = () => {
     if (!trackWidth || firstYear === undefined || lastYear === undefined) return 0;
     if (lastYear === firstYear) return trackWidth / 2;
     const percentage = (year - firstYear) / (lastYear - firstYear);
-    const effectiveTrackWidth = trackWidth - PENGUIN_WIDTH;
-    return (percentage * effectiveTrackWidth) + (PENGUIN_WIDTH / 2);
+    const effectiveTrackWidth = trackWidth - penguinDimensions.width;
+    return (percentage * effectiveTrackWidth) + (penguinDimensions.width / 2);
   };
 
   const handleDragEnd = (
@@ -203,16 +242,16 @@ const TimelineSection: React.FC = () => {
 
   const selectedEntry = sortedTimelineData.find(entry => entry.year === selectedYear);
 
-  const penguinX = useMotionValue(selectedYear ? getYearPosition(selectedYear) - PENGUIN_WIDTH / 2 : 0);
+  const penguinX = useMotionValue(selectedYear ? getYearPosition(selectedYear) - penguinDimensions.width / 2 : 0);
   useEffect(() => {
     if (selectedYear !== null) {
-      penguinX.set(getYearPosition(selectedYear) - PENGUIN_WIDTH / 2);
+      penguinX.set(getYearPosition(selectedYear) - penguinDimensions.width / 2);
     }
   }, [selectedYear, trackWidth]);
 
   return (
-    <section className="py-20 px-4 overflow-hidden">
-      <div className="container mx-auto max-w-6xl">
+    <section id="journey-section" className="py-20 relative">
+      <div className="container mx-auto px-4">
         <h2 className="text-3xl md:text-4xl font-bold text-center text-white mb-12 md:mb-20">
           My Data Journey
         </h2>
@@ -226,35 +265,35 @@ const TimelineSection: React.FC = () => {
                 style={{ left: `${getYearPosition(entry.year)}px`, transform: `translate(-50%, -50%)` }}
                 onClick={() => setSelectedYear(entry.year)}
               >
-                 <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-xs text-gray-400 whitespace-nowrap">
-                    {entry.year}
-                 </span>
+                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-xs text-gray-400 whitespace-nowrap">
+                  {entry.year}
+                </span>
               </div>
             ))}
           </div>
 
           <motion.div
-             className="absolute bottom-full mb-1 cursor-grab z-10"
-             style={{ 
-                 x: penguinX, 
-                 width: PENGUIN_WIDTH,
-                 height: PENGUIN_HEIGHT
-             }}
-             drag="x"
-             dragConstraints={constraintsRef}
-             dragElastic={0.1}
-             dragMomentum={false}
-             onDragEnd={handleDragEnd}
-             whileTap={{ cursor: "grabbing" }}
-           >
+            className="absolute bottom-full mb-1 cursor-grab z-10"
+            style={{ 
+              x: penguinX, 
+              width: penguinDimensions.width,
+              height: penguinDimensions.height
+            }}
+            drag="x"
+            dragConstraints={constraintsRef}
+            dragElastic={0.1}
+            dragMomentum={false}
+            onDragEnd={handleDragEnd}
+            whileTap={{ cursor: "grabbing" }}
+          >
             <Image 
-                src="/icons/penguindb_icon.svg"
-                alt="Timeline marker"
-                width={PENGUIN_WIDTH}
-                height={PENGUIN_HEIGHT}
-                className="pointer-events-none"
+              src="/icons/laptop_penguin.svg"
+              alt="Timeline marker"
+              width={penguinDimensions.width}
+              height={penguinDimensions.height}
+              className="pointer-events-none"
             />
-           </motion.div>
+          </motion.div>
         </div>
 
         {/* Updated Details Section */}
@@ -275,13 +314,13 @@ const TimelineSection: React.FC = () => {
                     <div key={index} className="bg-gray-700/50 p-4 rounded-md border border-gray-600">
                       <h4 className="text-lg font-semibold text-blue-400 mb-1">{activity.title}</h4>
                       <p className="text-gray-300 text-sm mb-2 whitespace-pre-line">{activity.description}</p>
-                      {activity.link && activity.linkText && (
-                        <Link href={activity.link} target="_blank" rel="noopener noreferrer">
-                          <span className="inline-block text-blue-400 hover:text-blue-300 text-sm transition-colors underline">
-                            {activity.linkText} →
+                      {activity.links?.map((link, index) => (
+                        <Link key={index} href={link.url} target="_blank" rel="noopener noreferrer">
+                          <span className="inline-block text-blue-400 hover:text-blue-300 text-sm transition-colors underline mb-2">
+                            {link.text} →
                           </span>
                         </Link>
-                      )}
+                      ))}
                     </div>
                   ))}
                 </div>

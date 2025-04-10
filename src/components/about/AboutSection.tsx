@@ -48,13 +48,13 @@ const AboutSection: React.FC = () => {
   const [activePipeline, setActivePipeline] = useState<keyof Skills>('Data Sources');
 
   return (
-    <section className="py-24 relative overflow-hidden">
+    <section id="about-section" className="py-20 relative">
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="max-w-6xl mx-auto"
+          className="max-w-4xl mx-auto"
         >
           <h2 className="text-4xl font-bold mb-8 text-center text-white">About Me</h2>
 
@@ -63,7 +63,7 @@ const AboutSection: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="bg-black/70 backdrop-blur-sm p-6 rounded-lg border border-gray-700 mb-16 font-mono text-sm text-green-400 shadow-lg"
+            className="bg-black/70 backdrop-blur-sm p-6 rounded-lg border border-gray-700 mb-16 font-mono text-sm text-green-400 shadow-lg mx-auto"
           >
             <div className="flex items-center mb-2">
               <span className="text-blue-400 mr-2">user@penguin-os:</span>
@@ -112,12 +112,12 @@ const AboutSection: React.FC = () => {
           {/* Pipeline Visualization */}
           <div className="relative">
             {/* Pipeline Tabs - Updated styling */}
-            <div className="flex justify-center space-x-4 mb-8">
+            <div className="flex justify-center space-x-4 mb-8 flex-wrap px-2">
               {(Object.keys(skills) as Array<keyof Skills>).map((category) => (
                 <button
                   key={category}
                   onClick={() => setActivePipeline(category)}
-                  className={`px-6 py-2 rounded-lg transition-colors text-sm font-mono ${
+                  className={`px-6 py-2 rounded-lg transition-colors text-sm font-mono my-1 ${
                     activePipeline === category
                       ? 'bg-blue-500 text-white shadow-md'
                       : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
@@ -129,7 +129,7 @@ const AboutSection: React.FC = () => {
             </div>
 
             {/* Pipeline Content - Updated styling */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {(skills[activePipeline] as Skill[]).map((skill: Skill, index) => (
                 <motion.div
                   key={skill.name}

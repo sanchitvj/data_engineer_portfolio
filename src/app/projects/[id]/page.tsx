@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import MainLayout from '@/components/layout/MainLayout';
-import { projects } from '@/data/projects';
+import MainLayout from '../../../components/layout/MainLayout';
+import { projects } from '../../../data/projects';
 import { notFound } from 'next/navigation';
 import { ExternalLink, Github } from 'lucide-react';
 

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { FaGithub, FaLinkedin } from 'react-icons/fa';
-import { SiLeetcode, SiSubstack, SiKaggle } from 'react-icons/si';
+import { SiSubstack } from 'react-icons/si';
 
 const HeroSection: React.FC = () => {
   const [mounted, setMounted] = useState(false);
@@ -14,7 +14,7 @@ const HeroSection: React.FC = () => {
 
   if (!mounted) {
     return (
-      <section className="min-h-screen flex items-center justify-center relative overflow-hidden">
+      <section id="hero-section" className="h-[80vh] flex items-center justify-center relative overflow-hidden">
         <div className="w-full max-w-4xl mx-auto bg-dark-100 rounded-lg shadow-xl border border-dark-200 p-6 relative z-10">
           <div className="font-mono">
             <h1 className="text-4xl md:text-6xl font-bold mb-4 text-white">
@@ -27,7 +27,7 @@ const HeroSection: React.FC = () => {
   }
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section id="hero-section" className="relative h-[80vh] flex items-center justify-center overflow-hidden">
       {/* Terminal Window */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -56,15 +56,15 @@ const HeroSection: React.FC = () => {
           <div className="text-gray-300 font-mono text-sm">
             <p className="flex items-start mt-4">
               <span className="mr-2 text-data">🐧</span>
-              <span>A data engineer who transforms raw information into structured insights, just like a penguin navigating through icy data lakes.</span>
+              <span>As penguins navigate icy waters, I transform raw data into structured insights.</span>
             </p>
             <p className="flex items-start mt-3">
               <span className="mr-2 text-data">🐧</span>
-              <span>My portfolio draws inspiration from these resilient birds—showcasing projects that transform raw information into actionable intelligence.</span>
+              <span>My portfolio reflects penguins’ resilience—showcasing projects that turn data into intelligence.</span>
             </p>
             <p className="flex items-start mt-3">
               <span className="mr-2 text-data">🐧</span>
-              <span>Just as penguins move efficiently between environments, I build seamless pipelines connecting diverse data sources to powerful analytics platforms.</span>
+              <span>Like penguins adapt to environments, I build pipelines connecting diverse data to analytics.</span>
             </p>
           </div>
           
@@ -99,16 +99,6 @@ const HeroSection: React.FC = () => {
             >
               <SiSubstack />
             </motion.a>
-            {/* <motion.a
-              href="https://www.kaggle.com/sanchitvj"
-              target="_blank"
-              rel="noopener noreferrer"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className="text-2xl text-dark-400 hover:text-data transition-colors"
-            >
-              <SiKaggle />
-            </motion.a> */}
           </div>
         </div>
       </motion.div>

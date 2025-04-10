@@ -126,7 +126,7 @@ const ResumeSection = () => {
   }, []);
 
   return (
-    <section className="py-24 relative overflow-hidden">
+    <section id="resume-section" className="py-20 relative overflow-hidden">
       {/* Penguin Footprints Background */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-20 left-20">
@@ -165,7 +165,7 @@ const ResumeSection = () => {
           </h2>
           
           {/* Experience Section */}
-          <div className="mb-16">
+          <div id="experience-section" className="mb-16">
             <div className="flex items-center mb-8">
               <FaBriefcase className="text-3xl text-data mr-4" />
               <h3 className="text-2xl font-semibold text-white">Experience</h3>
@@ -332,7 +332,7 @@ const ResumeSection = () => {
           </div>
 
           {/* Education Section */}
-          <div className="mb-16">
+          <div id="education-section" className="mb-16">
             <div className="flex items-center mb-8">
               <FaGraduationCap className="text-3xl text-data mr-4" />
               <h3 className="text-2xl font-semibold text-white">Education</h3>
@@ -360,9 +360,9 @@ const ResumeSection = () => {
           </div>
 
           {/* Skills Section */}
-          <div>
+          <div id="skills-section">
             <div className="flex items-center mb-8">
-              <FaCode className="text-3xl text-data mr-4" />
+              <FaTools className="text-3xl text-data mr-4" />
               <h3 className="text-2xl font-semibold text-white">Technical Skills</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
