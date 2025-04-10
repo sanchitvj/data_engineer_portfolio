@@ -68,7 +68,7 @@ const DataBackground: React.FC = () => {
       </div>
 
       {/* Data Flow Particles */}
-      <div className="absolute top-0 left-0 w-full h-full">
+      {/* <div className="absolute top-0 left-0 w-full h-full">
         {[...Array(20)].map((_, i) => (
           <div
             key={i}
@@ -80,7 +80,7 @@ const DataBackground: React.FC = () => {
             }}
           />
         ))}
-      </div>
+      </div> */}
 
       {/* Circuit Pattern Overlay */}
       <div className="absolute inset-0 bg-[url('/images/circuit-pattern.svg')] opacity-5" />

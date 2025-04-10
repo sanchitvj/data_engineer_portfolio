@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence, time } from 'framer-motion';
 import { FaBriefcase, FaGraduationCap, FaCode, FaDatabase, FaCloud, FaBrain, FaTools } from 'react-icons/fa';
 import PenguinFootprint from '../theme/PenguinFootprint';
 import PenguinIcons from '../theme/PenguinIcons';
@@ -10,7 +10,11 @@ interface Experience {
   title: string;
   company: string | JSX.Element;
   period: string;
-  description: string[];
+  base_description: string;
+  detail_description: {
+    data_engineering: string[];
+    machine_learning: string[];
+  };
   technologies: string[];
 }
 
@@ -18,46 +22,62 @@ interface Education {
   degree: string;
   institution: string;
   period: string;
-  details: string;
+  // details: string;
 }
 
 const experiences: Experience[] = [
   {
     title: "Data Engineer",
     company: <a href="https://www.opalhtm.tech/" target="_blank" rel="noopener noreferrer" className="text-data hover:text-data-light transition-colors">Opal HTM</a>,
-    period: "Oct2023 - Present",
-    description: [
-      "Architected big data pipeline for medical device analytics following lakehouse architecture, reducing predictive analysis latency by 85%.",
-      "Engineered serverless data ingestion system using AWS Lambda and ECS Fargate, processing 50M+ data points per trial with 99.9% data quality through DynamoDB tracking.",
-      "Optimized Spark-based ETL pipelines on AWS EMR, reducing processing time by 80% and enabling seamless integration with Redshift for analytics workloads.",
-      "Implemented data quality monitoring using Airflow, AWS Glue and Iceberg table format, enabling 40% faster query performance through Athena for ad-hoc analysis.",
-      "Established infrastructure automation using GitHub Actions and Terraform, achieving 3x deployment frequency through containerized microservices (ECR), reducing cloud costs by 30%."
-    ],
+    period: "Oct 2023 - Present",
+    base_description: "Modernized healthcare analytics for medical device data, designing cloud-native pipelines to process 50M+ daily records with 85% faster insights. Built scalable serverless systems and Spark optimizations to reduce costs by 30% while ensuring HIPAA compliance and real-time operational decisions.",
+    detail_description: {
+      data_engineering: [
+        "Architected lakehouse pipeline for 50M+/day medical device data, reducing predictive analysis latency by 85%.",
+        "Built serverless ingestion (Lambda/Fargate) processing 50M+ points/trial with DynamoDB-managed deduplication and fault isolation.",
+        "Automated timestamp tracking via DynamoDB to flag modified source files, reducing reprocessing errors by 92%.",
+        "Optimized Spark ETL workflows on AWS EMR, cutting processing time by 80% for Redshift integration.",
+        "Deployed Airflow-monitored data validation (AWS Glue/Iceberg), reducing errors by 92% via automated checks.",
+        "Accelerated Athena queries by 40% via Iceberg schema optimization for ad-hoc analytics.",
+        "Automated CI/CD (GitHub Actions/Terraform), 3x deployment frequency and slashing cloud costs by 30%."
+      ],
+      machine_learning: [
+        "Trained ML models (Spark/Databricks) for predictive maintenance and utilization-tracking achieving 89% failure prediction accuracy.",
+        "Conducted A/B testing for temporal data sampling, preserving timewise behavior in model training.",
+        "Partnered with clinicians to translate device state hierarchies into automated labeling workflows."
+      ]
+    },
     technologies: ["Apache Spark", "AWS", "Airflow", "GitHub Actions", "Terraform", "Iceberg", "Athena", "Glue", "DynamoDB", "EMR", "ECS Fargate"]
   },
   {
     title: "Creator",
     company: <a href="https://github.com/sanchitvj/sports_betting_analytics_engine" target="_blank" rel="noopener noreferrer" className="text-data hover:text-data-light transition-colors">Betflow</a>,
     period: "Nov 2024 - Present",
-    description: [
-      "Architected sports betting platform using Lambda architecture, processing 400K+ records daily with Kafka, Spark Streaming, and Druid on local infrastructure enabling sub-second market analysis.",
-      "Engineered data pipelines integrating real-time streams (games, odds, weather) with OLAP-based historical analysis using Snowflake and DBT, reducing analytics latency to 5 seconds.",
-      "Accelerated analytics using incremental strategy, SCD Type-2, and CDC patterns in DBT, reducing daily warehouse compute cost by 60% while enabling betting market inefficiency detection.",
-      "Orchestrated batch ETL using Airflow and optimized Snowflake external tables with Glue catalog integration, reducing warehouse storage costs by 90% while maintaining query performance for 1TB+ data.",
-      "Designed multi-sport Grafana dashboards handling 1M+ daily events across betting analytics and market trends, enabling stakeholders to analyze patterns with sub-5 second refresh rate."
-    ],
+    base_description: "Architected sports betting platform using Lambda architecture, processing 400K+ records daily with Kafka, Spark Streaming, and Druid on local infrastructure enabling sub-second market analysis.",
+    detail_description: {
+      data_engineering: [
+        "Engineered data pipelines integrating real-time streams (games, odds, weather) with OLAP-based historical analysis using Snowflake and DBT, reducing analytics latency to 5 seconds.",
+        "Accelerated analytics using incremental strategy, SCD Type-2, and CDC patterns in DBT, reducing daily warehouse compute cost by 60% while enabling betting market inefficiency detection.",
+        "Orchestrated batch ETL using Airflow and optimized Snowflake external tables with Glue catalog integration, reducing warehouse storage costs by 90% while maintaining query performance for 1TB+ data.",
+        "Designed multi-sport Grafana dashboards handling 1M+ daily events across betting analytics and market trends, enabling stakeholders to analyze patterns with sub-5 second refresh rate."
+      ],
+      machine_learning: []
+    },
     technologies: ["Spark", "AWS", "Airflow", "Glue", "Kafka", "Druid", "Snowflake", "DBT", "Grafana"]
   },
   {
     title: "Data Engineer",
     company: <a href="https://www.bytelearn.com/" target="_blank" rel="noopener noreferrer" className="text-data hover:text-data-light transition-colors">Bytelearn</a>,
     period: "Jul 2021 - Jul 2022",
-    description: [
-      "Built AWS Glue workflows to automate image metadata extraction, improving dataset accuracy by 25% for downstream analytics.",
-      "Designed annotation tool backend with FastAPI and UI with Streamlit, reducing manual work by 80% for image data and improving rendering time by 60% for video content.",
-      "Developed algorithms for image data generation, ingestion of unstructured data, cutting development time by 70% through modularization.",
-      "Employed Docker-based deployment environment with Agile workflows, ensuring reproducibility across 5+ systems and accelerating cross-functional collaboration."
-    ],
+    base_description: "Built AWS Glue workflows to automate image metadata extraction, improving dataset accuracy by 25% for downstream analytics.",
+    detail_description: {
+      data_engineering: [
+        "Designed annotation tool backend with FastAPI and UI with Streamlit, reducing manual work by 80% for image data and improving rendering time by 60% for video content.",
+        "Developed algorithms for image data generation, ingestion of unstructured data, cutting development time by 70% through modularization.",
+        "Employed Docker-based deployment environment with Agile workflows, ensuring reproducibility across 5+ systems and accelerating cross-functional collaboration."
+      ],
+      machine_learning: []
+    },
     technologies: ["Python", "AWS", "FastAPI", "Streamlit", "Docker", "Agile"]
   }
 ];
@@ -67,17 +87,35 @@ const education: Education[] = [
     degree: "Master's in Data Science",
     institution: "George Washington University",
     period: "Aug 2022 - May 2024",
-    details: "Specialized in Machine Learning and Big Data Analytics"
+    // details: "Specialized in Machine Learning and Big Data Analytics"
   },
   {
     degree: "Bachelor's in Electronics and Communication Engineering",
     institution: "Vellore Institute of Technology",
     period: "July 2016 - May 2020",
-    details: "Focus on Software Engineering and Database Systems"
+    // details: "Focus on Software Engineering and Database Systems"
   }
 ];
 
 const ResumeSection = () => {
+  const [expandedExperience, setExpandedExperience] = useState<number | null>(null);
+  const [hoveredBlock, setHoveredBlock] = useState<{expIndex: number | null, blockType: 'data_engineering' | 'machine_learning' | null}>({expIndex: null, blockType: null});
+  const [clickedBlocks, setClickedBlocks] = useState<{expIndex: number | null, blocks: ('data_engineering' | 'machine_learning')[]}>({expIndex: null, blocks: []});
+
+  const handleClickOutside = (event: React.MouseEvent) => {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.detail-description')) {
+      setClickedBlocks({expIndex: null, blocks: []});
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener('click', handleClickOutside as any);
+    return () => {
+      document.removeEventListener('click', handleClickOutside as any);
+    };
+  }, []);
+
   return (
     <section className="py-24 relative overflow-hidden">
       {/* Penguin Footprints Background */}
@@ -123,42 +161,158 @@ const ResumeSection = () => {
               <FaBriefcase className="text-3xl text-data mr-4" />
               <h3 className="text-2xl font-semibold text-white">Experience</h3>
             </div>
-            <div className="space-y-8">
+            <div className="space-y-4">
               {experiences.map((exp, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.2 }}
-                  className="bg-dark-200/50 backdrop-blur-sm p-6 rounded-lg border border-data/20 hover:border-data/40 transition-colors relative group"
+                  className="bg-dark-200/50 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-colors"
                 >
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h4 className="text-xl font-semibold text-white">{exp.title}</h4>
-                      <p className="text-data">{exp.company}</p>
-                    </div>
-                    <span className="text-gray-300">{exp.period}</span>
-                  </div>
-                  <ul className="list-disc list-inside space-y-2 mb-4 text-gray-300">
-                    {exp.description.map((item, i) => (
-                      <li key={i}>{item}</li>
-                    ))}
-                  </ul>
-                  <div className="absolute right-0 top-0 h-full w-48 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                    <div className="absolute right-0 top-0 h-full w-48 bg-dark-200/80 backdrop-blur-sm p-4 translate-x-full">
-                      <h5 className="text-white font-semibold mb-2">Technologies</h5>
-                      <div className="flex flex-wrap gap-2">
-                        {exp.technologies.map((tech, i) => (
-                          <span
-                            key={i}
-                            className="px-3 py-1 bg-data/10 text-data rounded-full text-sm"
+                  <button
+                    onClick={() => setExpandedExperience(expandedExperience === index ? null : index)}
+                    className="w-full p-6 text-left"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h4 className="text-xl font-semibold text-white">{exp.title}</h4>
+                        <p className="text-data">{exp.company}</p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="text-gray-300">{exp.period}</span>
+                        <motion.div
+                          animate={{ 
+                            y: [0, 8, 0],
+                            transition: {
+                              duration: 1.5,
+                              repeat: Infinity,
+                              ease: "easeInOut"
+                            }
+                          }}
+                        >
+                          <svg 
+                            className="w-5 h-5 text-data" 
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
                           >
-                            {tech}
-                          </span>
-                        ))}
+                            <path 
+                              strokeLinecap="round" 
+                              strokeLinejoin="round" 
+                              strokeWidth={2} 
+                              d="M19 9l-7 7-7-7" 
+                            />
+                          </svg>
+                        </motion.div>
                       </div>
                     </div>
-                  </div>
+                    <p className="mt-2 text-gray-300">{exp.base_description}</p>
+                  </button>
+
+                  <AnimatePresence>
+                    {expandedExperience === index && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="p-6 border-t border-data/20 detail-description">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            {/* Data Engineering Block */}
+                            <div className="relative group">
+                              <div
+                                className="bg-dark-200/30 p-4 rounded-lg border border-[#ff7700] cursor-pointer hover:border-[#ff7700] transition-colors"
+                                onMouseEnter={() => setHoveredBlock({expIndex: index, blockType: 'data_engineering'})}
+                                onMouseLeave={() => setHoveredBlock({expIndex: null, blockType: null})}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setClickedBlocks(prev => ({
+                                    expIndex: index,
+                                    blocks: prev.blocks.includes('data_engineering')
+                                      ? prev.blocks.filter(b => b !== 'data_engineering')
+                                      : [...prev.blocks, 'data_engineering']
+                                  }));
+                                }}
+                              >
+                                <div className="flex items-center gap-2 mb-2">
+                                  <FaDatabase className="text-[#ff7700]" />
+                                  <h5 className="text-[#ff7700] font-semibold">Data Engineering</h5>
+                                </div>
+                                <AnimatePresence>
+                                  {(hoveredBlock.expIndex === index && hoveredBlock.blockType === 'data_engineering') || 
+                                   (clickedBlocks.expIndex === index && clickedBlocks.blocks.includes('data_engineering')) ? (
+                                    <motion.ul
+                                      initial={{ opacity: 0, y: 10 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      exit={{ opacity: 0, y: 10 }}
+                                      className="list-disc list-inside space-y-2 text-gray-300 text-sm"
+                                    >
+                                      {exp.detail_description.data_engineering.map((item, i) => (
+                                        <li key={i}>{item}</li>
+                                      ))}
+                                    </motion.ul>
+                                  ) : null}
+                                </AnimatePresence>
+                              </div>
+                            </div>
+
+                            {/* Machine Learning Block */}
+                            <div className="relative group">
+                              <div
+                                className="bg-dark-200/30 p-4 rounded-lg border border-[#DAA520] cursor-pointer hover:border-[#FFD700] transition-colors"
+                                onMouseEnter={() => setHoveredBlock({expIndex: index, blockType: 'machine_learning'})}
+                                onMouseLeave={() => setHoveredBlock({expIndex: null, blockType: null})}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setClickedBlocks(prev => ({
+                                    expIndex: index,
+                                    blocks: prev.blocks.includes('machine_learning')
+                                      ? prev.blocks.filter(b => b !== 'machine_learning')
+                                      : [...prev.blocks, 'machine_learning']
+                                  }));
+                                }}
+                              >
+                                <div className="flex items-center gap-2 mb-2">
+                                  <FaBrain className="text-[#DAA520]" />
+                                  <h5 className="text-[#DAA520] font-semibold">Machine Learning</h5>
+                                </div>
+                                <AnimatePresence>
+                                  {(hoveredBlock.expIndex === index && hoveredBlock.blockType === 'machine_learning') || 
+                                   (clickedBlocks.expIndex === index && clickedBlocks.blocks.includes('machine_learning')) ? (
+                                    <motion.ul
+                                      initial={{ opacity: 0, y: 10 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      exit={{ opacity: 0, y: 10 }}
+                                      className="list-disc list-inside space-y-2 text-gray-300 text-sm"
+                                    >
+                                      {exp.detail_description.machine_learning.map((item, i) => (
+                                        <li key={i}>{item}</li>
+                                      ))}
+                                    </motion.ul>
+                                  ) : null}
+                                </AnimatePresence>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Technologies Section */}
+                          <div className="flex flex-wrap gap-2">
+                            {exp.technologies.map((tech, i) => (
+                              <span
+                                key={i}
+                                className="px-3 py-1 bg-data/10 text-data rounded-full text-sm"
+                              >
+                                {tech}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.div>
               ))}
             </div>
@@ -183,7 +337,7 @@ const ResumeSection = () => {
                     <div>
                       <h4 className="text-xl font-semibold text-white">{edu.degree}</h4>
                       <p className="text-data">{edu.institution}</p>
-                      <p className="text-gray-300 mt-2">{edu.details}</p>
+                      {/* <p className="text-gray-300 mt-2">{edu.details}</p> */}
                     </div>
                     <span className="text-gray-300">{edu.period}</span>
                   </div>

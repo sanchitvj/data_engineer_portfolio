@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { FaGithub, FaLinkedin } from 'react-icons/fa';
 import { SiLeetcode, SiSubstack, SiKaggle } from 'react-icons/si';
 
-const HeroSection = () => {
+const HeroSection: React.FC = () => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -27,7 +27,7 @@ const HeroSection = () => {
   }
 
   return (
-    <section className="min-h-screen flex items-center justify-center relative overflow-hidden">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Terminal Window */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -36,9 +36,9 @@ const HeroSection = () => {
         className="w-full max-w-4xl mx-auto bg-dark-100 rounded-lg shadow-xl border border-dark-200 p-6 relative z-10"
       >
         <div className="flex items-center space-x-2 mb-4">
-          <div className="w-3 h-3 rounded-full bg-red-500" />
-          <div className="w-3 h-3 rounded-full bg-yellow-500" />
-          <div className="w-3 h-3 rounded-full bg-green-500" />
+          <div className="w-3 h-3 bg-red-500" />
+          <div className="w-3 h-3 bg-yellow-500" />
+          <div className="w-3 h-3 bg-green-500" />
         </div>
         
         <div className="font-mono">
@@ -53,14 +53,22 @@ const HeroSection = () => {
           </h2>
           
           <p className="text-data-light mb-2">$ <span className="text-white">cat description.txt</span></p>
-          <p className="text-lg md:text-xl text-dark-400 mb-8">
-            I'm a curious explorer of data's hidden stories, building bridges between raw numbers
-            and real-world impact. Passionate about simplifying complexity, I write about the
-            puzzles, patterns, and possibilities that shape our digital age. Join me as we uncover
-            how data quietly transforms industries, decisions, and the stories that shape our world.
-          </p>
+          <div className="text-gray-300 font-mono text-sm">
+            <p className="flex items-start mt-4">
+              <span className="mr-2 text-data">🐧</span>
+              <span>A data engineer who transforms raw information into structured insights, just like a penguin navigating through icy data lakes.</span>
+            </p>
+            <p className="flex items-start mt-3">
+              <span className="mr-2 text-data">🐧</span>
+              <span>My portfolio draws inspiration from these resilient birds—showcasing projects that transform raw information into actionable intelligence.</span>
+            </p>
+            <p className="flex items-start mt-3">
+              <span className="mr-2 text-data">🐧</span>
+              <span>Just as penguins move efficiently between environments, I build seamless pipelines connecting diverse data sources to powerful analytics platforms.</span>
+            </p>
+          </div>
           
-          <div className="flex space-x-4">
+          <div className="flex space-x-4 mt-6">
             <motion.a
               href="https://github.com/sanchitvj"
               target="_blank"
@@ -91,7 +99,7 @@ const HeroSection = () => {
             >
               <SiSubstack />
             </motion.a>
-            <motion.a
+            {/* <motion.a
               href="https://www.kaggle.com/sanchitvj"
               target="_blank"
               rel="noopener noreferrer"
@@ -100,92 +108,13 @@ const HeroSection = () => {
               className="text-2xl text-dark-400 hover:text-data transition-colors"
             >
               <SiKaggle />
-            </motion.a>
+            </motion.a> */}
           </div>
         </div>
       </motion.div>
 
       {/* Data Network Animation */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Central Processing Node */}
-        <motion.div
-          className="absolute w-8 h-8 rounded-full bg-data/30 backdrop-blur-sm"
-          style={{
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%, -50%)',
-          }}
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.5, 0.3],
-          }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-
-        {/* Satellite Nodes */}
-        {[...Array(6)].map((_, i) => {
-          const angle = (i * 60) * (Math.PI / 180);
-          const radius = 40;
-          const x = 50 + Math.cos(angle) * radius;
-          const y = 50 + Math.sin(angle) * radius;
-          
-          return (
-            <motion.div
-              key={`satellite-${i}`}
-              className="absolute w-6 h-6 rounded-full bg-data-light/20 backdrop-blur-sm"
-              style={{
-                left: `${x}%`,
-                top: `${y}%`,
-                transform: 'translate(-50%, -50%)',
-              }}
-              animate={{
-                scale: [1, 1.1, 1],
-                opacity: [0.2, 0.4, 0.2],
-              }}
-              transition={{
-                duration: 2 + Math.random(),
-                repeat: Infinity,
-                delay: i * 0.2,
-              }}
-            />
-          );
-        })}
-
-        {/* Connecting Arcs */}
-        {[...Array(6)].map((_, i) => {
-          const angle = (i * 60) * (Math.PI / 180);
-          const radius = 40;
-          const x = 50 + Math.cos(angle) * radius;
-          const y = 50 + Math.sin(angle) * radius;
-          
-          return (
-            <motion.div
-              key={`arc-${i}`}
-              className="absolute h-0.5 bg-data-light/10"
-              style={{
-                left: '50%',
-                top: '50%',
-                width: `${radius}%`,
-                transform: `rotate(${angle}rad)`,
-                transformOrigin: 'left center',
-              }}
-              animate={{
-                opacity: [0.1, 0.3, 0.1],
-                scaleX: [1, 1.2, 1],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                delay: i * 0.2,
-              }}
-            />
-          );
-        })}
-
         {/* Data Flow Particles */}
         {[...Array(12)].map((_, i) => {
           const angle = (i * 30) * (Math.PI / 180);
@@ -196,7 +125,7 @@ const HeroSection = () => {
           return (
             <motion.div
               key={`particle-${i}`}
-              className="absolute w-1 h-1 rounded-full bg-data-light/40"
+              className="absolute w-1 h-1 bg-data-light/40"
               style={{
                 left: `${startX}%`,
                 top: `${startY}%`,

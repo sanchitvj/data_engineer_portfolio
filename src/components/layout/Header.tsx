@@ -2,20 +2,20 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import Image from 'next/image';
 
 const Header = () => {
   return (
-    <header className="bg-dark-100 border-b border-dark-200 sticky top-0 z-20">
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-dark/80 backdrop-blur-sm">
+      <div className="container mx-auto px-4 py-4">
+        <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center space-x-2">
             <Image
-              src="/images/penguin_db_substack.jpeg"
+              src="/icons/penguindb_icon.svg"
               alt="Logo"
               width={32}
               height={32}
-              className="rounded-full"
             />
             <span className="text-xl font-bold text-white">Sanchit Vijay</span>
           </Link>
