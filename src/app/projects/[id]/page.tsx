@@ -46,7 +46,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
             <div>
               <h2 className="text-2xl font-semibold mb-4">Metrics</h2>
               <div className="grid grid-cols-2 gap-4">
-                {project.metrics.map((metric) => (
+                {project.metrics.map((metric: { label: string; value: string | number }) => (
                   <div
                     key={metric.label}
                     className="rounded-lg border p-4 text-center"
