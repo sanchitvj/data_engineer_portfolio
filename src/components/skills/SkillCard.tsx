@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Skill } from '@/types/skill';
-import { projects } from '@/data/projects';
+import { Skill } from '../../types/skill';
 import Link from 'next/link';
 
 interface SkillCardProps {
@@ -72,25 +71,6 @@ export default function SkillCard({ skill }: SkillCardProps) {
       <p className="mt-4 text-sm text-muted-foreground">
         {skill.description}
       </p>
-
-      <div className="mt-6">
-        <h4 className="text-sm font-medium mb-2">Related Projects</h4>
-        <div className="flex flex-wrap gap-2">
-          {skill.projects.map((projectId) => {
-            const project = projects.find((p) => p.id === projectId);
-            if (!project) return null;
-            return (
-              <Link
-                key={projectId}
-                href={`/projects/${projectId}`}
-                className="rounded-full bg-secondary px-3 py-1 text-xs font-medium hover:bg-secondary/80"
-              >
-                {project.title}
-              </Link>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 } 
