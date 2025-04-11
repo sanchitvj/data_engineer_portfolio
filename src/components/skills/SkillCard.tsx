@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Skill } from '../../types/skill';
-import Link from 'next/link';
 
 interface SkillCardProps {
   skill: Skill;
