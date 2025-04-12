@@ -5,6 +5,7 @@ import { motion, AnimatePresence, time } from 'framer-motion';
 import { FaBriefcase, FaGraduationCap, FaCode, FaDatabase, FaCloud, FaBrain, FaTools } from 'react-icons/fa';
 import PenguinFootprint from '../theme/PenguinFootprint';
 import PenguinIcons from '../theme/PenguinIcons';
+import Link from 'next/link';
 
 interface Experience {
   title: string;
@@ -21,8 +22,8 @@ interface Experience {
 interface Education {
   degree: string;
   institution: string;
-  // period: string;
-  // details: string;
+  details: string;
+  achievements: (string | JSX.Element)[];
 }
 
 const experiences: Experience[] = [
@@ -57,7 +58,7 @@ const experiences: Experience[] = [
     title: "Creator",
     company: <a href="https://github.com/sanchitvj/sports_betting_analytics_engine" target="_blank" rel="noopener noreferrer" className="text-data hover:text-data-light transition-colors">Betflow</a>,
     period: "Nov 2024 - Present",
-    base_description: "Developed advanced ML-driven sports analytics platform with Lambda architecture, processing 400K+ daily events through real-time and batch pipelines. Built predictive models for market inefficiency detection, reducing decision latency by 95% while cutting infrastructure costs by 60%. Implemented scalable data processing with Kafka, Spark, and Snowflake, enabling sub-second analysis across multiple sports markets.",
+    base_description: "Developed real-time sports analytics platform with Lambda architecture, processing 400K+ daily events through real-time and batch pipelines. Built predictive models for market inefficiency detection, reducing decision latency by 95% while cutting infrastructure costs by 60%. Implemented scalable data processing with Kafka, Spark, and Snowflake, enabling sub-second analysis across multiple sports markets.",
     detail_description: {
       data_engineering: [
         "Built Lambda architecture processing 400K+ daily records for sports betting platform.",
@@ -66,7 +67,7 @@ const experiences: Experience[] = [
         "Reduced analytics latency to 5 seconds for time-sensitive betting decisions.",
         "Implemented SCD Type-2 and CDC patterns in DBT for historical trend analysis.",
         "Decreased daily warehouse compute costs by 60% using incremental processing strategies.",
-        "Reduced storage costs by 90% while maintaining query performance on 1TB+ data.",
+        "Reduced storage costs by 90% while maintaining query performance on 100GB+ data.",
         "Designed multi-sport Grafana dashboards visualizing 1M+ daily betting events.",
         "Enabled sub-5 second dashboard refresh rates for real-time pattern detection."
       ],
@@ -78,16 +79,25 @@ const experiences: Experience[] = [
     title: "Data Engineer",
     company: <a href="https://www.bytelearn.com/" target="_blank" rel="noopener noreferrer" className="text-data hover:text-data-light transition-colors">Bytelearn</a>,
     period: "Jul 2021 - Jul 2022",
-    base_description: "Built AWS Glue workflows to automate image metadata extraction, improving dataset accuracy by 25% for downstream analytics.",
+    base_description: "Engineered AI-driven educational tech solutions with AWS Glue and FastAPI for mathematical content recognition. Built YOLO-based models improving detection accuracy from 68% to 85% while reducing annotation effort by 80%. Implemented Docker-based workflows that accelerated development by 70%, enabling rapid iteration on educational features and improving content accessibility.",
     detail_description: {
       data_engineering: [
-        "Designed annotation tool backend with FastAPI and UI with Streamlit, reducing manual work by 80% for image data and improving rendering time by 60% for video content.",
-        "Developed algorithms for image data generation, ingestion of unstructured data, cutting development time by 70% through modularization.",
-        "Employed Docker-based deployment environment with Agile workflows, ensuring reproducibility across 5+ systems and accelerating cross-functional collaboration."
+        "Built AWS Glue workflows improving dataset accuracy by 25% for product analytics.",
+        "Designed FastAPI backend reducing manual annotation work by 80%.",
+        "Created Streamlit UI improving video content rendering time by 60%.",
+        "Developed modular algorithms cutting image processing development time by 70%.",
+        "Implemented Docker containers ensuring reproducibility across 5+ systems.",
+        "Established Agile workflows accelerating cross-functional collaboration by 40%."
       ],
-      machine_learning: []
+      machine_learning: [
+        "Trained YOLO models achieving 85% detection accuracy for mathematical content.",
+        "Improved text understanding by 10% using NLP and OCR integration.",
+        "Engineered AWS EC2-based training pipeline with PyTorch for object detection.",
+        "Developed augmentation techniques generating diverse training data for models.",
+        "Created feature extraction system for math questions and geometric figures."
+      ]
     },
-    technologies: ["Python", "AWS", "FastAPI", "Streamlit", "Docker", "Agile"]
+    technologies: ["Python", "AWS", "FastAPI", "Streamlit", "PyTorch", "Docker", "Agile"]
   }
 ];
 
@@ -95,19 +105,36 @@ const education: Education[] = [
   {
     degree: "Master's in Data Science",
     institution: "George Washington University",
-    // period: "Aug 2022 - May 2024",
-    // details: "Specialized in Machine Learning and Big Data Analytics"
+    details: "Washington, DC, USA",
+    achievements: [
+      "Graduated with a 3.9 GPA, focusing on machine learning and data engineering",
+      "Teaching Assistant for Data Science courses, mentoring class of 60+ students",
+      "Worked as a Data Analyst in a research project for deriving actionable insights from IP Negotiation interview transcripts.",
+      <>
+        Completed capstone project{' '}
+        <Link href="/projects#grag" className="text-data hover:text-data-light transition-colors">
+          GRAG
+        </Link>
+        , RAG-based AI for extracting insights from private documents.
+      </>
+    ]
   },
   {
     degree: "Bachelor's in Electronics and Communication Engineering",
     institution: "Vellore Institute of Technology",
-    // period: "July 2016 - May 2020",
-    // details: "Focus on Software Engineering and Database Systems"
+    details: "Vellore, TN, India",
+    achievements: [
+      // "Graduated with distinction, focusing on software development and data structures",
+      // "Led multiple technical projects in data analysis and embedded systems",
+      // "Active member of the coding club, organized hackathons and workshops",
+      // "Completed internships in software development and data analysis"
+    ]
   }
 ];
 
 const ResumeSection = () => {
   const [expandedExperience, setExpandedExperience] = useState<number | null>(null);
+  const [expandedEducation, setExpandedEducation] = useState<number | null>(null);
   const [hoveredBlock, setHoveredBlock] = useState<{expIndex: number | null, blockType: 'data_engineering' | 'machine_learning' | null}>({expIndex: null, blockType: null});
   const [clickedBlocks, setClickedBlocks] = useState<{expIndex: number | null, blocks: ('data_engineering' | 'machine_learning')[]}>({expIndex: null, blocks: []});
 
@@ -337,23 +364,73 @@ const ResumeSection = () => {
               <FaGraduationCap className="text-3xl text-data mr-4" />
               <h3 className="text-2xl font-semibold text-white">Education</h3>
             </div>
-            <div className="space-y-6">
+            <div className="space-y-4">
               {education.map((edu, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.2 }}
-                  className="bg-dark-200/50 backdrop-blur-sm p-6 rounded-lg border border-data/20 hover:border-data/40 transition-colors"
+                  className="bg-dark-200/50 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-colors"
                 >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="text-xl font-semibold text-white">{edu.degree}</h4>
-                      <p className="text-data">{edu.institution}</p>
-                      {/* <p className="text-gray-300 mt-2">{edu.details}</p> */}
+                  <button
+                    onClick={() => setExpandedEducation(expandedEducation === index ? null : index)}
+                    className="w-full p-6 text-left"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h4 className="text-xl font-semibold text-white">{edu.degree}</h4>
+                        <p className="text-data">{edu.institution}</p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <motion.div
+                          animate={{ 
+                            y: [0, 8, 0],
+                            transition: {
+                              duration: 1.5,
+                              repeat: Infinity,
+                              ease: "easeInOut"
+                            }
+                          }}
+                        >
+                          <svg 
+                            className="w-5 h-5 text-data" 
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
+                          >
+                            <path 
+                              strokeLinecap="round" 
+                              strokeLinejoin="round" 
+                              strokeWidth={2} 
+                              d="M19 9l-7 7-7-7" 
+                            />
+                          </svg>
+                        </motion.div>
+                      </div>
                     </div>
-                    {/* <span className="text-gray-300">{edu.period}</span> */}
-                  </div>
+                    <p className="mt-2 text-gray-300">{edu.details}</p>
+                  </button>
+
+                  <AnimatePresence>
+                    {expandedEducation === index && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="p-6 pt-0">
+                          <ul className="list-disc list-inside space-y-2 text-gray-300 text-sm">
+                            {edu.achievements.map((achievement, i) => (
+                              <li key={i}>{achievement}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.div>
               ))}
             </div>
@@ -378,28 +455,6 @@ const ResumeSection = () => {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {['Python', 'R', 'SQL', 'NoSQL', 'Postgres', 'Tableau', 'MS Excel', 'PySpark'].map((skill, i) => (
-                    <span
-                      key={i}
-                      className="px-3 py-1 bg-data/10 text-data rounded-full text-sm"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-                className="bg-dark-200/50 backdrop-blur-sm p-6 rounded-lg border border-data/20 hover:border-data/40 transition-colors"
-              >
-                <div className="flex items-center mb-4">
-                  <FaBrain className="text-2xl text-data mr-2" />
-                  <h4 className="text-xl font-semibold text-white">Machine Learning</h4>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {['TensorFlow/Keras', 'PyTorch', 'Langchain', 'MLflow', 'FastAPI', 'Streamlit', 'REST APIs'].map((skill, i) => (
                     <span
                       key={i}
                       className="px-3 py-1 bg-data/10 text-data rounded-full text-sm"
@@ -443,7 +498,7 @@ const ResumeSection = () => {
                   <h4 className="text-xl font-semibold text-white">Cloud Services (AWS)</h4>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {['EMR', 'Glue', 'Athena', 'Redshift', 'IAM', 'S3', 'EC2', 'ECS', 'ECR', 'Lambda', 'Sagemaker', 'DynamoDB'].map((skill, i) => (
+                  {['EMR', 'Glue', 'Athena', 'Redshift', 'IAM', 'Amplify', 'ECS', 'Lambda', 'Sagemaker', 'DynamoDB'].map((skill, i) => (
                     <span
                       key={i}
                       className="px-3 py-1 bg-data/10 text-data rounded-full text-sm"
@@ -453,7 +508,30 @@ const ResumeSection = () => {
                   ))}
                 </div>
               </motion.div>
+              
 
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                className="bg-dark-200/50 backdrop-blur-sm p-6 rounded-lg border border-data/20 hover:border-data/40 transition-colors"
+              >
+                <div className="flex items-center mb-4">
+                  <FaBrain className="text-2xl text-data mr-2" />
+                  <h4 className="text-xl font-semibold text-white">Machine Learning</h4>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {['TensorFlow/Keras', 'PyTorch', 'Langchain', 'MLflow', 'FastAPI', 'Streamlit'].map((skill, i) => (
+                    <span
+                      key={i}
+                      className="px-3 py-1 bg-data/10 text-data rounded-full text-sm"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </motion.div>
+              
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -475,6 +553,50 @@ const ResumeSection = () => {
                   ))}
                 </div>
               </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 1.2 }}
+                className="bg-dark-200/50 backdrop-blur-sm p-6 rounded-lg border border-data/20 hover:border-data/40 transition-colors"
+              >
+                <div className="flex items-center mb-4">
+                  <FaCode className="text-2xl text-data mr-2" />
+                  <h4 className="text-xl font-semibold text-white">Full Stack Development</h4>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {['React', 'Next.js', 'TypeScript', 'Node.js', 'Express', 'REST APIs', 'Tailwind CSS'].map((skill, i) => (
+                    <span
+                      key={i}
+                      className="px-3 py-1 bg-data/10 text-data rounded-full text-sm"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </motion.div>
+
+              {/* <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 1.4 }}
+                className="bg-dark-200/50 backdrop-blur-sm p-6 rounded-lg border border-data/20 hover:border-data/40 transition-colors"
+              >
+                <div className="flex items-center mb-4">
+                  <FaCode className="text-2xl text-data mr-2" />
+                  <h4 className="text-xl font-semibold text-white">Web Development</h4>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {['HTML5', 'CSS3', 'JavaScript', 'React Hooks', 'Context API', 'Redux', 'Next.js', 'Vercel', 'Netlify', 'Webpack', 'Babel', 'Jest', 'React Testing Library'].map((skill, i) => (
+                    <span
+                      key={i}
+                      className="px-3 py-1 bg-data/10 text-data rounded-full text-sm"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </motion.div> */}
             </div>
           </div>
         </motion.div>

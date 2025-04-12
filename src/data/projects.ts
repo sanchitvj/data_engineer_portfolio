@@ -4,26 +4,46 @@ export const projects: Project[] = [
   {
     id: 'betflow',
     title: 'Betflow',
-    description: 'A comprehensive platform for betting flow analysis and management. This platform will be available as a page on this website.',
+    description: 'A data and analytics engineering platform designed for sports analytics combining streaming & batch processing capabilities.',
+    objective: 'The purpose of this project is to simply offer analytics-as-a-product for analyzing transient data at huge scale.',
     features: [
-      'Advanced data analytics for betting patterns',
-      'Interactive visualization tools',
-      'User-friendly dashboard interface'
+      'Live game statistics processing',
+      'Multi-source data integration',
+      'Historical pattern recognition'
     ],
+    architecture:'The platform processes both streaming data for immediate insights and historical data for pattern analysis, providing a complete solution for sports betting analytics.',
+    challenges: 'The main challenge right now is to modify the existing architecture to the one above. Earlier, we were using Spark Streaming and Druid for real-time data processing. But compute cost for this setup is too high. So, we are trying to migrate to a new architecture using DuckDB.',
     technologies: ['Spark', 'AWS', 'Snowflake', 'Kafka', 'DBT', 'Grafana', 'Airflow', 'Druid'],
+    metrics: [
+      { label: 'Daily Events', value: '1M+' },
+        { label: 'Latency', value: '10s' },
+        { label: 'Cost Reduction', value: '90%' },
+        // { label: 'Data Volume', value: '100TB+' },
+        // { label: 'Data Volume', value: '100TB+' },
+    ],
     imageUrl: '/images/projects/betflow_2_0.png',
+    githubUrl: 'https://github.com/sanchitvj/sports_betting_analytics_engine',
+    demoUrl: 'https://youtu.be/XD2b8V_RfFc?t=1493',
     isExternal: false
   },
   {
     id: 'grag',
     title: 'GRAG',
-    description: 'A groundbreaking research project focused on retrieval-augmented generation technologies and applications.',
+    description: 'GRAG is a simple python package that provides an easy end-to-end solution for implementing Retrieval Augmented Generation (RAG).',
+    objective: 'The package offers an easy way for running various LLMs locally, Thanks to LlamaCpp and also supports vector stores like Chroma and DeepLake. It also makes it easy to integrage support to any vector stores easy.',
     features: [
-      'Advanced retrieval mechanisms for information access',
-      'State-of-the-art generation capabilities',
-      'Efficient integration with existing systems'
+      'Does not use any external services or APIs',
+      'Processes unstructured data locally',
+      'Solves data privacy concerns'
     ],
-    technologies: ['Python', 'Machine Learning', 'NLP', 'RAG', 'Vector Databases'],
+    technologies: ['Generative AI', 'RAG', 'LLM', 'Vector Databases', 'Langchain', 'Jenkins'],
+    architecture: 'The parsing and partitioning were primarily done using the unstructured.io library, which is designed for this purpose. However, for PDFs with complex layouts, such as nested tables or tax forms, pdfplumber and pytesseract were employed to improve the parsing accuracy.',
+    challenges: 'The main challenge was to make the package easy to use and understand.',
+    metrics: [
+      { label: 'Cookbooks Available', value: 'Yes' },
+      { label: 'LLMs Supported', value: 'Meta Llama-2, Gemma, Mixtral' },
+      // { label: 'Easy to integrate', value: 'Yes' },
+    ],
     githubUrl: 'https://github.com/arjbingly/grag',
     demoUrl: 'https://g-rag.org',
     imageUrl: '/images/projects/grag.png',
@@ -33,41 +53,62 @@ export const projects: Project[] = [
     id: 'rsppunet',
     title: 'rsppUnet-BraTS-2021',
     description: 'A deep learning model for brain tumor segmentation using residual Spatial Pyramid Pooling-powered 3D U-Net architecture.',
+    objective: 'Enhance MRI brain tumor segmentation using a 3D U-Net with Spatial Pyramid Pooling (SPP) and attention blocks to improve accuracy without increasing computational complexity.',
     features: [
-      'State-of-the-art medical image segmentation',
-      'Improved brain tumor detection accuracy',
-      'Efficient 3D volumetric processing'
+      'Spatial Pyramid Pooling and attention integration',
+      'Multi-scale feature aggregation',
+      'Lightweight parameter efficiency',
+      'Attention-guided context fusion (combines local/global features)',
+      'Configurable SPP blocks (tested 1 or 2 SPP layers for optimal performance)'
     ],
-    technologies: ['Python', 'PyTorch', 'Deep Learning', 'Medical Imaging', 'Computer Vision'],
+    technologies: ['PyTorch', 'Deep Learning', 'Medical Imaging', 'Computer Vision', '3D Image Processing'],
+    architecture: '3D U-Net with residual SPP and attention blocks, processing MRI images at 160×192×192 resolution, using group normalization and Adam optimization.',
+    challenges: 'Handling tumor size variability, avoiding gradient explosion with batch size 1, and balancing context without extra parameters.',
+    metrics: [
+      { label: 'Avg. Dice Score', value: '0.883' },
+      // { label: 'Avg. Dice Score 2SPP', value: '0.876' },
+      { label: 'Avg. Hausdorff Distance', value: '7.840' },
+      // { label: 'Precision', value: '0.92' },
+      // { label: 'Recall', value: '0.98' },
+    ],
     githubUrl: 'https://github.com/sanchitvj/rsppUnet-BraTS-2021',
-    imageUrl: '/images/projects/rsppunet.png',
+    publicationUrl: 'https://www.frontiersin.org/journals/public-health/articles/10.3389/fpubh.2023.1091850/full',
+    imageUrl: '/images/projects/brats.png',
     isExternal: true
   },
   {
     id: 'image-dehazing',
     title: 'Image Dehazing',
-    description: 'A novel approach to remove haze from images using a Gated Multi-scale Aggregation Network (GMAN-net).',
+    description: 'A novel approach to remove haze from images using a Generic Model-Agnostic Network (GMAN-net).',
+    objective: 'Enhance hazy images by removing atmospheric distortions using GMAN-Net (Generic Model-Agnostic Convolutional Neural Network) to restore visual clarity and detail.',
     features: [
-      'Advanced image enhancement for hazy conditions',
-      'Real-time dehazing capabilities',
-      'Improved visual clarity for various applications'
+      'Multi-scale adversarial training',
+      'Attention-based feature refinement',
+      'End-to-end haze removal'
     ],
     technologies: ['Python', 'TensorFlow', 'Computer Vision', 'Image Processing'],
+    architecture: 'GMAN-Net combines a generator with residual blocks, multi-scale discriminators, and attention modules, trained using perceptual and adversarial losses.',
+    challenges: 'Balancing detail preservation and haze removal, avoiding artifacts in dense haze, and computational efficiency.',
+    metrics: [
+      { label: 'PSNR (dB)', value: '28.5' },
+      { label: 'SSIM', value: '0.92' },
+      { label: 'CIEDE2000 (color accuracy)', value: '5.2' }
+    ],
     githubUrl: 'https://github.com/sanchitvj/Image-Dehazing-using-GMAN-net',
-    imageUrl: '/images/projects/dehazing.png',
+    imageUrl: '/images/projects/image_dehazing.png',
     isExternal: true
   },
-  {
-    id: 'confidential-project',
-    title: 'Confidential Research Project',
-    description: 'An innovative research initiative exploring cutting-edge technologies in data science and machine learning (details confidential).',
-    features: [
-      'Novel algorithmic approaches',
-      'Cross-domain applications',
-      'Performance optimization techniques'
-    ],
-    technologies: ['Machine Learning', 'Data Science', 'Python', 'Cloud Computing'],
-    imageUrl: '/images/projects/confidential.png',
-    isExternal: false
-  }
+  // {
+  //   id: 'confidential-project',
+  //   title: 'Confidential Research Project',
+  //   description: 'An innovative research initiative exploring cutting-edge technologies in data science and machine learning (details confidential).',
+  //   features: [
+  //     'Novel algorithmic approaches',
+  //     'Cross-domain applications',
+  //     'Performance optimization techniques'
+  //   ],
+  //   technologies: ['Machine Learning', 'Data Science', 'Python', 'Cloud Computing'],
+  //   imageUrl: '/images/projects/confidential.png',
+  //   isExternal: false
+  // }
 ]; 

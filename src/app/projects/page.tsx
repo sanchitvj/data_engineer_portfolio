@@ -12,33 +12,34 @@ import Image from 'next/image';
 
 // Define project categories
 const projectCategories = [
-  'ML & AI',
-  'Data Visualization', 
-  'Data Engineering'
+  'Data Engineering',
+  'AI',
+  'Deep Learning', 
+  'Research'
 ];
 
 // Assign categories to projects
 const categorizedProjects = [
   {
     ...projects[0], // Betflow
-    category: 'Data Visualization',
+    category: 'Data Engineering',
   },
   {
     ...projects[1], // GRAG
-    category: 'ML & AI',
+    category: 'AI',
   },
   {
     ...projects[2], // rsppUnet
-    category: 'ML & AI',
+    category: ['Deep Learning', 'Research'],
   },
   {
     ...projects[3], // Image-Dehazing
-    category: 'ML & AI',
+    category: ['Deep Learning'],
   },
-  {
-    ...projects[4], // Confidential Project
-    category: 'Data Engineering',
-  }
+  // {
+  //   ...projects[4], // Confidential Project
+  //   category: 'Data Engineering',
+  // }
 ];
 
 export default function Projects2Page() {
@@ -52,7 +53,12 @@ export default function Projects2Page() {
       setFilteredProjects(categorizedProjects);
     } else {
       setFilteredProjects(
-        categorizedProjects.filter(project => project.category === activeFilter)
+        categorizedProjects.filter(project => {
+          if (Array.isArray(project.category)) {
+            return project.category.includes(activeFilter);
+          }
+          return project.category === activeFilter;
+        })
       );
     }
   }, [activeFilter]);
@@ -103,13 +109,28 @@ export default function Projects2Page() {
 
           {/* Data Lake Visualization */}
           <div className="relative w-full max-w-7xl mx-auto">
-            {/* Projects Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProjects.map((project, index) => (
-                <div key={project.id} className="h-full">
-                  <DataIsland project={project} index={index} />
+            {/* Featured Project (Betflow) */}
+            <div className="mb-12">
+              {filteredProjects.find(p => p.id === 'betflow') && (
+                <div className="max-w-3xl mx-auto">
+                  <DataIsland 
+                    project={filteredProjects.find(p => p.id === 'betflow')!} 
+                    index={0}
+                    isFeatured={true}
+                  />
                 </div>
-              ))}
+              )}
+            </div>
+
+            {/* Other Projects Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredProjects
+                .filter(p => p.id !== 'betflow')
+                .map((project, index) => (
+                  <div key={project.id} className="h-full">
+                    <DataIsland project={project} index={index} />
+                  </div>
+                ))}
             </div>
           </div>
         </main>

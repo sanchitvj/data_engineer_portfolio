@@ -8,13 +8,14 @@ export interface Project {
   technologies: string[];
   features?: string[];
   isExternal?: boolean;
-  category?: string;
+  category?: string | string[];
   objective?: string;
   architecture?: string;
-  challenges?: string[];
+  challenges?: string;
   solutions?: string[];
   metrics?: Array<{
     label: string;
     value: string;
   }>;
+  publicationUrl?: string;
 } 

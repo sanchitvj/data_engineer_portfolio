@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaEnvelope, FaPhone, FaGoogle } from 'react-icons/fa';
+import { FaEnvelope, FaPhone, FaGoogle, FaLinkedin } from 'react-icons/fa';
 
 const FloatingContact: React.FC = () => {
   const [isContactOpen, setIsContactOpen] = useState(false);
@@ -77,18 +77,20 @@ const FloatingContact: React.FC = () => {
           >
             <div className="space-y-3">
               <a
-                href="mailto:sanchitvj@gmail.com"
+                href="mailto:sanchit.aiwork@gmail.com"
                 className="flex items-center space-x-2 text-gray-300 hover:text-data transition-colors"
               >
                 <FaEnvelope className="text-data" />
                 <span>Email</span>
               </a>
               <a
-                href="tel:+1234567890"
+                href="https://www.linkedin.com/in/sanchit-vijay"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex items-center space-x-2 text-gray-300 hover:text-data transition-colors"
               >
-                <FaPhone className="text-data" />
-                <span>Call</span>
+                <FaLinkedin className="text-data" />
+                <span>LinkedIn</span>
               </a>
               <a
                 href="https://forms.gle/your-form-id"

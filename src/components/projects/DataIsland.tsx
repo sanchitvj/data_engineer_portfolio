@@ -4,15 +4,16 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Project } from '../../types/project';
-import { Github, ExternalLink, Info, X } from 'lucide-react';
+import { Github, ExternalLink, Info, X, Youtube, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface DataIslandProps {
   project: Project;
   index: number;
+  isFeatured?: boolean;
 }
 
-const DataIsland: React.FC<DataIslandProps> = ({ project, index }) => {
+const DataIsland: React.FC<DataIslandProps> = ({ project, index, isFeatured = false }) => {
   const [showDetails, setShowDetails] = useState(false);
   
   // Add global animations to the document head
@@ -86,15 +87,10 @@ const DataIsland: React.FC<DataIslandProps> = ({ project, index }) => {
 
   return (
     <motion.div
-      className="relative"
       initial={{ opacity: 0, y: 20 }}
-      animate={{ 
-        opacity: 1,
-        y: 0
-      }}
-      transition={{
-        opacity: { duration: 0.5, delay: index * 0.1 }
-      }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: index * 0.1 }}
+      className={`relative group cursor-pointer ${isFeatured ? 'scale-110' : ''}`}
     >
       <div className="h-full">
         <div className="relative h-full overflow-hidden rounded-xl backdrop-blur-sm bg-gradient-to-br from-white/10 to-[#25B7D3]/10 border-2 border-[#25B7D3]/30 shadow-lg shadow-[#25B7D3]/20 group transition-all duration-300 hover:shadow-[#25B7D3]/30 hover:shadow-xl">
@@ -112,7 +108,7 @@ const DataIsland: React.FC<DataIslandProps> = ({ project, index }) => {
             {/* Technology Tags */}
             <div className="mt-auto">
               <div className="flex flex-wrap gap-2 mb-4">
-                {project.technologies.slice(0, 5).map((tech, idx) => (
+                {project.technologies.map((tech, idx) => (
                   <span
                     key={idx}
                     className="inline-flex items-center justify-center rounded-md bg-white/10 px-3 py-1 text-xs font-medium text-white shadow-sm border-2 border-[#25B7D3]/30"
@@ -120,11 +116,6 @@ const DataIsland: React.FC<DataIslandProps> = ({ project, index }) => {
                     {tech}
                   </span>
                 ))}
-                {project.technologies.length > 5 && (
-                  <span className="inline-flex items-center justify-center rounded-md bg-white/10 px-3 py-1 text-xs font-medium text-white shadow-sm border-2 border-[#25B7D3]/30">
-                    +{project.technologies.length - 5} more
-                  </span>
-                )}
               </div>
             </div>
             
@@ -162,6 +153,18 @@ const DataIsland: React.FC<DataIslandProps> = ({ project, index }) => {
                   >
                     <div className="absolute inset-0 bg-white/20 rounded-full scale-0 group-hover:scale-100 transition-transform duration-300 origin-center"></div>
                     <ExternalLink className="h-5 w-5 text-white relative z-10" />
+                  </a>
+                )}
+
+                {project.publicationUrl && (
+                  <a 
+                    href={project.publicationUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="relative rounded-full bg-white/10 p-2 overflow-hidden group"
+                  >
+                    <div className="absolute inset-0 bg-white/20 rounded-full scale-0 group-hover:scale-100 transition-transform duration-300 origin-center"></div>
+                    <FileText className="h-5 w-5 text-white relative z-10" />
                   </a>
                 )}
                 
@@ -216,12 +219,12 @@ const DataIsland: React.FC<DataIslandProps> = ({ project, index }) => {
                     {/* Project Image */}
                     {project.imageUrl && (
                       <div className="overflow-hidden rounded-xl border-2 border-[#25B7D3]/30 w-full">
-                        <div className="relative h-64 md:h-96 w-full">
+                        <div className="relative aspect-video w-full">
                           <Image 
                             src={project.imageUrl} 
                             alt={project.title}
                             fill
-                            style={{ objectFit: 'cover' }}
+                            style={{ objectFit: 'contain' }}
                             className="transition-transform duration-500 hover:scale-105"
                           />
                         </div>
@@ -266,20 +269,16 @@ const DataIsland: React.FC<DataIslandProps> = ({ project, index }) => {
                             </div>
                             <div>
                               <h4 className="text-base md:text-lg font-medium text-[#25B7D3] mb-2">Challenges</h4>
-                              <ul className="list-disc list-inside text-white/80 text-sm md:text-base space-y-2">
-                                {project.challenges?.map((challenge, idx) => (
-                                  <li key={idx}>{challenge}</li>
-                                ))}
-                              </ul>
+                              <p className="text-white/80 text-sm md:text-base">{project.challenges || 'No challenges provided'}</p>
                             </div>
-                            <div>
+                            {/* <div>
                               <h4 className="text-base md:text-lg font-medium text-[#25B7D3] mb-2">Solutions</h4>
                               <ul className="list-disc list-inside text-white/80 text-sm md:text-base space-y-2">
                                 {project.solutions?.map((solution, idx) => (
                                   <li key={idx}>{solution}</li>
                                 ))}
                               </ul>
-                            </div>
+                            </div> */}
                           </div>
                         </div>
                       </div>
@@ -305,16 +304,16 @@ const DataIsland: React.FC<DataIslandProps> = ({ project, index }) => {
                         </div>
                         
                         {/* Metrics */}
-                        <div className="bg-white/10 p-4 md:p-6 rounded-xl border-2 border-[#25B7D3]/30 shadow-md shadow-[#25B7D3]/10">
-                          <h3 className="text-xl md:text-2xl font-semibold text-[#25B7D3] mb-3 md:mb-4 flex items-center">
-                            <span className="w-2 h-6 md:h-8 bg-[#25B7D3]/50 mr-3 rounded-sm"></span>
+                        <div className="bg-white/10 p-3 md:p-4 rounded-xl border-2 border-[#25B7D3]/30 shadow-md shadow-[#25B7D3]/10">
+                          <h3 className="text-lg md:text-xl font-semibold text-[#25B7D3] mb-2 md:mb-3 flex items-center">
+                            <span className="w-2 h-5 md:h-6 bg-[#25B7D3]/50 mr-2 rounded-sm"></span>
                             Metrics & Impact
                           </h3>
-                          <div className="space-y-3 md:space-y-4">
+                          <div className="flex flex-wrap gap-2">
                             {project.metrics?.map((metric, idx) => (
-                              <div key={idx} className="bg-white/5 p-2 md:p-3 rounded-lg border border-[#25B7D3]/20">
-                                <p className="text-white/60 text-xs md:text-sm">{metric.label}</p>
-                                <p className="text-[#25B7D3] text-base md:text-lg font-medium">{metric.value}</p>
+                              <div key={idx} className="bg-white/5 px-2 py-1 rounded border border-[#25B7D3]/20 min-w-[120px]">
+                                <p className="text-white/60 text-s leading-tight inline">{metric.label}: </p>
+                                <p className="text-[#25B7D3] text-s font-medium leading-tight inline">{metric.value}</p>
                               </div>
                             ))}
                           </div>
@@ -345,17 +344,29 @@ const DataIsland: React.FC<DataIslandProps> = ({ project, index }) => {
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-2 md:gap-3 rounded-lg bg-white/10 px-3 md:px-4 py-2 md:py-3 text-[#25B7D3] hover:bg-white/20 transition-colors text-sm md:text-base border border-[#25B7D3]/30"
                               >
-                                <ExternalLink className="h-4 w-4 md:h-5 md:w-5" />
-                                <span>Live Demo</span>
+                                {project.demoUrl.includes('youtube.com') || project.demoUrl.includes('youtu.be') ? (
+                                  <>
+                                    <Youtube className="h-4 w-4 md:h-5 md:w-5" />
+                                    <span>Demo Video</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ExternalLink className="h-4 w-4 md:h-5 md:w-5" />
+                                    <span>Documentation</span>
+                                  </>
+                                )}
                               </a>
                             )}
-                            {!project.isExternal && (
-                              <Link 
-                                href={`/projects/${project.id}`}
+                            {project.publicationUrl && (
+                              <a 
+                                href={project.publicationUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
                                 className="flex items-center gap-2 md:gap-3 rounded-lg bg-white/10 px-3 md:px-4 py-2 md:py-3 text-[#25B7D3] hover:bg-white/20 transition-colors text-sm md:text-base border border-[#25B7D3]/30"
                               >
-                                <span>View Full Details</span>
-                              </Link>
+                                <FileText className="h-4 w-4 md:h-5 md:w-5" />
+                                <span>Research Paper</span>
+                              </a>
                             )}
                           </div>
                         </div>
