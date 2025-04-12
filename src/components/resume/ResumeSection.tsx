@@ -21,7 +21,7 @@ interface Experience {
 interface Education {
   degree: string;
   institution: string;
-  period: string;
+  // period: string;
   // details: string;
 }
 
@@ -95,13 +95,13 @@ const education: Education[] = [
   {
     degree: "Master's in Data Science",
     institution: "George Washington University",
-    period: "Aug 2022 - May 2024",
+    // period: "Aug 2022 - May 2024",
     // details: "Specialized in Machine Learning and Big Data Analytics"
   },
   {
     degree: "Bachelor's in Electronics and Communication Engineering",
     institution: "Vellore Institute of Technology",
-    period: "July 2016 - May 2020",
+    // period: "July 2016 - May 2020",
     // details: "Focus on Software Engineering and Database Systems"
   }
 ];
@@ -352,7 +352,7 @@ const ResumeSection = () => {
                       <p className="text-data">{edu.institution}</p>
                       {/* <p className="text-gray-300 mt-2">{edu.details}</p> */}
                     </div>
-                    <span className="text-gray-300">{edu.period}</span>
+                    {/* <span className="text-gray-300">{edu.period}</span> */}
                   </div>
                 </motion.div>
               ))}

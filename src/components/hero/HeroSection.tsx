@@ -80,7 +80,7 @@ const HeroSection: React.FC = () => {
               <FaGithub />
             </motion.a>
             <motion.a
-              href="https://www.linkedin.com/in/sanchitvj"
+              href="https://www.linkedin.com/in/sanchit-vijay"
               target="_blank"
               rel="noopener noreferrer"
               whileHover={{ scale: 1.1 }}
