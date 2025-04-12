@@ -19,7 +19,7 @@ const Header = () => {
               width={36}
               height={36}
             />
-            <span className="text-xl font-bold text-white hidden md:block">Sanchit Vijay</span>
+            {/* <span className="text-xl font-bold text-white hidden md:block">Sanchit Vijay</span> */}
           </Link>
           
           {/* Mobile Menu Button */}
