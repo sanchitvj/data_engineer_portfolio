@@ -30,7 +30,7 @@ const IcebergCard: React.FC<IcebergCardProps> = ({ project, index }) => {
               <div>
                 <h4 className="mb-1 text-sm font-semibold text-data">KEY FEATURES</h4>
                 <ul className="list-disc pl-5 text-sm text-gray-300">
-                  {project.features.map((feature, idx) => (
+                  {project.features?.map((feature, idx) => (
                     <li key={idx} className="mb-1">{feature}</li>
                   ))}
                 </ul>

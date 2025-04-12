@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import MainLayout from '../../components/layout/MainLayout';
-import DataIsland from '../../components/projects-2/DataIsland';
-import IcebergBackground from '../../components/projects-2/IcebergBackground';
-import FilterControls from '../../components/projects-2/FilterControls';
+import DataIsland from '../../components/projects/DataIsland';
+import IcebergBackground from '../../components/projects/IcebergBackground';
+import FilterControls from '../../components/projects/FilterControls';
 import Header from '../../components/layout/Header';
 import { projects } from '../../data/projects';
 import Image from 'next/image';
