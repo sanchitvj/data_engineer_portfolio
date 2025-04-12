@@ -33,7 +33,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const showNavigator = pathname === '/' || pathname === '/resume';
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="font-poppins flex flex-col min-h-screen">
       <DataBackground />
       <Header />
       {showNavigator && <VerticalNavigator sections={sections} page={page} />}
