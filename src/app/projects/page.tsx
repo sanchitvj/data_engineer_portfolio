@@ -1,52 +1,119 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import MainLayout from '../../components/layout/MainLayout';
-import IcebergCard from '../../components/projects/IcebergCard';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import DataIsland from '../../components/projects-2/DataIsland';
+import IcebergBackground from '../../components/projects-2/IcebergBackground';
+import FilterControls from '../../components/projects-2/FilterControls';
+import Header from '../../components/layout/Header';
 import { projects } from '../../data/projects';
+import Image from 'next/image';
 
-export default function ProjectsPage() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end start"]
-  });
+// Define project categories
+const projectCategories = [
+  'ML & AI',
+  'Data Visualization', 
+  'Data Engineering'
+];
 
-  const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
-  const scale = useTransform(scrollYProgress, [0, 0.2], [1, 0.8]);
-  const y = useTransform(scrollYProgress, [0, 0.2], [0, -50]);
+// Assign categories to projects
+const categorizedProjects = [
+  {
+    ...projects[0], // Betflow
+    category: 'Data Visualization',
+  },
+  {
+    ...projects[1], // GRAG
+    category: 'ML & AI',
+  },
+  {
+    ...projects[2], // rsppUnet
+    category: 'ML & AI',
+  },
+  {
+    ...projects[3], // Image-Dehazing
+    category: 'ML & AI',
+  },
+  {
+    ...projects[4], // Confidential Project
+    category: 'Data Engineering',
+  }
+];
 
+export default function Projects2Page() {
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [filteredProjects, setFilteredProjects] = useState(categorizedProjects);
+  const [isLoaded, setIsLoaded] = useState(false);
+  
+  // Filter projects based on active filter
+  useEffect(() => {
+    if (activeFilter === 'all') {
+      setFilteredProjects(categorizedProjects);
+    } else {
+      setFilteredProjects(
+        categorizedProjects.filter(project => project.category === activeFilter)
+      );
+    }
+  }, [activeFilter]);
+  
+  // Set loaded state after initial render
+  useEffect(() => {
+    setIsLoaded(true);
+  }, []);
+  
   return (
-    <MainLayout>
-      <div ref={containerRef} className="relative min-h-screen pt-20 pb-32">
-        {/* Hero Title */}
-        <motion.div 
-          className="container mx-auto mb-16 text-center"
-          style={{ opacity, scale, y }}
-        >
-          <h1 className="text-4xl font-bold text-white md:text-5xl lg:text-6xl">
-            My <span className="text-data">Projects</span>
-          </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-300">
-            Explore my latest work in data science, machine learning, and software development.
-            Each card showcases key features and technologies used.
-          </p>
-        </motion.div>
-
-        {/* Projects Grid */}
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col gap-8 max-w-5xl mx-auto">
-            {projects.map((project, index) => (
-              <IcebergCard 
-                key={project.id} 
-                project={project} 
-                index={index}
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Use IcebergBackground instead of DataLakeBackground */}
+      <IcebergBackground />
+      
+      {/* Content */}
+      <div className="relative z-10">
+        <Header />
+        
+        <main className="container mx-auto px-4 pt-16 pb-8">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="max-w-4xl mx-auto mb-6 text-center"
+          >
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              Project <span className="text-data">Island</span>
+              <Image 
+                src="/images/right_mac_penguin.png" 
+                alt="Penguin" 
+                width={50} 
+                height={50}
+                className="inline-block ml-4 animate-float"
               />
-            ))}
+            </h1>
+            <p className="text-gray-300 max-w-2xl mx-auto">
+              Explore my data engineering projects, each represented as an island in the data lake.
+              Click on any island to discover more about the project.
+            </p>
+          </motion.div>
+
+          {/* Filter Controls */}
+          <FilterControls 
+            categories={projectCategories} 
+            activeFilter={activeFilter} 
+            setActiveFilter={setActiveFilter} 
+          />
+
+          {/* Data Lake Visualization */}
+          <div className="relative w-full max-w-7xl mx-auto">
+            {/* Projects Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredProjects.map((project, index) => (
+                <div key={project.id} className="h-full">
+                  <DataIsland project={project} index={index} />
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </main>
       </div>
-    </MainLayout>
+    </div>
   );
 } 
