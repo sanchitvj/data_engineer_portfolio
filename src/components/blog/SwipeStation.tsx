@@ -32,15 +32,20 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
 
   // Handle responsive behavior
   const [responsiveVisibleCards, setResponsiveVisibleCards] = useState(visibleCards);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth < 640) { // Mobile
+      const width = window.innerWidth;
+      if (width < 640) { // Mobile
         setResponsiveVisibleCards(1);
-      } else if (window.innerWidth < 1024) { // Tablet
+        setIsMobile(true);
+      } else if (width < 1024) { // Tablet
         setResponsiveVisibleCards(Math.max(1, visibleCards - 1));
+        setIsMobile(false);
       } else { // Desktop
         setResponsiveVisibleCards(visibleCards);
+        setIsMobile(false);
       }
     };
 
@@ -130,7 +135,7 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
         {/* Cards Container */}
         <div
           ref={containerRef}
-          className="overflow-hidden px-16"
+          className={`overflow-hidden ${isMobile ? 'px-4' : 'px-16'}`}
         >
           <motion.div 
             className={`flex gap-4 pb-4`}
