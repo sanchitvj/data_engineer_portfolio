@@ -127,7 +127,7 @@ const HeroSection: React.FC = () => {
                 opacity: [0, 0.8, 0],
               }}
               transition={{
-                duration: 2 + Math.random(),
+                duration: 6 + Math.random(),
                 repeat: Infinity,
                 delay: i * 0.1,
                 ease: "easeInOut",

@@ -58,7 +58,7 @@ const experiences: Experience[] = [
     title: "Creator",
     company: <a href="https://github.com/sanchitvj/sports_betting_analytics_engine" target="_blank" rel="noopener noreferrer" className="text-data hover:text-data-light transition-colors">Betflow</a>,
     period: "Nov 2024 - Present",
-    base_description: "Developed real-time sports analytics platform with Lambda architecture, processing 400K+ daily events through real-time and batch pipelines. Built predictive models for market inefficiency detection, reducing decision latency by 95% while cutting infrastructure costs by 60%. Implemented scalable data processing with Kafka, Spark, and Snowflake, enabling sub-second analysis across multiple sports markets.",
+    base_description: "Developed real-time sports analytics platform with Lambda architecture, processing sports, odds, and weather events through real-time and batch pipelines. Built analytics dashboard, reducing streaming latency by 95% while cutting infrastructure costs by 60%. Implemented scalable data processing with Kafka, Spark, and Snowflake for sub-second analysis across sports markets.",
     detail_description: {
       data_engineering: [
         "Built Lambda architecture processing 400K+ daily records for sports betting platform.",
@@ -531,7 +531,7 @@ const ResumeSection = () => {
                   ))}
                 </div>
               </motion.div>
-              
+
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}

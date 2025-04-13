@@ -79,7 +79,7 @@ export const projects: Project[] = [
   {
     id: 'image-dehazing',
     title: 'Image Dehazing',
-    description: 'A novel approach to remove haze from images using a Generic Model-Agnostic Network (GMAN-net).',
+    description: 'A novel approach to remove haze from images using a Generic Model-Agnostic Network (GMAN-net) and dilated convolutions.',
     objective: 'Enhance hazy images by removing atmospheric distortions using GMAN-Net (Generic Model-Agnostic Convolutional Neural Network) to restore visual clarity and detail.',
     features: [
       'Multi-scale adversarial training',
