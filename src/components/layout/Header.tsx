@@ -92,13 +92,6 @@ const Header = () => {
                     Projects
                   </Link>
                   <Link
-                    href="/projects-2"
-                    className="text-white hover:text-data transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Projects-2
-                  </Link>
-                  <Link
                     href="/blog"
                     className="text-white hover:text-data transition-colors"
                     onClick={() => setIsMenuOpen(false)}
