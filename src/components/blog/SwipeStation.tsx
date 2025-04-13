@@ -33,6 +33,34 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
   // Handle responsive behavior
   const [responsiveVisibleCards, setResponsiveVisibleCards] = useState(visibleCards);
   const [isMobile, setIsMobile] = useState(false);
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  // Update container width on resize or when container ref updates
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.clientWidth);
+      }
+    };
+    
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    
+    // Create a ResizeObserver to detect container size changes
+    if (containerRef.current) {
+      const resizeObserver = new ResizeObserver(updateWidth);
+      resizeObserver.observe(containerRef.current);
+      
+      return () => {
+        window.removeEventListener('resize', updateWidth);
+        resizeObserver.disconnect();
+      };
+    }
+    
+    return () => {
+      window.removeEventListener('resize', updateWidth);
+    };
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -93,11 +121,22 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
     trackMouse: true
   });
 
-  // Get visible posts with consideration for responsive behavior
-  const visiblePosts = posts.slice(
-    currentIndex,
-    currentIndex + responsiveVisibleCards
-  );
+  // Calculate the width of a single card including its gap
+  const contentPadding = isMobile ? 32 : 128; // 16px * 2 (left+right) or 64px * 2
+  const availableWidth = containerWidth - contentPadding;
+  const gapSize = 16; // gap-4 = 16px
+  const totalGapWidth = (responsiveVisibleCards - 1) * gapSize;
+  const singleCardWidth = availableWidth 
+    ? (availableWidth - totalGapWidth) / responsiveVisibleCards 
+    : 0;
+
+  // Calculate the total width of all cards + gaps
+  const totalContentWidth = (singleCardWidth * totalItems) + (gapSize * (totalItems - 1));
+  
+  // Calculate the exact position to translate to, keeping cards centered
+  const translateX = singleCardWidth 
+    ? (currentIndex * (singleCardWidth + gapSize)) 
+    : 0;
 
   return (
     <div className={`mb-12 ${className}`}>
@@ -138,10 +177,10 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
           className={`overflow-hidden ${isMobile ? 'px-4' : 'px-16'}`}
         >
           <motion.div 
-            className={`flex gap-4 pb-4`}
+            className="flex gap-4 pb-4"
             initial={false}
             animate={{ 
-              x: `calc(-${currentIndex * 100}% / ${responsiveVisibleCards})`
+              x: -translateX 
             }}
             transition={{ 
               type: "spring",
@@ -152,9 +191,9 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
             {posts.map((post, index) => (
               <div
                 key={post.id}
-                className={`relative flex-none transform transition-opacity duration-300`}
+                className="relative flex-none transition-opacity duration-300"
                 style={{
-                  width: `calc((100% - ${(responsiveVisibleCards-1) * 16}px) / ${responsiveVisibleCards})`,
+                  width: singleCardWidth > 0 ? `${singleCardWidth}px` : '100%',
                   opacity: 
                     (index < currentIndex || index >= currentIndex + responsiveVisibleCards) 
                       ? 0.3 : 1,
@@ -192,7 +231,7 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
           {Array.from({ length: Math.ceil(totalItems / responsiveVisibleCards) }).map((_, i) => (
             <button
               key={i}
-              onClick={() => setCurrentIndex(i * responsiveVisibleCards)}
+              onClick={() => setCurrentIndex(Math.min(i * responsiveVisibleCards, maxIndex))}
               className={`w-2 h-2 rounded-full transition-all ${
                 i === Math.floor(currentIndex / responsiveVisibleCards)
                   ? 'bg-data w-4'
