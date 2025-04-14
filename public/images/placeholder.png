@@ -1,0 +1,16 @@
+/*
+Note: This is a text file, not a binary image file.
+
+You will need to manually create a simple placeholder image named 'placeholder.png' and place it in this location.
+
+The placeholder should be:
+1. Small in file size (under 10KB if possible)
+2. Visually indicate that it's a placeholder for offline content
+3. Match your site's color scheme
+
+You can create a simple 400x300px image with text like "Image Unavailable Offline" using any image editor.
+
+For a quick solution, you could use a service like https://placeholder.com/ to generate a placeholder and download it.
+
+Example: https://via.placeholder.com/400x300/0f172a/f1f5f9?text=Offline+Image
+*/ 

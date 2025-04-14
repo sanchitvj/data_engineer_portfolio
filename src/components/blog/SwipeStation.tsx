@@ -3,6 +3,7 @@ import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform } from '
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { useSwipeable } from 'react-swipeable';
 import { BlogPost } from '../../types/blog';
+import dynamic from 'next/dynamic';
 
 interface SwipeStationProps {
   title: string;

@@ -2,7 +2,7 @@ import { BlogPost } from '../types/blog';
 
 // Blog categories
 export const blogCategories = [
-  { id: 'all', label: 'All Stations' },
+  // { id: 'all', label: 'All Stations' },
   { id: 'data-engineering', label: 'Data Engineering' },
   // { id: 'architecture', label: 'Architecture' },
   { id: 'data-quality', label: 'Data Quality' },

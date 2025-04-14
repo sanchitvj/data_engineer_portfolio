@@ -31,10 +31,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const sections = pathname === '/' ? homeSections : resumeSections;
   const page = pathname === '/' ? 'home' : 'resume';
   const showNavigator = pathname === '/' || pathname === '/resume';
+  
+  // Don't show DataBackground on blog or projects pages because they have their own backgrounds
+  const skipDefaultBackground = pathname?.startsWith('/blog') || pathname?.startsWith('/projects');
 
   return (
     <div className="font-poppins flex flex-col min-h-screen">
-      <DataBackground />
+      {/* Only show default background on pages that don't have custom backgrounds */}
+      {!skipDefaultBackground && <DataBackground />}
       <Header />
       {showNavigator && <VerticalNavigator sections={sections} page={page} />}
       <main className="flex-grow container mx-auto px-4 py-8 relative z-10">
