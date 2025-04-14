@@ -101,6 +101,11 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
     return () => clearInterval(interval);
   }, [autoplay, currentIndex, hovering, isDragging, maxIndex, autoplayInterval]);
 
+  // Reset the currentIndex when posts array changes (filtering happens)
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [posts]);
+
   const handlePrev = () => {
     if (currentIndex > 0 && !animating) {
       setAnimating(true);
