@@ -21,6 +21,7 @@ const BlogPage = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchSuggestions, setSearchSuggestions] = useState<{value: string, display: string, type: string}[]>([]);
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const [searchStateKey, setSearchStateKey] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [focusedSuggestionIndex, setFocusedSuggestionIndex] = useState(-1);
   const suggestionsRef = useRef<(HTMLButtonElement | null)[]>([]);
@@ -284,6 +285,12 @@ const BlogPage = () => {
   const removeSearchTerm = (term: string) => {
     setActiveSearchTerms(activeSearchTerms.filter(t => t !== term));
   };
+
+  // Update searchStateKey whenever search parameters change
+  useEffect(() => {
+    // Increment the key to force SwipeStation components to remount
+    setSearchStateKey(prev => prev + 1);
+  }, [activeFilter, activeSearchTerms]);
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -655,7 +662,7 @@ const BlogPage = () => {
             {/* LinkedIn Posts Station */}
             {shouldShowStation('linkedin-post') && (
               <SwipeStation
-                key={`linkedin-${filteredPosts.filter(post => post.type === 'linkedin-post').length}-${searchQuery}-${activeFilter}`}
+                key={`linkedin-${searchStateKey}-${filteredPosts.filter(post => post.type === 'linkedin-post').length}`}
                 title="LinkedIn Posts Station"
                 posts={filteredPosts.filter(post => post.type === 'linkedin-post')}
                 visibleCards={3}
@@ -703,7 +710,7 @@ const BlogPage = () => {
             {/* Quick Notes Station */}
             {shouldShowStation('quick-note') && (
               <SwipeStation
-                key={`quick-note-${filteredPosts.filter(post => post.type === 'quick-note').length}-${searchQuery}-${activeFilter}`}
+                key={`quick-note-${searchStateKey}-${filteredPosts.filter(post => post.type === 'quick-note').length}`}
                 title="Quick Notes Station"
                 posts={filteredPosts.filter(post => post.type === 'quick-note')}
                 visibleCards={3}
@@ -740,7 +747,7 @@ const BlogPage = () => {
             {/* Research Reports Station */}
             {shouldShowStation('research-report') && (
               <SwipeStation
-                key={`research-report-${filteredPosts.filter(post => post.type === 'research-report' && !post.featured).length}-${searchQuery}-${activeFilter}`}
+                key={`research-report-${searchStateKey}-${filteredPosts.filter(post => post.type === 'research-report' && !post.featured).length}`}
                 title="Research Reports Station"
                 posts={filteredPosts.filter(post => post.type === 'research-report' && !post.featured)}
                 visibleCards={2}
@@ -777,7 +784,7 @@ const BlogPage = () => {
             {/* Comprehensive Studies Station */}
             {shouldShowStation('comprehensive-study') && (
               <SwipeStation
-                key={`comprehensive-study-${filteredPosts.filter(post => post.type === 'comprehensive-study').length}-${searchQuery}-${activeFilter}`}
+                key={`comprehensive-study-${searchStateKey}-${filteredPosts.filter(post => post.type === 'comprehensive-study').length}`}
                 title="Comprehensive Studies Station"
                 posts={filteredPosts.filter(post => post.type === 'comprehensive-study')}
                 visibleCards={1}

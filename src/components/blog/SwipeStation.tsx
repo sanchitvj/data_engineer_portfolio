@@ -32,12 +32,18 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const dragX = useMotionValue(0);
   const totalItems = posts.length;
-  const maxIndex = Math.max(0, totalItems - visibleCards);
-
+  
   // Handle responsive behavior
   const [responsiveVisibleCards, setResponsiveVisibleCards] = useState(visibleCards);
   const [isMobile, setIsMobile] = useState(false);
   const [containerWidth, setContainerWidth] = useState(0);
+
+  // Correct maxIndex calculation depends on responsiveVisibleCards and totalItems
+  const [maxIndex, setMaxIndex] = useState(0);
+
+  useEffect(() => {
+    setMaxIndex(Math.max(0, totalItems - responsiveVisibleCards));
+  }, [totalItems, responsiveVisibleCards]);
 
   // Update container width on resize or when container ref updates
   useEffect(() => {
@@ -88,23 +94,51 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
 
   // Autoplay functionality
   useEffect(() => {
-    if (!autoplay || hovering || isDragging) return;
+    if (!autoplay || hovering || isDragging || currentIndex >= maxIndex) return;
     
     const interval = setInterval(() => {
       if (currentIndex < maxIndex) {
         handleNext();
       } else {
-        setCurrentIndex(0);
+        setCurrentIndex(0); // Loop back to start
       }
     }, autoplayInterval);
     
     return () => clearInterval(interval);
   }, [autoplay, currentIndex, hovering, isDragging, maxIndex, autoplayInterval]);
 
-  // Reset the currentIndex when posts array changes (filtering happens)
+  // Reset index and update width when posts change
   useEffect(() => {
     setCurrentIndex(0);
-  }, [posts]);
+    
+    // Ensure container width is updated AFTER the posts have likely rendered
+    const timer = setTimeout(() => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.clientWidth);
+      }
+    }, 50); // Small delay for DOM update
+
+    return () => clearTimeout(timer);
+  }, [posts]); // Trigger only when the posts array itself changes
+
+  // Adjust currentIndex if it becomes invalid after filtering or resize
+  useEffect(() => {
+    if (currentIndex > maxIndex) {
+      setCurrentIndex(maxIndex);
+    }
+  }, [currentIndex, maxIndex]);
+
+  // Recalculate container width specifically on mobile state change
+  useEffect(() => {
+    if (isMobile) {
+      const timer = setTimeout(() => {
+        if (containerRef.current) {
+          setContainerWidth(containerRef.current.clientWidth);
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isMobile]);
 
   const handlePrev = () => {
     if (currentIndex > 0 && !animating) {
@@ -218,6 +252,11 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
   const getCardVisibility = (index: number) => {
     // Default visibility based on current index
     const isVisible = index >= currentIndex && index < currentIndex + responsiveVisibleCards;
+    
+    // Always make at least one card visible if no cards would be visible
+    if (posts.length > 0 && posts.length <= responsiveVisibleCards) {
+      return index < responsiveVisibleCards;
+    }
     
     // If dragging, adjust visibility based on drag direction and distance
     if (isDragging && dragCards > 0) {
@@ -348,7 +387,7 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
 
         {/* Right Arrow */}
         <AnimatePresence>
-          {currentIndex < maxIndex && !isDragging && (
+          {currentIndex < maxIndex && !isDragging && posts.length > responsiveVisibleCards && (
             <motion.button
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
