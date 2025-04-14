@@ -2,6 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import './globals.css';
 import MainLayout from '../components/layout/MainLayout';
+import ServiceWorkerHandler from '@/components/ServiceWorkerHandler';
 
 export const metadata: Metadata = {
   title: 'Sanchit Vijay - Data Engineer',
@@ -25,6 +26,7 @@ export default function RootLayout({
         className="bg-gray-900 text-white antialiased"
         suppressHydrationWarning
       >
+        <ServiceWorkerHandler />
         <MainLayout>{children}</MainLayout>
       </body>
     </html>
