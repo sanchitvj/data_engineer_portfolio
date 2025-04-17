@@ -42,9 +42,11 @@ export default async function ProjectsPage() {
   const initialProjectCategories = projectCategories;
 
   return (
-    <ProjectsClientContent 
-      initialProjects={initialProjects}
-      initialProjectCategories={initialProjectCategories}
-    />
+    <>
+      <ProjectsClientContent 
+        initialProjects={initialProjects}
+        initialProjectCategories={initialProjectCategories}
+      />
+    </>
   );
 } 

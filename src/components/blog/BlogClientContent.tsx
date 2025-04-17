@@ -481,270 +481,267 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
 
   // --- Return JSX Structure ---
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <>
       <BlogIcebergBackground />
-      
-      <div className="relative z-10">
-        <main className="container mx-auto px-4 pt-16 pb-8">
-          {/* Header Section */}
+      <div className="container mx-auto px-4 pt-20 pb-16 z-10 relative">
+        {/* Header Section */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: isLoaded ? 1 : 0, y: isLoaded ? 0 : -20 }}
+          transition={{ duration: 0.5 }}
+          className="max-w-6xl mx-auto mb-8 text-center"
+        >
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+            Research <span className="text-data">Station</span>
+            <Image 
+              src="/images/right_mac_penguin.png" 
+              alt="Penguin" 
+              width={50} 
+              height={50}
+              className="inline-block ml-4 animate-float"
+              priority // Keep priority as it might be ATF
+            />
+          </h1>
+          <p className="text-gray-300 max-w-2xl mx-auto">
+            Welcome to my Antarctic Research Station, where I document insights and discoveries from my data engineering expeditions.
+          </p>
+        </motion.div>
+
+        {/* Search Trigger Button & Active Filters Display */}
+        <div className="max-w-6xl mx-auto mb-8 flex justify-end items-center gap-2">
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: isLoaded ? 1 : 0, y: isLoaded ? 0 : -20 }}
-            transition={{ duration: 0.5 }}
-            className="max-w-6xl mx-auto mb-8 text-center"
+            className="bg-dark-200/70 backdrop-blur-sm rounded-lg border border-data/20 px-3 py-2 text-white flex items-center hover:bg-dark-200/90 hover:border-data/40 transition-all flex-wrap gap-1 max-w-xl"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              Research <span className="text-data">Station</span>
-              <Image 
-                src="/images/right_mac_penguin.png" 
-                alt="Penguin" 
-                width={50} 
-                height={50}
-                className="inline-block ml-4 animate-float"
-                priority // Keep priority as it might be ATF
-              />
-            </h1>
-            <p className="text-gray-300 max-w-2xl mx-auto">
-              Welcome to my Antarctic Research Station, where I document insights and discoveries from my data engineering expeditions.
-            </p>
-          </motion.div>
-
-          {/* Search Trigger Button & Active Filters Display */}
-          <div className="max-w-6xl mx-auto mb-8 flex justify-end items-center gap-2">
-            <motion.div
-              className="bg-dark-200/70 backdrop-blur-sm rounded-lg border border-data/20 px-3 py-2 text-white flex items-center hover:bg-dark-200/90 hover:border-data/40 transition-all flex-wrap gap-1 max-w-xl"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+            {/* Button to open modal */}
+            <button
+              onClick={() => setShowSearchModal(true)}
+              className="flex items-center mr-2 shrink-0" // Prevent shrinking
+              aria-label="Open search and filter options"
             >
-              {/* Button to open modal */}
-              <button
-                onClick={() => setShowSearchModal(true)}
-                className="flex items-center mr-2 shrink-0" // Prevent shrinking
-                aria-label="Open search and filter options"
-              >
-                <FaSearch className="text-data mr-2" />
-                <span>Search</span>
-              </button>
-              
-              {/* Display active category filter */}
-              {activeFilter !== 'all' && (
-                <div className="group bg-data/20 text-data text-xs px-2 py-1 rounded-full flex items-center relative shrink-0">
-                  <span>{blogCategories.find(c => c.id === activeFilter)?.label || activeFilter}</span>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setActiveFilter('all'); }}
-                    className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center w-4 h-4"
-                    aria-label="Remove category filter"
-                  >
-                    <X size={12} className="text-data hover:text-white" />
-                  </button>
-                </div>
-              )}
-
-              {/* Display active search terms */}
-              {activeSearchTerms.map(term => (
-                <div
-                  key={term}
-                  className="group bg-data/20 text-data text-xs px-2 py-1 rounded-full flex items-center relative shrink-0"
-                >
-                  <span>{term}</span>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); removeSearchTerm(term); }}
-                    className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center w-4 h-4"
-                    aria-label={`Remove keyword ${term}`}
-                  >
-                    <X size={12} className="text-data hover:text-white" />
-                  </button>
-                </div>
-              ))}
-            </motion.div>
+              <FaSearch className="text-data mr-2" />
+              <span>Search</span>
+            </button>
             
-            {/* Clear all button */}
-            {(activeSearchTerms.length > 0 || activeFilter !== 'all') && (
-              <button
-                onClick={resetAllFilters}
-                className="bg-dark-200/70 backdrop-blur-sm rounded-lg border border-data/20 p-2 text-data hover:bg-dark-200/90 hover:text-white transition-all shrink-0"
-                aria-label="Clear all filters"
-              >
-                <X size={18} />
-              </button>
-            )}
-          </div>
-
-          {/* Lazy-loaded Search Modal */}
-          {showSearchModal && (
-            <Suspense fallback={
-              <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-[10vh] bg-black/80 backdrop-blur-sm">
-                <div className="w-full max-w-3xl h-64 bg-dark-200/95 rounded-xl border border-data/30 flex items-center justify-center">
-                  <div className="text-gray-400">Loading search...</div>
-                </div>
+            {/* Display active category filter */}
+            {activeFilter !== 'all' && (
+              <div className="group bg-data/20 text-data text-xs px-2 py-1 rounded-full flex items-center relative shrink-0">
+                <span>{blogCategories.find(c => c.id === activeFilter)?.label || activeFilter}</span>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setActiveFilter('all'); }}
+                  className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center w-4 h-4"
+                  aria-label="Remove category filter"
+                >
+                  <X size={12} className="text-data hover:text-white" />
+                </button>
               </div>
-            }>
-              <SearchModal 
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                activeFilter={activeFilter}
-                activeSearchTerms={activeSearchTerms}
-                blogCategories={blogCategories}
-                searchInputRef={searchInputRef}
-                showSuggestions={showSuggestions && !isMobileDevice}
-                setShowSuggestions={setShowSuggestions}
-                searchSuggestions={isMobileDevice ? [] : searchSuggestions}
-                suggestionsRef={suggestionsRef}
-                focusedSuggestionIndex={focusedSuggestionIndex}
-                handleSearchEnter={handleSearchEnter}
-                handleFilterButtonClick={handleFilterButtonClick}
-                handleSuggestionClick={handleSuggestionClick}
-                removeSearchTerm={removeSearchTerm}
-                resetAllFilters={resetAllFilters}
-                showSearchModal={showSearchModal}
-                setShowSearchModal={setShowSearchModal}
-                handleSearchInputChange={handleSearchInputChange}
-              />
-            </Suspense>
-          )}
+            )}
 
-          {/* Featured Post Section */}
-          {featuredPost && ( 
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: isLoaded ? 1 : 0, scale: isLoaded ? 1 : 0.95 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="max-w-6xl mx-auto mb-12"
+            {/* Display active search terms */}
+            {activeSearchTerms.map(term => (
+              <div
+                key={term}
+                className="group bg-data/20 text-data text-xs px-2 py-1 rounded-full flex items-center relative shrink-0"
+              >
+                <span>{term}</span>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); removeSearchTerm(term); }}
+                  className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center w-4 h-4"
+                  aria-label={`Remove keyword ${term}`}
+                >
+                  <X size={12} className="text-data hover:text-white" />
+                </button>
+              </div>
+            ))}
+          </motion.div>
+          
+          {/* Clear all button */}
+          {(activeSearchTerms.length > 0 || activeFilter !== 'all') && (
+            <button
+              onClick={resetAllFilters}
+              className="bg-dark-200/70 backdrop-blur-sm rounded-lg border border-data/20 p-2 text-data hover:bg-dark-200/90 hover:text-white transition-all shrink-0"
+              aria-label="Clear all filters"
             >
-              {/* ... Featured post JSX ... */}
-              <div className="bg-dark-200/70 backdrop-blur-sm rounded-lg border border-data/30 overflow-hidden shadow-lg"> <div className="flex flex-col lg:flex-row"> {featuredPost.image && ( <div className="lg:w-1/2 overflow-hidden relative"> <Image src={featuredPost.image} alt={featuredPost.title} width={600} height={400} className="w-full h-64 lg:h-full object-cover transition-transform duration-300 hover:scale-105" /> </div> )} <div className={`p-6 lg:p-8 ${featuredPost.image ? 'lg:w-1/2' : 'w-full'} flex flex-col`}> <div className="flex items-center mb-3"> <FaStar className="text-data mr-2" /> <span className="text-data text-sm font-medium">Featured Research</span> </div> <h2 className="text-2xl md:text-3xl font-bold mb-3 text-white leading-tight">{highlightText(featuredPost.title, activeSearchTerms)}</h2> <p className="text-gray-300 mb-4 line-clamp-4">{highlightText(featuredPost.excerpt, activeSearchTerms)}</p> <div className="flex items-center text-sm text-gray-400 mb-6"> <span>{formatDate(featuredPost.date)}</span> <span className="mx-2">•</span> <span>{featuredPost.readTime}</span> {/* Assuming readTime includes 'min' */} </div> <Link href={featuredPost.link} target="_blank" rel="noopener noreferrer" className="mt-auto inline-flex items-center px-4 py-2 bg-data hover:bg-data-dark text-dark-300 font-medium rounded-lg transition-colors" > Read Full Report <FaExternalLinkAlt className="ml-2" size={12}/> </Link> </div> </div> </div>
-            </motion.div>
+              <X size={18} />
+            </button>
           )}
+        </div>
 
-          {/* Swipe Stations Section */}
-          {filteredPosts.length > 0 && ( // Only render stations if there are posts
-             <div className="max-w-6xl mx-auto mb-8"> 
-               <h2 className="text-2xl font-bold mb-6 text-white">Research Stations</h2> 
-               
-               {/* Lazy-load all SwipeStation components with IntersectionObserver for deferred loading */}
-               <Suspense fallback={null}>
-                 {/* LinkedIn Posts Station */}
-                 {shouldShowStation('linkedin-post') && (
-                   <LazyComponent 
-                     placeholder={
-                       <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-12 flex items-center justify-center">
-                         <div className="text-gray-500">Loading LinkedIn Posts...</div>
-                       </div>
-                     }
-                   >
-                     <div className="mb-12">
-                       <SwipeStation 
-                         key={`linkedin-${searchStateKey}-${filteredPosts.filter(post => post.type === 'linkedin-post').length}`} 
-                         title="LinkedIn Posts Station" 
-                         posts={filteredPosts.filter(post => post.type === 'linkedin-post')} 
-                         visibleCards={3} 
-                         renderCard={(post, index) => ( 
-                           <motion.div key={post.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }} className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-3 h-[230px] flex flex-col"> {/* Slightly taller */}
-                             {/* ... LinkedIn Card Content ... */}
-                              <div className="flex items-center mb-2"> <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0"> <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"> <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"></path> </svg> </div> <span className="ml-1.5 text-xs text-gray-400">LinkedIn Post</span> </div> <h4 className="font-semibold text-md mb-1.5 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> <p className="text-gray-300 text-xs mb-2 line-clamp-3 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt, 24), activeSearchTerms)} </p> <div className="mt-auto"> <div className="flex justify-between items-center text-xs text-gray-400 mb-1.5"> <span>{formatDate(post.date)}</span> <span>{post.readTime}</span> </div> <Link href={post.link} target="_blank" rel="noopener noreferrer" className="mt-1 text-blue-400 hover:text-blue-300 text-xs flex items-center group"> View on LinkedIn <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70 group-hover:opacity-100"/> </Link> </div>
-                           </motion.div> 
-                         )} 
-                       /> 
-                     </div>
-                   </LazyComponent>
-                 )}
-                
-                 {/* Quick Notes Station */}
-                 {shouldShowStation('quick-note') && (
-                   <LazyComponent 
-                     placeholder={
-                       <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-12 flex items-center justify-center">
-                         <div className="text-gray-500">Loading Quick Notes...</div>
-                       </div>
-                     }
-                   >
-                     <div className="mb-12">
-                       <SwipeStation 
-                         key={`quick-note-${searchStateKey}-${filteredPosts.filter(post => post.type === 'quick-note').length}`} 
-                         title="Quick Notes Station" 
-                         posts={filteredPosts.filter(post => post.type === 'quick-note')} 
-                         visibleCards={3} 
-                         renderCard={(post, index) => ( 
-                           <motion.div key={post.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }} className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-4 h-[230px] flex flex-col"> {/* Slightly taller */}
-                             {/* ... Quick Note Card Content ... */}
-                              <h4 className="font-semibold text-lg mb-2 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> <p className="text-gray-300 text-sm mb-3 line-clamp-3 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt, 28), activeSearchTerms)} </p> <div className="mt-auto"> <div className="flex justify-between items-center text-xs text-gray-400 mb-2"> <span>{formatDate(post.date)}</span> <span>{post.readTime}</span> </div> <Link href={post.link} target="_blank" rel="noopener noreferrer" className="text-data hover:text-data-light text-sm group inline-flex items-center"> View Note <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70 group-hover:opacity-100"/> </Link> </div>
-                           </motion.div> 
-                         )} 
-                       /> 
-                     </div>
-                   </LazyComponent>
-                 )}
-                
-                 {/* Research Reports Station */}
-                 {shouldShowStation('research-report') && (
-                   <LazyComponent 
-                     placeholder={
-                       <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-12 flex items-center justify-center">
-                         <div className="text-gray-500">Loading Research Reports...</div>
-                       </div>
-                     }
-                   >
-                     <div className="mb-12">
-                       <SwipeStation 
-                         key={`research-report-${searchStateKey}-${filteredPosts.filter(post => post.type === 'research-report' && !post.featured).length}`} 
-                         title="Research Reports Station" 
-                         posts={filteredPosts.filter(post => post.type === 'research-report' && !post.featured)} 
-                         visibleCards={2} 
-                         renderCard={(post, index) => ( 
-                           <motion.div key={post.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }} className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-6 h-[280px] flex flex-col">
-                             {/* ... Research Report Card Content ... */}
-                             <h4 className="font-bold text-xl mb-3 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> <p className="text-gray-300 mb-4 line-clamp-4 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt, 36), activeSearchTerms)} </p> <div className="mt-auto"> <div className="flex justify-between items-center text-sm text-gray-400 mb-4"> <span>{formatDate(post.date)}</span> <span>{post.readTime}</span> </div> <Link href={post.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-3 py-1.5 bg-dark-300 hover:bg-data/20 text-data rounded-lg transition-colors text-sm group"> Read Report <FaExternalLinkAlt className="w-3 h-3 ml-1.5 opacity-70 group-hover:opacity-100"/> </Link> </div>
-                           </motion.div> 
-                         )} 
-                       /> 
-                     </div>
-                   </LazyComponent>
-                 )}
-                
-                 {/* Comprehensive Studies Station */}
-                 {shouldShowStation('comprehensive-study') && (
-                   <LazyComponent 
-                     placeholder={
-                       <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-12 flex items-center justify-center">
-                         <div className="text-gray-500">Loading Comprehensive Studies...</div>
-                       </div>
-                     }
-                   >
-                     <div className="mb-12">
-                       <SwipeStation 
-                         key={`comprehensive-study-${searchStateKey}-${filteredPosts.filter(post => post.type === 'comprehensive-study').length}`} 
-                         title="Comprehensive Studies Station" 
-                         posts={filteredPosts.filter(post => post.type === 'comprehensive-study')} 
-                         visibleCards={1} 
-                         renderCard={(post, index) => ( 
-                           <motion.div key={post.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }} className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all overflow-hidden h-[320px]">
-                             {/* ... Comprehensive Study Card Content ... */}
-                              <div className="flex flex-col md:flex-row h-full"> {post.image && ( <div className="md:w-1/3 overflow-hidden relative"> <Image src={post.image} alt={post.title} width={400} height={300} className="w-full h-48 md:h-full object-cover transition-transform duration-300 hover:scale-105" /> </div> )} <div className={`p-6 ${post.image ? 'md:w-2/3' : 'w-full'} flex flex-col`}> <h4 className="font-bold text-xl mb-3 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> <p className="text-gray-300 mb-4 line-clamp-5 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt, 50), activeSearchTerms)} </p> <div className="mt-auto"> <div className="flex justify-between items-center text-sm text-gray-400 mb-4"> <span>{formatDate(post.date)}</span> <span>{post.readTime}</span> </div> <Link href={post.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-4 py-2 bg-dark-300 hover:bg-data/20 text-data rounded-lg transition-colors group"> Read Full Study <FaExternalLinkAlt className="w-3 h-3 ml-1.5 opacity-70 group-hover:opacity-100"/> </Link> </div> </div> </div>
-                           </motion.div> 
-                         )} 
-                       /> 
-                     </div>
-                   </LazyComponent>
-                 )}
-               </Suspense>
-             </div>
-           )}
+        {/* Lazy-loaded Search Modal */}
+        {showSearchModal && (
+          <Suspense fallback={
+            <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-[10vh] bg-black/80 backdrop-blur-sm">
+              <div className="w-full max-w-3xl h-64 bg-dark-200/95 rounded-xl border border-data/30 flex items-center justify-center">
+                <div className="text-gray-400">Loading search...</div>
+              </div>
+            </div>
+          }>
+            <SearchModal 
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              activeFilter={activeFilter}
+              activeSearchTerms={activeSearchTerms}
+              blogCategories={blogCategories}
+              searchInputRef={searchInputRef}
+              showSuggestions={showSuggestions && !isMobileDevice}
+              setShowSuggestions={setShowSuggestions}
+              searchSuggestions={isMobileDevice ? [] : searchSuggestions}
+              suggestionsRef={suggestionsRef}
+              focusedSuggestionIndex={focusedSuggestionIndex}
+              handleSearchEnter={handleSearchEnter}
+              handleFilterButtonClick={handleFilterButtonClick}
+              handleSuggestionClick={handleSuggestionClick}
+              removeSearchTerm={removeSearchTerm}
+              resetAllFilters={resetAllFilters}
+              showSearchModal={showSearchModal}
+              setShowSearchModal={setShowSearchModal}
+              handleSearchInputChange={handleSearchInputChange}
+            />
+          </Suspense>
+        )}
 
-          {/* Empty State */}
-          {filteredPosts.length === 0 && (
-             <motion.div 
-               initial={{ opacity: 0 }}
-               animate={{ opacity: 1 }}
-               transition={{ delay: 0.2 }}
-               className="max-w-6xl mx-auto py-16 text-center"
-             >
-               {/* ... Empty state JSX ... */}
-                <div className="mb-6"> <Image src="/images/penguin_confused.png" alt="No results" width={100} height={100} className="mx-auto" /> </div> <h3 className="text-xl font-bold text-white mb-2">No Research Logs Found</h3> <p className="text-gray-400"> No posts match your current search criteria. Try adjusting your filters or search query. </p> <button onClick={resetAllFilters} className="mt-4 px-4 py-2 bg-data hover:bg-data-dark text-dark-300 font-medium rounded-lg transition-colors" > Reset Filters </button>
-            </motion.div>
-          )}
-        </main>
+        {/* Featured Post Section */}
+        {featuredPost && ( 
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: isLoaded ? 1 : 0, scale: isLoaded ? 1 : 0.95 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="max-w-6xl mx-auto mb-12"
+          >
+            {/* ... Featured post JSX ... */}
+            <div className="bg-dark-200/70 backdrop-blur-sm rounded-lg border border-data/30 overflow-hidden shadow-lg"> <div className="flex flex-col lg:flex-row"> {featuredPost.image && ( <div className="lg:w-1/2 overflow-hidden relative"> <Image src={featuredPost.image} alt={featuredPost.title} width={600} height={400} className="w-full h-64 lg:h-full object-cover transition-transform duration-300 hover:scale-105" /> </div> )} <div className={`p-6 lg:p-8 ${featuredPost.image ? 'lg:w-1/2' : 'w-full'} flex flex-col`}> <div className="flex items-center mb-3"> <FaStar className="text-data mr-2" /> <span className="text-data text-sm font-medium">Featured Research</span> </div> <h2 className="text-2xl md:text-3xl font-bold mb-3 text-white leading-tight">{highlightText(featuredPost.title, activeSearchTerms)}</h2> <p className="text-gray-300 mb-4 line-clamp-4">{highlightText(featuredPost.excerpt, activeSearchTerms)}</p> <div className="flex items-center text-sm text-gray-400 mb-6"> <span>{formatDate(featuredPost.date)}</span> <span className="mx-2">•</span> <span>{featuredPost.readTime}</span> {/* Assuming readTime includes 'min' */} </div> <Link href={featuredPost.link} target="_blank" rel="noopener noreferrer" className="mt-auto inline-flex items-center px-4 py-2 bg-data hover:bg-data-dark text-dark-300 font-medium rounded-lg transition-colors" > Read Full Report <FaExternalLinkAlt className="ml-2" size={12}/> </Link> </div> </div> </div>
+          </motion.div>
+        )}
+
+        {/* Swipe Stations Section */}
+        {filteredPosts.length > 0 && ( // Only render stations if there are posts
+           <div className="max-w-6xl mx-auto mb-8"> 
+             <h2 className="text-2xl font-bold mb-6 text-white">Research Stations</h2> 
+             
+             {/* Lazy-load all SwipeStation components with IntersectionObserver for deferred loading */}
+             <Suspense fallback={null}>
+               {/* LinkedIn Posts Station */}
+               {shouldShowStation('linkedin-post') && (
+                 <LazyComponent 
+                   placeholder={
+                     <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-12 flex items-center justify-center">
+                       <div className="text-gray-500">Loading LinkedIn Posts...</div>
+                     </div>
+                   }
+                 >
+                   <div className="mb-12">
+                     <SwipeStation 
+                       key={`linkedin-${searchStateKey}-${filteredPosts.filter(post => post.type === 'linkedin-post').length}`} 
+                       title="LinkedIn Posts Station" 
+                       posts={filteredPosts.filter(post => post.type === 'linkedin-post')} 
+                       visibleCards={3} 
+                       renderCard={(post, index) => ( 
+                         <motion.div key={post.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }} className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-3 h-[230px] flex flex-col"> {/* Slightly taller */}
+                           {/* ... LinkedIn Card Content ... */}
+                            <div className="flex items-center mb-2"> <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0"> <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"> <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"></path> </svg> </div> <span className="ml-1.5 text-xs text-gray-400">LinkedIn Post</span> </div> <h4 className="font-semibold text-md mb-1.5 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> <p className="text-gray-300 text-xs mb-2 line-clamp-3 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt, 24), activeSearchTerms)} </p> <div className="mt-auto"> <div className="flex justify-between items-center text-xs text-gray-400 mb-1.5"> <span>{formatDate(post.date)}</span> <span>{post.readTime}</span> </div> <Link href={post.link} target="_blank" rel="noopener noreferrer" className="mt-1 text-blue-400 hover:text-blue-300 text-xs flex items-center group"> View on LinkedIn <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70 group-hover:opacity-100"/> </Link> </div>
+                         </motion.div> 
+                       )} 
+                     /> 
+                   </div>
+                 </LazyComponent>
+               )}
+              
+               {/* Quick Notes Station */}
+               {shouldShowStation('quick-note') && (
+                 <LazyComponent 
+                   placeholder={
+                     <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-12 flex items-center justify-center">
+                       <div className="text-gray-500">Loading Quick Notes...</div>
+                     </div>
+                   }
+                 >
+                   <div className="mb-12">
+                     <SwipeStation 
+                       key={`quick-note-${searchStateKey}-${filteredPosts.filter(post => post.type === 'quick-note').length}`} 
+                       title="Quick Notes Station" 
+                       posts={filteredPosts.filter(post => post.type === 'quick-note')} 
+                       visibleCards={3} 
+                       renderCard={(post, index) => ( 
+                         <motion.div key={post.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }} className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-4 h-[230px] flex flex-col"> {/* Slightly taller */}
+                           {/* ... Quick Note Card Content ... */}
+                            <h4 className="font-semibold text-lg mb-2 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> <p className="text-gray-300 text-sm mb-3 line-clamp-3 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt, 28), activeSearchTerms)} </p> <div className="mt-auto"> <div className="flex justify-between items-center text-xs text-gray-400 mb-2"> <span>{formatDate(post.date)}</span> <span>{post.readTime}</span> </div> <Link href={post.link} target="_blank" rel="noopener noreferrer" className="text-data hover:text-data-light text-sm group inline-flex items-center"> View Note <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70 group-hover:opacity-100"/> </Link> </div>
+                         </motion.div> 
+                       )} 
+                     /> 
+                   </div>
+                 </LazyComponent>
+               )}
+              
+               {/* Research Reports Station */}
+               {shouldShowStation('research-report') && (
+                 <LazyComponent 
+                   placeholder={
+                     <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-12 flex items-center justify-center">
+                       <div className="text-gray-500">Loading Research Reports...</div>
+                     </div>
+                   }
+                 >
+                   <div className="mb-12">
+                     <SwipeStation 
+                       key={`research-report-${searchStateKey}-${filteredPosts.filter(post => post.type === 'research-report' && !post.featured).length}`} 
+                       title="Research Reports Station" 
+                       posts={filteredPosts.filter(post => post.type === 'research-report' && !post.featured)} 
+                       visibleCards={2} 
+                       renderCard={(post, index) => ( 
+                         <motion.div key={post.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }} className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-6 h-[280px] flex flex-col">
+                           {/* ... Research Report Card Content ... */}
+                           <h4 className="font-bold text-xl mb-3 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> <p className="text-gray-300 mb-4 line-clamp-4 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt, 36), activeSearchTerms)} </p> <div className="mt-auto"> <div className="flex justify-between items-center text-sm text-gray-400 mb-4"> <span>{formatDate(post.date)}</span> <span>{post.readTime}</span> </div> <Link href={post.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-3 py-1.5 bg-dark-300 hover:bg-data/20 text-data rounded-lg transition-colors text-sm group"> Read Report <FaExternalLinkAlt className="w-3 h-3 ml-1.5 opacity-70 group-hover:opacity-100"/> </Link> </div>
+                         </motion.div> 
+                       )} 
+                     /> 
+                   </div>
+                 </LazyComponent>
+               )}
+              
+               {/* Comprehensive Studies Station */}
+               {shouldShowStation('comprehensive-study') && (
+                 <LazyComponent 
+                   placeholder={
+                     <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-12 flex items-center justify-center">
+                       <div className="text-gray-500">Loading Comprehensive Studies...</div>
+                     </div>
+                   }
+                 >
+                   <div className="mb-12">
+                     <SwipeStation 
+                       key={`comprehensive-study-${searchStateKey}-${filteredPosts.filter(post => post.type === 'comprehensive-study').length}`} 
+                       title="Comprehensive Studies Station" 
+                       posts={filteredPosts.filter(post => post.type === 'comprehensive-study')} 
+                       visibleCards={1} 
+                       renderCard={(post, index) => ( 
+                         <motion.div key={post.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }} className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all overflow-hidden h-[320px]">
+                           {/* ... Comprehensive Study Card Content ... */}
+                            <div className="flex flex-col md:flex-row h-full"> {post.image && ( <div className="md:w-1/3 overflow-hidden relative"> <Image src={post.image} alt={post.title} width={400} height={300} className="w-full h-48 md:h-full object-cover transition-transform duration-300 hover:scale-105" /> </div> )} <div className={`p-6 ${post.image ? 'md:w-2/3' : 'w-full'} flex flex-col`}> <h4 className="font-bold text-xl mb-3 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> <p className="text-gray-300 mb-4 line-clamp-5 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt, 50), activeSearchTerms)} </p> <div className="mt-auto"> <div className="flex justify-between items-center text-sm text-gray-400 mb-4"> <span>{formatDate(post.date)}</span> <span>{post.readTime}</span> </div> <Link href={post.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-4 py-2 bg-dark-300 hover:bg-data/20 text-data rounded-lg transition-colors group"> Read Full Study <FaExternalLinkAlt className="w-3 h-3 ml-1.5 opacity-70 group-hover:opacity-100"/> </Link> </div> </div> </div>
+                         </motion.div> 
+                       )} 
+                     /> 
+                   </div>
+                 </LazyComponent>
+               )}
+             </Suspense>
+           </div>
+         )}
+
+        {/* Empty State */}
+        {filteredPosts.length === 0 && (
+           <motion.div 
+             initial={{ opacity: 0 }}
+             animate={{ opacity: 1 }}
+             transition={{ delay: 0.2 }}
+             className="max-w-6xl mx-auto py-16 text-center"
+           >
+             {/* ... Empty state JSX ... */}
+              <div className="mb-6"> <Image src="/images/penguin_confused.png" alt="No results" width={100} height={100} className="mx-auto" /> </div> <h3 className="text-xl font-bold text-white mb-2">No Research Logs Found</h3> <p className="text-gray-400"> No posts match your current search criteria. Try adjusting your filters or search query. </p> <button onClick={resetAllFilters} className="mt-4 px-4 py-2 bg-data hover:bg-data-dark text-dark-300 font-medium rounded-lg transition-colors" > Reset Filters </button>
+         </motion.div>
+        )}
       </div>
-    </div>
+    </>
   );
 };
 

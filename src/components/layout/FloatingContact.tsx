@@ -92,7 +92,7 @@ const FloatingContact: React.FC = () => {
                 <FaLinkedin className="text-data" />
                 <span>LinkedIn</span>
               </a>
-              <a
+              {/* <a
                 href="https://forms.gle/your-form-id"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -100,7 +100,7 @@ const FloatingContact: React.FC = () => {
               >
                 <FaGoogle className="text-data" />
                 <span>Google Form</span>
-              </a>
+              </a> */}
             </div>
           </motion.div>
         )}
