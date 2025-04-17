@@ -6,7 +6,7 @@ import { BlogPost } from '@/types/blog';
 // Import the new client component
 import BlogClientContent from '@/components/blog/BlogClientContent';
 // Import data fetching source directly
-import { blogPosts, blogCategories } from '@/data/blog-data'; 
+import { blogPosts, blogCategories } from '@/data/blog-data';
 
 // Make the page component async for potential server-side operations (though direct import is sync here)
 export default async function BlogPage() {
@@ -16,10 +16,12 @@ export default async function BlogPage() {
   const initialBlogCategories: { id: string; label: string }[] = blogCategories;
 
   return (
-    <BlogClientContent 
-      initialBlogPosts={initialBlogPosts}
-      initialBlogCategories={initialBlogCategories} 
-    />
+    <>
+      <BlogClientContent 
+        initialBlogPosts={initialBlogPosts}
+        initialBlogCategories={initialBlogCategories} 
+      />
+    </>
   );
 }
 

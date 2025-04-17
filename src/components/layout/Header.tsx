@@ -12,7 +12,7 @@ const Header = () => {
     <header className="fixed top-0 left-0 right-0 z-50 bg-dark/80 backdrop-blur-sm">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
+          <Link href="/" className="flex items-center space-x-1">
             <Image
               src="/images/penguindb_front.png"
               alt="Logo"
@@ -21,6 +21,10 @@ const Header = () => {
             />
             <span className="text-xl font-bold text-white hidden md:block">Sanchit</span>
             <span className="text-xl font-bold text-data hidden md:block">Vijay</span>
+            <div className="flex items-center space-x-0 md:hidden">
+              <span className="text-xl font-bold text-white">S</span>
+              <span className="text-xl font-bold text-data">V</span>
+            </div>
           </Link>
           
           {/* Mobile Menu Button */}

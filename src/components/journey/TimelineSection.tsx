@@ -58,7 +58,7 @@ const timelineData: TimelineEntry[] = [
         description: 'Started exploring data science, ML and deep learning. Participated in Kaggle competitions and won multiple medals.',
         links: [{
           url: 'https://www.kaggle.com/sanchitvj',
-          text: <SiKaggle className="text-2xl text-data hover:text-data-light transition-colors" />
+          text: 'Kaggle'
         }]
       },
       {
@@ -317,7 +317,7 @@ const TimelineSection: React.FC = () => {
                       {activity.links?.map((link, index) => (
                         <Link key={index} href={link.url} target="_blank" rel="noopener noreferrer">
                           <span className="inline-block text-blue-400 hover:text-blue-300 text-sm transition-colors underline mb-2">
-                            {link.text} →
+                            {link.text}
                           </span>
                         </Link>
                       ))}

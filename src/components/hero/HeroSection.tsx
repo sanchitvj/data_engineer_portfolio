@@ -14,7 +14,10 @@ const HeroSection: React.FC = () => {
 
   if (!mounted) {
     return (
-      <section id="hero-section" className="h-[80vh] flex items-center justify-center relative overflow-hidden">
+      <section 
+        id="hero-section" 
+        className="min-h-[80vh] pt-20 flex items-start justify-center relative overflow-hidden px-4 pb-10"
+      >
         <div className="w-full max-w-4xl mx-auto bg-dark-100 rounded-lg shadow-xl border border-dark-200 p-6 relative z-10">
           <div className="font-mono">
             <h1 className="text-4xl md:text-6xl font-bold mb-4 text-white">
@@ -27,7 +30,10 @@ const HeroSection: React.FC = () => {
   }
 
   return (
-    <section id="hero-section" className="relative h-[80vh] flex items-center justify-center overflow-hidden">
+    <section 
+      id="hero-section" 
+      className="relative min-h-[80vh] pt-20 md:pt-24 flex items-start justify-center overflow-hidden px-4 pb-10"
+    >
       {/* Terminal Window */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -60,7 +66,7 @@ const HeroSection: React.FC = () => {
             </p>
             <p className="flex items-start mt-3">
               <span className="mr-2 text-data">🐧</span>
-              <span>My portfolio reflects penguins’ resilience—showcasing projects that turn data into intelligence.</span>
+              <span>My portfolio reflects penguins' resilience—showcasing projects that turn data into intelligence.</span>
             </p>
             <p className="flex items-start mt-3">
               <span className="mr-2 text-data">🐧</span>
