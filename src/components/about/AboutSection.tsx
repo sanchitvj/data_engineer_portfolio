@@ -48,7 +48,7 @@ const AboutSection: React.FC = () => {
   const [activePipeline, setActivePipeline] = useState<keyof Skills>('Data Sources');
 
   return (
-    <section id="about-section" className="py-20 relative">
+    <section id="about-section" className="py-36 relative">
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -63,33 +63,31 @@ const AboutSection: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="bg-black/70 backdrop-blur-sm p-6 rounded-lg border border-gray-700 mb-16 font-mono text-sm text-green-400 shadow-lg mx-auto"
+            className="bg-dark-100 rounded-lg shadow-xl border border-dark-200 p-6 mb-16 font-mono relative z-10"
           >
-            <div className="flex items-center mb-2">
-              <span className="text-blue-400 mr-2">user@penguin-os:</span>
-              <span className="text-white">~/about</span>
-              <span className="text-blue-400 ml-2">$</span>
+            <div className="flex items-center space-x-2 mb-4">
+              <div className="w-3 h-3 bg-red-500" />
+              <div className="w-3 h-3 bg-yellow-500" />
+              <div className="w-3 h-3 bg-green-500" />
             </div>
-            <div className="mb-2">
-              <span className="mr-2">🐧</span>
-              <span>whoami</span>
-            </div>
-            <div className="mb-4 text-gray-300">
-              <p>A data engineer who transforms raw information into structured insights, just like a penguin navigating through icy data lakes.</p>
-            </div>
-            <div className="mb-2">
-              <span className="mr-2">🐧</span>
-              <span>specialization</span>
-            </div>
-            <div className="mb-4 text-gray-300">
-              <p>Building robust data pipelines that help organizations make data-driven decisions. Diving deep into complex data ecosystems to surface clear, actionable insights.</p>
-            </div>
-            <div className="mb-2">
-              <span className="mr-2">🐧</span>
-              <span>philosophy</span>
-            </div>
-            <div className="text-gray-300">
-              <p>Much like penguins thrive in colonies, I believe in collaborative data engineering to navigate the vast ocean of data with confidence and precision.</p>
+            
+            <div className="font-mono">
+              <p className="text-data-light mb-2">$ <span className="text-white">what -i --do</span></p>
+              <div className="text-gray-300 mb-4">
+                <p>A data engineer who architects scalable pipelines transforming terabyte-scale information into actionable insights, enabling organizations to make smarter, data-driven decisions.</p>
+              </div>
+              
+              <p className="text-data-light mb-2">$ <span className="text-white">cat specialization.txt</span></p>
+              <div className="text-gray-300 mb-4">
+                <p>Building cloud-native data systems that process millions of records daily with high reliability. Optimizing workflows across AWS, Databricks, and Snowflake to deliver sub-second analytics.</p>
+              </div>
+              
+              <p className="text-data-light mb-2">$ <span className="text-white">cat philosophy.txt</span></p>
+              <div className="text-gray-300">
+                <p>I believe in automation-first engineering that balances technical excellence with business needs. Data solutions should reduce complexity while maximizing insights for all stakeholders.</p>
+              </div>
+              
+              <p className="text-data-light mt-4">$ <span className="text-white">_</span><span className="animate-[pulse_0.9s_ease-in-out_infinite] w-1.5 h-3.5 bg-white inline-block"></span></p>
             </div>
           </motion.div>
 
