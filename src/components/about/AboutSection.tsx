@@ -92,7 +92,7 @@ const AboutSection: React.FC = () => {
           </motion.div>
 
           {/* Metrics Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
+          {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
             {metrics.map((metric, index) => (
               <motion.div
                 key={index}
@@ -105,12 +105,12 @@ const AboutSection: React.FC = () => {
                 <div className="text-gray-400 text-sm font-sans">{metric.label}</div>
               </motion.div>
             ))}
-          </div>
+          </div> */}
 
           {/* Pipeline Visualization */}
           <div className="relative">
             {/* Pipeline Tabs - Updated styling */}
-            <div className="flex justify-center space-x-4 mb-8 flex-wrap px-2">
+            {/* <div className="flex justify-center space-x-4 mb-8 flex-wrap px-2">
               {(Object.keys(skills) as Array<keyof Skills>).map((category) => (
                 <button
                   key={category}
@@ -124,10 +124,10 @@ const AboutSection: React.FC = () => {
                   {category}
                 </button>
               ))}
-            </div>
+            </div> */}
 
             {/* Pipeline Content - Updated styling */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {(skills[activePipeline] as Skill[]).map((skill: Skill, index) => (
                 <motion.div
                   key={skill.name}
@@ -141,7 +141,7 @@ const AboutSection: React.FC = () => {
                   <p className="text-gray-400 text-sm font-sans">{skill.description}</p>
                 </motion.div>
               ))}
-            </div>
+            </div> */}
           </div>
         </motion.div>
       </div>
