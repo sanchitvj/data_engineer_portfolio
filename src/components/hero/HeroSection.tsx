@@ -16,7 +16,7 @@ const HeroSection: React.FC = () => {
     return (
       <section 
         id="hero-section" 
-        className="min-h-[80vh] pt-20 flex items-start justify-center relative overflow-hidden px-4 pb-10"
+        className="min-h-[80vh] pt-20 flex items-center justify-center relative overflow-hidden px-4 pb-10"
       >
         <div className="w-full max-w-4xl mx-auto bg-dark-100 rounded-lg shadow-xl border border-dark-200 p-6 relative z-10">
           <div className="font-mono">
@@ -32,7 +32,7 @@ const HeroSection: React.FC = () => {
   return (
     <section 
       id="hero-section" 
-      className="relative min-h-[80vh] pt-20 md:pt-24 flex items-start justify-center overflow-hidden px-4 pb-10"
+      className="relative min-h-[80vh] pt-20 md:pt-24 flex items-center justify-center overflow-hidden px-4 pb-10"
     >
       {/* Terminal Window */}
       <motion.div
@@ -62,15 +62,18 @@ const HeroSection: React.FC = () => {
           <div className="text-gray-300 font-mono text-sm">
             <p className="flex items-start mt-4">
               <span className="mr-2 text-data">🐧</span>
-              <span>As penguins navigate icy waters, I transform raw data into structured insights.</span>
+              {/* <span>As penguins navigate icy waters, I transform raw data into structured insights.</span> */}
+              <span>Penguins can hold their breath underwater for 20 minutes — I dive just as deep into data challenges.</span>
             </p>
             <p className="flex items-start mt-3">
               <span className="mr-2 text-data">🐧</span>
-              <span>My portfolio reflects penguins' resilience—showcasing projects that turn data into intelligence.</span>
+              {/* <span>My portfolio reflects penguins' resilience—showcasing projects that turn data into intelligence.</span> */}
+              <span>I chose penguins for my portfolio because they're methodical, collaborative, and surprisingly adaptable — like me.</span>
             </p>
             <p className="flex items-start mt-3">
               <span className="mr-2 text-data">🐧</span>
-              <span>Like penguins adapt to environments, I build pipelines connecting diverse data to analytics.</span>
+              {/* <span>Like penguins adapt to environments, I build pipelines connecting diverse data to analytics.</span> */}
+              <span>Just as penguin colonies thrive through organization, I help businesses succeed by arranging information wisely.</span>
             </p>
           </div>
           
