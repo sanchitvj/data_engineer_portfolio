@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaEnvelope, FaPhone, FaGoogle, FaLinkedin } from 'react-icons/fa';
+import Image from 'next/image';
 
 const FloatingContact: React.FC = () => {
   const [isContactOpen, setIsContactOpen] = useState(false);
@@ -54,17 +55,22 @@ const FloatingContact: React.FC = () => {
       }}
       onMouseLeave={() => {
         if (hoverTimeout) clearTimeout(hoverTimeout);
-        // Don't close if the contact menu was opened via click
       }}
     >
-      <motion.button
-        className="bg-data text-white p-4 rounded-full shadow-lg hover:bg-data-light transition-colors"
+      <motion.div
+        className="cursor-pointer"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={handleContactClick}
       >
-        <FaEnvelope className="text-2xl" />
-      </motion.button>
+        <Image 
+          src="/images/penguin_envelope.png" 
+          alt="Contact Penguin" 
+          width={64} 
+          height={64}
+          className="bg-transparent"
+        />
+      </motion.div>
 
       <AnimatePresence>
         {isContactOpen && (

@@ -296,21 +296,17 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
 
   return (
     <div className={`mb-12 ${className}`}>
-      <div className="flex items-center mb-4">
-        <div className="flex items-center">
-          <div className="w-3 h-3 rounded-full bg-data mr-3"></div>
-          <h3 className="text-xl font-semibold text-white">{title}</h3>
-        </div>
-        <motion.div 
-          className="ml-auto px-2 py-0.5 rounded-full bg-dark-300/40 backdrop-blur-sm border border-data/10"
-          animate={{ 
-            scale: isDragging ? 1.05 : 1 
-          }}
-        >
-          <span className="text-xs font-medium text-data">
-            {getRightmostVisibleCard()}/{totalItems}
-          </span>
-        </motion.div>
+      <div className="flex justify-between items-center mb-5">
+        <h3 className="text-xl font-bold text-white">{title}</h3>
+        
+        {/* Show pagination indicator if there are posts */}
+        {totalItems > 0 && (
+          <div className="ml-auto px-2 py-0.5 rounded-full bg-dark-300/40 backdrop-blur-sm border border-data/10">
+            <span className="text-xs font-medium text-data">
+              {getRightmostVisibleCard()}/{totalItems}
+            </span>
+          </div>
+        )}
       </div>
 
       <div 

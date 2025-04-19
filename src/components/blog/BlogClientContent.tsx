@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { FaSearch, FaFilter, FaStar, FaTimes, FaExternalLinkAlt } from 'react-icons/fa';
+import { FaSearch, FaFilter, FaStar, FaTimes, FaExternalLinkAlt, FaChevronLeft, FaChevronRight, FaChevronDown } from 'react-icons/fa';
 import { X } from 'lucide-react';
 import { BlogPost } from '@/types/blog'; // Keep BlogPost type
 import LazyComponent from '@/components/blog/LazyComponent';
@@ -94,6 +94,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [focusedSuggestionIndex, setFocusedSuggestionIndex] = useState(-1);
   const suggestionsRef = useRef<(HTMLButtonElement | null)[]>([]);
+  const [isLinkedInIframeFolded, setIsLinkedInIframeFolded] = useState(true); // Start folded
 
   // --- Start of useEffects and Handlers ---
 
@@ -621,7 +622,8 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
              
              {/* Lazy-load all SwipeStation components with IntersectionObserver for deferred loading */}
              <Suspense fallback={null}>
-               {/* LinkedIn Posts Station */}
+              
+               {/* LinkedIn Posts Station (Original) */}
                {shouldShowStation('linkedin-post') && (
                  <LazyComponent 
                    placeholder={
@@ -638,15 +640,14 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                        visibleCards={3} 
                        renderCard={(post, index) => ( 
                          <motion.div key={post.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }} className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-3 h-[230px] flex flex-col"> {/* Slightly taller */}
-                           {/* ... LinkedIn Card Content ... */}
-                            <div className="flex items-center mb-2"> <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0"> <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"> <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"></path> </svg> </div> <span className="ml-1.5 text-xs text-gray-400">LinkedIn Post</span> </div> <h4 className="font-semibold text-md mb-1.5 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> <p className="text-gray-300 text-xs mb-2 line-clamp-3 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt, 24), activeSearchTerms)} </p> <div className="mt-auto"> <div className="flex justify-between items-center text-xs text-gray-400 mb-1.5"> <span>{formatDate(post.date)}</span> <span>{post.readTime}</span> </div> <Link href={post.link} target="_blank" rel="noopener noreferrer" className="mt-1 text-blue-400 hover:text-blue-300 text-xs flex items-center group"> View on LinkedIn <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70 group-hover:opacity-100"/> </Link> </div>
+                           <div className="flex items-center mb-2"> <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0"> <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"> <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"></path> </svg> </div> <span className="ml-1.5 text-xs text-gray-400">LinkedIn Post</span> </div> <h4 className="font-semibold text-md mb-1.5 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> <p className="text-gray-300 text-xs mb-2 line-clamp-3 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt, 24), activeSearchTerms)} </p> <div className="mt-auto"> <div className="flex justify-between items-center text-xs text-gray-400 mb-1.5"> <span>{formatDate(post.date)}</span> <span>{post.readTime}</span> </div> <Link href={post.link} target="_blank" rel="noopener noreferrer" className="mt-1 text-blue-400 hover:text-blue-300 text-xs flex items-center group"> View on LinkedIn <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70 group-hover:opacity-100"/> </Link> </div>
                          </motion.div> 
                        )} 
                      /> 
                    </div>
                  </LazyComponent>
                )}
-              
+
                {/* Quick Notes Station */}
                {shouldShowStation('quick-note') && (
                  <LazyComponent 
@@ -664,8 +665,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                        visibleCards={3} 
                        renderCard={(post, index) => ( 
                          <motion.div key={post.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }} className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-4 h-[230px] flex flex-col"> {/* Slightly taller */}
-                           {/* ... Quick Note Card Content ... */}
-                            <h4 className="font-semibold text-lg mb-2 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> <p className="text-gray-300 text-sm mb-3 line-clamp-3 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt, 28), activeSearchTerms)} </p> <div className="mt-auto"> <div className="flex justify-between items-center text-xs text-gray-400 mb-2"> <span>{formatDate(post.date)}</span> <span>{post.readTime}</span> </div> <Link href={post.link} target="_blank" rel="noopener noreferrer" className="text-data hover:text-data-light text-sm group inline-flex items-center"> View Note <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70 group-hover:opacity-100"/> </Link> </div>
+                           <h4 className="font-semibold text-lg mb-2 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> <p className="text-gray-300 text-sm mb-3 line-clamp-3 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt, 28), activeSearchTerms)} </p> <div className="mt-auto"> <div className="flex justify-between items-center text-xs text-gray-400 mb-2"> <span>{formatDate(post.date)}</span> <span>{post.readTime}</span> </div> <Link href={post.link} target="_blank" rel="noopener noreferrer" className="text-data hover:text-data-light text-sm group inline-flex items-center"> View Note <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70 group-hover:opacity-100"/> </Link> </div>
                          </motion.div> 
                        )} 
                      /> 
@@ -690,7 +690,6 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                        visibleCards={2} 
                        renderCard={(post, index) => ( 
                          <motion.div key={post.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }} className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-6 h-[280px] flex flex-col">
-                           {/* ... Research Report Card Content ... */}
                            <h4 className="font-bold text-xl mb-3 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> <p className="text-gray-300 mb-4 line-clamp-4 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt, 36), activeSearchTerms)} </p> <div className="mt-auto"> <div className="flex justify-between items-center text-sm text-gray-400 mb-4"> <span>{formatDate(post.date)}</span> <span>{post.readTime}</span> </div> <Link href={post.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-3 py-1.5 bg-dark-300 hover:bg-data/20 text-data rounded-lg transition-colors text-sm group"> Read Report <FaExternalLinkAlt className="w-3 h-3 ml-1.5 opacity-70 group-hover:opacity-100"/> </Link> </div>
                          </motion.div> 
                        )} 
@@ -716,11 +715,141 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                        visibleCards={1} 
                        renderCard={(post, index) => ( 
                          <motion.div key={post.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }} className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all overflow-hidden h-[320px]">
-                           {/* ... Comprehensive Study Card Content ... */}
-                            <div className="flex flex-col md:flex-row h-full"> {post.image && ( <div className="md:w-1/3 overflow-hidden relative"> <Image src={post.image} alt={post.title} width={400} height={300} className="w-full h-48 md:h-full object-cover transition-transform duration-300 hover:scale-105" /> </div> )} <div className={`p-6 ${post.image ? 'md:w-2/3' : 'w-full'} flex flex-col`}> <h4 className="font-bold text-xl mb-3 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> <p className="text-gray-300 mb-4 line-clamp-5 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt, 50), activeSearchTerms)} </p> <div className="mt-auto"> <div className="flex justify-between items-center text-sm text-gray-400 mb-4"> <span>{formatDate(post.date)}</span> <span>{post.readTime}</span> </div> <Link href={post.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-4 py-2 bg-dark-300 hover:bg-data/20 text-data rounded-lg transition-colors group"> Read Full Study <FaExternalLinkAlt className="w-3 h-3 ml-1.5 opacity-70 group-hover:opacity-100"/> </Link> </div> </div> </div>
+                           <div className="flex flex-col md:flex-row h-full"> {post.image && ( <div className="md:w-1/3 overflow-hidden relative"> <Image src={post.image} alt={post.title} width={400} height={300} className="w-full h-48 md:h-full object-cover transition-transform duration-300 hover:scale-105" /> </div> )} <div className={`p-6 ${post.image ? 'md:w-2/3' : 'w-full'} flex flex-col`}> <h4 className="font-bold text-xl mb-3 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> <p className="text-gray-300 mb-4 line-clamp-5 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt, 50), activeSearchTerms)} </p> <div className="mt-auto"> <div className="flex justify-between items-center text-sm text-gray-400 mb-4"> <span>{formatDate(post.date)}</span> <span>{post.readTime}</span> </div> <Link href={post.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-4 py-2 bg-dark-300 hover:bg-data/20 text-data rounded-lg transition-colors group"> Read Full Study <FaExternalLinkAlt className="w-3 h-3 ml-1.5 opacity-70 group-hover:opacity-100"/> </Link> </div> </div> </div>
                          </motion.div> 
                        )} 
                      /> 
+                   </div>
+                 </LazyComponent>
+               )}
+
+               {/* LinkedIn Iframe Posts Station (Moved to Last) */}
+               {shouldShowStation('linkedin-iframe') && (
+                 <LazyComponent 
+                   placeholder={
+                     <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-12 flex items-center justify-center">
+                       <div className="text-gray-500">Loading LinkedIn Posts...</div>
+                     </div>
+                   }
+                 >
+                   <div className="mb-12">
+                     {/* Folding Header */}
+                     <div className="flex justify-between items-center mb-5 cursor-pointer" onClick={() => setIsLinkedInIframeFolded(!isLinkedInIframeFolded)}>
+                       <h3 className="text-xl font-bold text-white">LinkedIn Posts</h3>
+                       <div className="flex items-center space-x-4">
+                         {/* Pagination Indicator */}
+                         <div className="px-2 py-0.5 rounded-full bg-dark-300/40 backdrop-blur-sm border border-data/10">
+                           <span className="text-xs font-medium text-data">
+                             {filteredPosts.filter(p => p.type === 'linkedin-iframe').length} posts
+                           </span>
+                         </div>
+                         {/* Animated Arrow */}
+                         <motion.div 
+                           animate={{ rotate: isLinkedInIframeFolded ? 0 : 180 }}
+                           transition={{ duration: 0.3 }}
+                           className="text-data"
+                         >
+                           <FaChevronDown /> 
+                         </motion.div>
+                       </div>
+                     </div>
+
+                     {/* Foldable Content */}
+                     <AnimatePresence initial={false}>
+                       {!isLinkedInIframeFolded && (
+                         <motion.div
+                           key="content"
+                           initial="collapsed"
+                           animate="open"
+                           exit="collapsed"
+                           variants={{
+                             open: { opacity: 1, height: "auto" },
+                             collapsed: { opacity: 0, height: 0 }
+                           }}
+                           transition={{ duration: 0.4, ease: [0.04, 0.62, 0.23, 0.98] }}
+                           className="overflow-hidden"
+                         >
+                           <SwipeStation 
+                             key={`linkedin-iframe-${searchStateKey}-${filteredPosts.filter(post => post.type === 'linkedin-iframe').length}`} 
+                             title="" // Title moved to folding header 
+                             posts={filteredPosts.filter(post => post.type === 'linkedin-iframe')} 
+                             visibleCards={1} // Show one card at a time 
+                             autoplay={false}
+                             renderCard={(post, index) => {
+                               // Extract LinkedIn post ID from the embed URL
+                               const postIdMatch = post.link.match(/urn:li:share:(\d+)/);
+                               const postId = postIdMatch ? postIdMatch[1] : '';
+                               const linkedinUrl = postId ? `https://www.linkedin.com/posts/sanchit-vijay_activity-${postId}` : post.link;
+                               
+                               // Set appropriate height based on the post ID
+                               const postHeight = (() => {
+                                 switch(postId) {
+                                   case '7311566965100158979': return 671;
+                                   case '7311910318933192707': return 671;
+                                   case '7305702724786868225': return 720;
+                                   case '7313433102393962496': return 505;
+                                   default: return 671; // Default height for the old post or others
+                                 }
+                               })();
+                               
+                               return (
+                                 <motion.div 
+                                   key={post.id} 
+                                   initial={{ opacity: 0, y: 20 }} 
+                                   animate={{ opacity: 1, y: 0 }} 
+                                   transition={{ duration: 0.3, delay: index * 0.05 }} 
+                                   className="relative mb-2 rounded-lg overflow-hidden flex flex-col items-center mx-auto"
+                                   style={{ width: "504px", maxWidth: "100%" }} // Original size, centered
+                                 >
+                                   <div className="mb-2 text-xs text-white opacity-70 bg-dark-300/50 px-2 py-0.5 rounded-full">
+                                     Post {index + 1} of {filteredPosts.filter(p => p.type === 'linkedin-iframe').length}
+                                   </div>
+                                   <div className="w-full relative">
+                                     <iframe 
+                                       src={`${post.link}?collapsed=1`} 
+                                       height={postHeight}
+                                       width="504" 
+                                       frameBorder="0" 
+                                       allowFullScreen
+                                       title="LinkedIn post"
+                                       loading="lazy"
+                                     ></iframe>
+                                     {/* Overlay for click handling */}
+                                     <a 
+                                       href={linkedinUrl}
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       className="absolute inset-0 z-10 flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-10 transition-all rounded-lg"
+                                     >
+                                       <span className="sr-only">View on LinkedIn</span>
+                                     </a>
+                                   </div>
+                                   <div className="mt-2 flex justify-between w-full">
+                                     <div className="flex items-center space-x-2 text-gray-400 text-xs">
+                                       <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center">
+                                         <svg className="w-3 h-3 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                           <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"></path>
+                                         </svg>
+                                       </div>
+                                       <span>LinkedIn post</span>
+                                     </div>
+                                     <a 
+                                       href={linkedinUrl}
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       className="text-blue-400 hover:text-blue-300 text-xs flex items-center group"
+                                     >
+                                       View on LinkedIn <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70 group-hover:opacity-100"/>
+                                     </a>
+                                   </div>
+                                   {/* Side arrows removed from card, rely on SwipeStation arrows */}
+                                 </motion.div> 
+                               );
+                             }} 
+                           /> 
+                         </motion.div>
+                       )}
+                     </AnimatePresence>
                    </div>
                  </LazyComponent>
                )}

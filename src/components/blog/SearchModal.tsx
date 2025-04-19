@@ -70,7 +70,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-[10vh] sm:pt-[8vh] bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-[15vh] sm:pt-[12vh] bg-black/80 backdrop-blur-sm"
           onClick={() => setShowSearchModal(false)}
         >
           <motion.div

@@ -23,7 +23,58 @@ export const blogCategories = [
 
 // Blog posts data
 export const blogPosts: BlogPost[] = [
-  // LinkedIn Posts
+  // LinkedIn Iframe Posts
+  {
+    id: 'linkedin-iframe-1',
+    title: 'Data Engineers, I See You',
+    excerpt: 'For the data engineers crafting elegant pipelines while fending off requests to "just dump it in a data lake".',
+    date: '2024-08-30',
+    readTime: '2 min',
+    category: ['data-engineering', 'humor'],
+    type: 'linkedin-iframe',
+    link: 'https://www.linkedin.com/embed/feed/update/urn:li:share:7311566965100158979'
+  },
+  {
+    id: 'linkedin-iframe-2',
+    title: 'Data Engineering Efficiency with Pandas',
+    excerpt: 'Tips for optimizing data pipeline performance in Python.',
+    date: '2024-09-01',
+    readTime: '2 min',
+    category: ['data-engineering', 'python'],
+    type: 'linkedin-iframe',
+    link: 'https://www.linkedin.com/embed/feed/update/urn:li:share:7311910318933192707'
+  },
+  {
+    id: 'linkedin-iframe-3',
+    title: 'Sports Analytics Insights',
+    excerpt: 'How data pipelines are transforming sports analytics and decision making.',
+    date: '2024-08-10',
+    readTime: '3 min',
+    category: ['data-engineering', 'sports-analytics'],
+    type: 'linkedin-iframe',
+    link: 'https://www.linkedin.com/embed/feed/update/urn:li:share:7305702724786868225'
+  },
+  {
+    id: 'linkedin-iframe-4',
+    title: 'Tuning Spark for Real-Time Processing',
+    excerpt: 'Essential configuration tips for Apache Spark in real-time processing scenarios.',
+    date: '2024-09-05',
+    readTime: '2 min',
+    category: ['data-engineering', 'spark'],
+    type: 'linkedin-iframe',
+    link: 'https://www.linkedin.com/embed/feed/update/urn:li:share:7313433102393962496'
+  },
+  // Original linkedin-iframe-1 (now redundant but keeping for backward compatibility)
+  {
+    id: 'linkedin-iframe-old',
+    title: 'Featured LinkedIn Post',
+    excerpt: 'Check out this featured LinkedIn post about data engineering insights and best practices.',
+    date: '2024-09-15',
+    readTime: '3 min',
+    category: ['data-engineering'],
+    type: 'linkedin-iframe',
+    link: 'https://www.linkedin.com/embed/feed/update/urn:li:share:7317758551194550272'
+  },
   {
     id: 'linkedin-1',
     title: 'Tuning Spark for Real-Time Risk Detection',

@@ -34,3 +34,5 @@ yarn-error.log*
 .env.production.local
 
 .vscode
+**.pdf
+**portfolio_gcp.json

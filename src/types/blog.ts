@@ -5,7 +5,7 @@ export interface BlogPost {
   date: string;
   readTime: string;
   category: string | string[];
-  type: 'linkedin-post' | 'quick-note' | 'research-report' | 'comprehensive-study';
+  type: 'linkedin-post' | 'quick-note' | 'research-report' | 'comprehensive-study' | 'linkedin-iframe';
   link: string;
   image?: string;
   featured?: boolean;
