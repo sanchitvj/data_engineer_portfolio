@@ -1,0 +1,57 @@
+name: Deploy Lambda
+
+on:
+  push:
+    branches:
+      - main
+
+    paths:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.AWS_FEDERATED_USER_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image to ECR
+        env:
+          ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          ECR_REPOSITORY: 
+          IMAGE_TAG: latest
+          OPALHTM_GCP_CREDS: ${{ secrets._GCP_CREDS }}
+        run: |
+          echo "${_GCP_CREDS}" > src/......lambda_functions/_gcp.json
+          cat src/......lambda_functions/_gcp.json | jq .
+          docker buildx build --platform linux/amd64 --provenance=false -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG --build-arg GITHUB_TOKEN=${{ secrets._ACCESS_TOKEN }} -f docker_images/_lambda.Dockerfile --push .
+
+      - name: Deploy Lambda function
+        env:
+          ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          ECR_REPOSITORY: _lambda_img
+          IMAGE_TAG: latest
+        run: |
+          aws lambda update-function-code --function-name  --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Retry Update Lambda Configuration
+        run: |
+          for i in {1..5}; do
+            aws lambda update-function-configuration --function-name  --environment "Variables={}" && break || sleep 15;
+          done
