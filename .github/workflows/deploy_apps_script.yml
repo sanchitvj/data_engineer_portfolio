@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - src/penguindb/apps_script/**
+      - .github/workflows/deploy_apps_script.yml
 
 jobs:
   deploy:

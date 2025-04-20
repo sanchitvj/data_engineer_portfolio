@@ -52,10 +52,10 @@ jobs:
           ECR_REPOSITORY: content_lambda
           IMAGE_TAG: latest
         run: |
-          aws lambda update-function-code --function-name  --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          aws lambda update-function-code --function-name process_content --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
       - name: Retry Update Lambda Configuration
         run: |
           for i in {1..5}; do
-            aws lambda update-function-configuration --function-name  --environment "Variables={}" && break || sleep 15;
+            aws lambda update-function-configuration --function-name process_content --environment "Variables={}" && break || sleep 15;
           done
