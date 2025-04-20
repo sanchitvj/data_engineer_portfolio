@@ -28,8 +28,8 @@ jobs:
         env:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
         run: |
-          # Create .clasprc.json in the Apps Script directory
-          echo '${{ secrets.CLASP_CREDENTIALS }}' > src/penguindb/apps_script/.clasprc.json
+          # Create .clasprc.json in the Apps Script directory using printf
+          printf "%s" "$CLASP_CREDENTIALS" > src/penguindb/apps_script/.clasprc.json
           chmod 600 src/penguindb/apps_script/.clasprc.json
           
       - name: Navigate to Apps Script directory and push changes
