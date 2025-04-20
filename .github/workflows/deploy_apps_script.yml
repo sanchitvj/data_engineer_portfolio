@@ -3,7 +3,7 @@ name: Deploy Google Apps Script
 on:
   push:
     branches:
-      - main
+      - content
     paths:
       - src/penguindb/apps_script/**
       - .github/workflows/deploy_apps_script.yml
@@ -64,7 +64,7 @@ jobs:
             if git diff ${{ github.event.before }} ${{ github.sha }} -- Code.js | grep -q "API_GATEWAY_URL"; then
               echo "Creating new deployment version..."
               # Update the API Gateway URL in Code.js with the actual URL from secrets
-              sed -i 's|YOUR_API_GATEWAY_URL_HERE|${{ secrets.API_GATEWAY_URL }}|g' Code.js
+              sed -i 's|API_GATEWAY_URL|${{ secrets.API_GATEWAY_URL }}|g' Code.js
               clasp push -f
               
               # Create new deployment version
