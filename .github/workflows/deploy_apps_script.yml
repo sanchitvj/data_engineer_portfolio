@@ -129,16 +129,25 @@ jobs:
           echo "Files in current directory:"
           ls -la . | grep clasp
           
-      - name: Configure Clasp and Push Changes
+      - name: Fix Clasp Configuration and Push Changes
         working-directory: ./src/penguindb/apps_script
         run: |
           # Debug: Check authentication status
           echo "Checking clasp login status..."
           clasp login --status
           
-          # Check clasp configuration
-          echo "Checking clasp configuration..."
+          # Fix the .clasp.json file to point to the correct directory
+          echo "Fixing .clasp.json to use current directory..."
+          cp .clasp.json .clasp.json.backup
+          jq '.rootDir = "."' .clasp.json > .clasp.json.tmp && mv .clasp.json.tmp .clasp.json
+          
+          # Check updated clasp configuration
+          echo "Checking updated clasp configuration..."
           clasp setting
+          
+          # List the files that will be pushed
+          echo "Files that will be pushed:"
+          ls -la
           
           # Attempt to push
           echo "Pushing changes to Google Apps Script..."
