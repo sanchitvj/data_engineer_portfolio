@@ -7,7 +7,7 @@ RUN yum install -y git
 
 # Set the working directory
 WORKDIR /app
-RUN git clone https://github.com/sanchitvj/data_engineering_portfolio.git
+RUN git clone https://github.com/sanchitvj/data_engineer_portfolio.git
 WORKDIR /app/data_engineering_portfolio
 RUN git checkout content
 RUN pip install .
