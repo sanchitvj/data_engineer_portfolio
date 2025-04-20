@@ -28,22 +28,9 @@ jobs:
         env:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
         run: |
-          # Create .clasprc.json with proper format
-          echo '{
-            "token": {
-              "access_token": "'"$CLASP_CREDENTIALS"'",
-              "refresh_token": "'"$CLASP_CREDENTIALS"'",
-              "scope": "https://www.googleapis.com/auth/script.projects",
-              "token_type": "Bearer",
-              "expiry_date": 9999999999999
-            },
-            "oauth2ClientSettings": {
-              "clientId": "8675309",
-              "clientSecret": "GOCSPX-1234567890",
-              "redirectUri": "http://localhost"
-            },
-            "isLocalCreds": false
-          }' > ~/.clasprc.json
+          # Create .clasprc.json with the entire credentials
+          echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.config/.clasprc.json
+          chmod 600 ~/.config/.clasprc.json
           
       - name: Navigate to Apps Script directory and push changes
         working-directory: ./src/penguindb/apps_script
