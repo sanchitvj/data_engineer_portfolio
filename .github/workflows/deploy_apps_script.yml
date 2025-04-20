@@ -24,7 +24,7 @@ jobs:
       - name: Install Required Packages
         run: |
           npm install -g @google/clasp
-          npm install -g googleapis
+          npm install googleapis  # Install locally, not globally
           
       - name: Create Temporary Token Authentication
         env:
