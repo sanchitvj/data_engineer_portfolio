@@ -29,10 +29,8 @@ jobs:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
         run: |
           # Create .clasprc.json in the Apps Script directory using printf
-          # printf "%s" "$CLASP_CREDENTIALS" > src/penguindb/apps_script/.clasprc.json
-          # chmod 600 src/penguindb/apps_script/.clasprc.json
-          echo "$CLASP_CREDENTIALS" > ~/.clasprc.json
-          chmod 600 ~/.clasprc.json
+          printf "%s" "$CLASP_CREDENTIALS" > src/penguindb/apps_script/.clasprc.json
+          chmod 600 src/penguindb/apps_script/.clasprc.json
           
       - name: Navigate to Apps Script directory and push changes
         working-directory: ./src/penguindb/apps_script
@@ -44,8 +42,7 @@ jobs:
           # Push changes to Google Apps Script using explicit auth path
           echo "Pushing changes to Google Apps Script..."
           # The path is relative to the working directory now
-          clasp push -f
-          # --auth ./.clasprc.json
+          clasp push -f --auth ./.clasprc.json
           
       - name: Create deployment (version) if needed
         working-directory: ./src/penguindb/apps_script
