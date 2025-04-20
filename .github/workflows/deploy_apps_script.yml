@@ -24,19 +24,50 @@ jobs:
       - name: Install @google/clasp globally
         run: npm install -g @google/clasp
 
-      - name: Authenticate with Google using Node.js
+      - name: Extract credentials and format new .clasprc.json
         env:
-          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+          CLASP_CLIENT_ID: ${{ secrets.CLASP_CLIENT_ID }} 
+          CLASP_CLIENT_SECRET: ${{ secrets.CLASP_CLIENT_SECRET }}
+          CLASP_REFRESH_TOKEN: ${{ secrets.CLASP_REFRESH_TOKEN }}
         run: |
-          echo "Creating .clasprc.json using Node.js..."
-          # Use Node.js to write the file, potentially handling JSON better
-          node -e "require('fs').writeFileSync('src/penguindb/apps_script/.clasprc.json', process.env.CLASP_CREDENTIALS)"
-          chmod 600 src/penguindb/apps_script/.clasprc.json
-          echo ".clasprc.json created."
+          # Create a simple script to generate a properly formatted .clasprc.json
+          cat > create_credentials.js << 'EOF'
+          const fs = require('fs');
           
-          echo "--- Verifying .clasprc.json content (raw) ---"
-          cat src/penguindb/apps_script/.clasprc.json
-          echo "--- End raw content ---"
+          // Create the expected structure
+          const credentials = {
+            "tokens": {
+              "default": {
+                "client_id": process.env.CLASP_CLIENT_ID || "1072944905499-vm2v2i5dvn0a0d2o4ca36i1vge8cvbn0.apps.googleusercontent.com",
+                "client_secret": process.env.CLASP_CLIENT_SECRET || "v6V3fKV_zWU7iw1DrpO1rknX",
+                "refresh_token": process.env.CLASP_REFRESH_TOKEN,
+                "access_token": "ya29.placeholder-token-will-be-refreshed-automatically",
+                "type": "authorized_user"
+              }
+            }
+          };
+          
+          // Write to both locations for maximum compatibility
+          fs.writeFileSync('src/penguindb/apps_script/.clasprc.json', JSON.stringify(credentials, null, 2));
+          fs.writeFileSync(process.env.HOME + '/.clasprc.json', JSON.stringify(credentials, null, 2));
+          
+          console.log('Created .clasprc.json files in both local and home directories');
+          console.log('Credentials structure (redacted):');
+          const redactedCreds = JSON.parse(JSON.stringify(credentials));
+          if (redactedCreds.tokens && redactedCreds.tokens.default) {
+            redactedCreds.tokens.default.client_id = redactedCreds.tokens.default.client_id.substring(0, 8) + '...';
+            redactedCreds.tokens.default.client_secret = redactedCreds.tokens.default.client_secret.substring(0, 8) + '...';
+            redactedCreds.tokens.default.refresh_token = redactedCreds.tokens.default.refresh_token.substring(0, 8) + '...';
+          }
+          console.log(JSON.stringify(redactedCreds, null, 2));
+          EOF
+          
+          # Run the script to create the credential files
+          node create_credentials.js
+          
+          # Set proper permissions
+          chmod 600 src/penguindb/apps_script/.clasprc.json
+          chmod 600 ~/.clasprc.json
           
       - name: Navigate to Apps Script directory and push changes
         working-directory: ./src/penguindb/apps_script
@@ -45,10 +76,9 @@ jobs:
           echo "Checking clasp configuration..."
           clasp setting
           
-          # Push changes to Google Apps Script using explicit auth path
+          # Try push without explicit auth flag first (using ~/.clasprc.json)
           echo "Pushing changes to Google Apps Script..."
-          # The path is relative to the working directory now
-          clasp push -f --auth ./.clasprc.json
+          clasp push -f
           
       - name: Create deployment (version) if needed
         working-directory: ./src/penguindb/apps_script
@@ -60,17 +90,15 @@ jobs:
               # Update the API Gateway URL in Code.js with the actual URL from secrets
               sed -i 's|API_GATEWAY_URL|${{ secrets.API_GATEWAY_URL }}|g' Code.js
               
-              # Push again with the updated URL, using explicit auth path
-              clasp push -f --auth ./.clasprc.json
+              # Push again with the updated URL
+              clasp push -f
               
               # Create new deployment version
               DEPLOY_ID=$(clasp deployments | grep "Current" | awk '{print $2}')
               if [ -n "$DEPLOY_ID" ]; then
-                # Use explicit auth path for redeploy too
-                clasp redeploy --auth ./.clasprc.json $DEPLOY_ID "Automatic update - ${{ github.sha }}"
+                clasp redeploy $DEPLOY_ID "Automatic update - ${{ github.sha }}"
               else
-                # Use explicit auth path for deploy too
-                clasp deploy --auth ./.clasprc.json -d "Automatic update - ${{ github.sha }}"
+                clasp deploy -d "Automatic update - ${{ github.sha }}"
               fi
             fi
           fi 
