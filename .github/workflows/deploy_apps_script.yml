@@ -1,0 +1,174 @@
+name: Deploy Google Apps Script
+
+on:
+  push:
+    branches:
+      - content
+    paths:
+      - src/penguindb/apps_script/**
+      - .github/workflows/deploy_apps_script.yml
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Install Required Packages
+        run: |
+          npm install -g @google/clasp
+          npm install googleapis
+          
+      - name: Create Proper Clasp Credentials File
+        env:
+          CLIENT_ID: ${{ secrets.CLASP_CLIENT_ID }} 
+          CLIENT_SECRET: ${{ secrets.CLASP_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CLASP_REFRESH_TOKEN }}
+        run: |
+          # Create a Node.js script to fetch a new access token and create .clasprc.json
+          cat > create_credentials.js << 'EOF'
+          const { google } = require('googleapis');
+          const fs = require('fs');
+          const os = require('os');
+          const path = require('path');
+          
+          // Get environment variables
+          const clientId = process.env.CLIENT_ID;
+          const clientSecret = process.env.CLIENT_SECRET;
+          const refreshToken = process.env.REFRESH_TOKEN;
+          
+          async function createClasprcJson() {
+            const oauth2Client = new google.auth.OAuth2(
+              clientId,
+              clientSecret,
+              'urn:ietf:wg:oauth:2.0:oob'
+            );
+            
+            oauth2Client.setCredentials({
+              refresh_token: refreshToken
+            });
+            
+            try {
+              const { token: accessToken } = await oauth2Client.getAccessToken();
+              console.log('Successfully obtained new access token');
+              
+              // Create proper .clasprc.json structure
+              const clasprc = {
+                token: {
+                  access_token: accessToken,
+                  refresh_token: refreshToken,
+                  scope: 'https://www.googleapis.com/auth/script.projects https://www.googleapis.com/auth/script.deployments https://www.googleapis.com/auth/drive.metadata.readonly',
+                  token_type: 'Bearer',
+                  expiry_date: Date.now() + 3600000 // 1 hour from now
+                },
+                oauth2ClientSettings: {
+                  clientId: clientId,
+                  clientSecret: clientSecret,
+                  redirectUri: 'http://localhost'
+                },
+                isLocalCreds: false
+              };
+              
+              // Write to both home directory and local directory
+              const homeClasprcPath = path.join(os.homedir(), '.clasprc.json');
+              const localClasprcPath = './.clasprc.json';
+              
+              fs.writeFileSync(homeClasprcPath, JSON.stringify(clasprc, null, 2));
+              fs.writeFileSync(localClasprcPath, JSON.stringify(clasprc, null, 2));
+              
+              console.log('Created .clasprc.json files in home and local directories');
+              
+              // Also create the old-style .clasprc.json for maximum compatibility
+              const oldStyleClasprc = {
+                "token": accessToken,
+                "oauth2ClientSettings": {
+                  "clientId": clientId,
+                  "clientSecret": clientSecret,
+                  "redirectUri": "http://localhost"
+                },
+                "refresh_token": refreshToken,
+                "id_token": null,
+                "tokenExpiry": Math.floor(Date.now() / 1000) + 3600, // 1 hour from now in seconds
+                "login": {
+                  "name": "",
+                  "photoLink": ""
+                }
+              };
+              
+              fs.writeFileSync(path.join(os.homedir(), '.clasprc'), JSON.stringify(oldStyleClasprc, null, 2));
+              console.log('Created old-style .clasprc file for compatibility');
+              
+              return clasprc;
+            } catch (error) {
+              console.error('Error creating credentials:', error);
+              process.exit(1);
+            }
+          }
+          
+          createClasprcJson();
+          EOF
+          
+          # Run the script to create credential files
+          node create_credentials.js
+          
+          # Set proper permissions
+          chmod 600 ~/.clasprc.json
+          chmod 600 ~/.clasprc
+          chmod 600 ./.clasprc.json
+          
+          # Debug: Show what was created
+          echo "Files in home directory:"
+          ls -la ~ | grep clasp
+          echo "Files in current directory:"
+          ls -la . | grep clasp
+          
+      - name: Fix Clasp Configuration and Push Changes
+        working-directory: ./src/penguindb/apps_script
+        run: |
+          # Debug: Check authentication status
+          echo "Checking clasp login status..."
+          clasp login --status
+          
+          # Fix the .clasp.json file to point to the correct directory
+          echo "Fixing .clasp.json to use current directory..."
+          cp .clasp.json .clasp.json.backup
+          jq '.rootDir = "."' .clasp.json > .clasp.json.tmp && mv .clasp.json.tmp .clasp.json
+          
+          # Check updated clasp configuration
+          echo "Checking updated clasp configuration..."
+          clasp setting
+          
+          # List the files that will be pushed
+          echo "Files that will be pushed:"
+          ls -la
+          
+          # Attempt to push
+          echo "Pushing changes to Google Apps Script..."
+          clasp push -f
+          
+          # Check if there are changes to Code.js that need API_GATEWAY_URL updated
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "Code.js"; then
+            if git diff ${{ github.event.before }} ${{ github.sha }} -- Code.js | grep -q "API_GATEWAY_URL"; then
+              echo "Creating new deployment version..."
+              # Update the API Gateway URL in Code.js
+              sed -i 's|API_GATEWAY_URL|${{ secrets.API_GATEWAY_URL }}|g' Code.js
+              
+              # Push again with updated URL
+              clasp push -f
+              
+              # Create new deployment version
+              DEPLOY_ID=$(clasp deployments | grep "Current" | awk '{print $2}')
+              if [ -n "$DEPLOY_ID" ]; then
+                clasp redeploy $DEPLOY_ID "Automatic update - ${{ github.sha }}"
+              else
+                clasp deploy -d "Automatic update - ${{ github.sha }}"
+              fi
+            fi
+          fi 
