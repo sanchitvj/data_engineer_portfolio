@@ -39,9 +39,10 @@ jobs:
           echo "Checking clasp configuration..."
           clasp setting
           
-          # Push changes to Google Apps Script
+          # Push changes to Google Apps Script using explicit auth path
           echo "Pushing changes to Google Apps Script..."
-          clasp push -f
+          # The path is relative to the working directory now
+          clasp push -f --auth ./.clasprc.json
           
       - name: Create deployment (version) if needed
         working-directory: ./src/penguindb/apps_script
@@ -52,14 +53,17 @@ jobs:
               echo "Creating new deployment version..."
               # Update the API Gateway URL in Code.js with the actual URL from secrets
               sed -i 's|API_GATEWAY_URL|${{ secrets.API_GATEWAY_URL }}|g' Code.js
-              clasp push -f
+              # Push again with the updated URL, using explicit auth path
+              clasp push -f --auth ./.clasprc.json
               
               # Create new deployment version
               DEPLOY_ID=$(clasp deployments | grep "Current" | awk '{print $2}')
               if [ -n "$DEPLOY_ID" ]; then
-                clasp redeploy $DEPLOY_ID "Automatic update - ${{ github.sha }}"
+                # Use explicit auth path for redeploy too
+                clasp redeploy --auth ./.clasprc.json $DEPLOY_ID "Automatic update - ${{ github.sha }}"
               else
-                clasp deploy -d "Automatic update - ${{ github.sha }}"
+                # Use explicit auth path for deploy too
+                clasp deploy --auth ./.clasprc.json -d "Automatic update - ${{ github.sha }}"
               fi
             fi
           fi 
