@@ -3,10 +3,9 @@ name: Deploy Google Apps Script
 on:
   push:
     branches:
-      - content
+      - main
     paths:
       - src/penguindb/apps_script/**
-      - .github/workflows/deploy_apps_script.yml
 
 jobs:
   deploy:
@@ -25,8 +24,25 @@ jobs:
         run: npm install -g @google/clasp
         
       - name: Authenticate with Google
+        env:
+          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
         run: |
-          echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.clasprc.json
+          # Create .clasprc.json with proper format
+          echo '{
+            "token": {
+              "access_token": "'"$CLASP_CREDENTIALS"'",
+              "refresh_token": "'"$CLASP_CREDENTIALS"'",
+              "scope": "https://www.googleapis.com/auth/script.projects",
+              "token_type": "Bearer",
+              "expiry_date": 9999999999999
+            },
+            "oauth2ClientSettings": {
+              "clientId": "8675309",
+              "clientSecret": "GOCSPX-1234567890",
+              "redirectUri": "http://localhost"
+            },
+            "isLocalCreds": false
+          }' > ~/.clasprc.json
           
       - name: Navigate to Apps Script directory and push changes
         working-directory: ./src/penguindb/apps_script
@@ -47,7 +63,7 @@ jobs:
             if git diff ${{ github.event.before }} ${{ github.sha }} -- Code.js | grep -q "API_GATEWAY_URL"; then
               echo "Creating new deployment version..."
               # Update the API Gateway URL in Code.js with the actual URL from secrets
-              sed -i 's|API_GATEWAY_URL|${{ secrets.API_GATEWAY_URL }}|g' Code.js
+              sed -i 's|YOUR_API_GATEWAY_URL_HERE|${{ secrets.API_GATEWAY_URL }}|g' Code.js
               clasp push -f
               
               # Create new deployment version
