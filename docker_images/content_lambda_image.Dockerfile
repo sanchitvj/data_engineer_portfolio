@@ -12,7 +12,7 @@ WORKDIR /app/data_engineering_portfolio
 RUN git checkout content
 RUN pip install .
 
-COPY src/penguindb/lambda_functions/ ${LAMBDA_TASK_ROOT}/
+COPY src/penguindb/lambda_function/ ${LAMBDA_TASK_ROOT}/
 
 WORKDIR ${LAMBDA_TASK_ROOT}
 # Set the CMD to your handler (could also be done as a parameter override outside of the Dockerfile)
