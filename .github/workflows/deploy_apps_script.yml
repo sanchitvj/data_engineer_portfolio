@@ -1,0 +1,61 @@
+name: Deploy Google Apps Script
+
+on:
+  push:
+    branches:
+      - content
+    paths:
+      - src/penguindb/apps_script/**
+      - .github/workflows/deploy_apps_script.yml
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Install @google/clasp globally
+        run: npm install -g @google/clasp
+        
+      - name: Authenticate with Google
+        run: |
+          echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.clasprc.json
+          
+      - name: Navigate to Apps Script directory and push changes
+        working-directory: ./src/penguindb/apps_script
+        run: |
+          # Validate clasp configuration
+          echo "Checking clasp configuration..."
+          clasp setting
+          
+          # Push changes to Google Apps Script
+          echo "Pushing changes to Google Apps Script..."
+          clasp push -f
+          
+      - name: Create deployment (version) if needed
+        working-directory: ./src/penguindb/apps_script
+        run: |
+          # Only create a new deployment/version if API_GATEWAY_URL has changed
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "Code.js"; then
+            if git diff ${{ github.event.before }} ${{ github.sha }} -- Code.js | grep -q "API_GATEWAY_URL"; then
+              echo "Creating new deployment version..."
+              # Update the API Gateway URL in Code.js with the actual URL from secrets
+              sed -i 's|API_GATEWAY_URL|${{ secrets.API_GATEWAY_URL }}|g' Code.js
+              clasp push -f
+              
+              # Create new deployment version
+              DEPLOY_ID=$(clasp deployments | grep "Current" | awk '{print $2}')
+              if [ -n "$DEPLOY_ID" ]; then
+                clasp redeploy $DEPLOY_ID "Automatic update - ${{ github.sha }}"
+              else
+                clasp deploy -d "Automatic update - ${{ github.sha }}"
+              fi
+            fi
+          fi 

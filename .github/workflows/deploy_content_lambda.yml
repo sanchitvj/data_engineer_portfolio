@@ -46,16 +46,16 @@ jobs:
           # docker buildx build --platform linux/amd64 --provenance=false -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG --build-arg GITHUB_TOKEN=${{ secrets._ACCESS_TOKEN }} -f docker_images/content_lambda_image.Dockerfile --push .
           docker buildx build --platform linux/amd64 --provenance=false -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f docker_images/content_lambda_image.Dockerfile --push .
 
-      # - name: Deploy Lambda function
-      #   env:
-      #     ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-      #     ECR_REPOSITORY: content_lambda
-      #     IMAGE_TAG: latest
-      #   run: |
-      #     aws lambda update-function-code --function-name  --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+      - name: Deploy Lambda function
+        env:
+          ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          ECR_REPOSITORY: content_lambda
+          IMAGE_TAG: latest
+        run: |
+          aws lambda update-function-code --function-name  --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      # - name: Retry Update Lambda Configuration
-      #   run: |
-      #     for i in {1..5}; do
-      #       aws lambda update-function-configuration --function-name  --environment "Variables={}" && break || sleep 15;
-      #     done
+      - name: Retry Update Lambda Configuration
+        run: |
+          for i in {1..5}; do
+            aws lambda update-function-configuration --function-name  --environment "Variables={}" && break || sleep 15;
+          done

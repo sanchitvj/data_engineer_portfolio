@@ -14,7 +14,7 @@ authors = [{ name = "Sanchit Vijay", email = "sanchitvj1026@gmail.com" }, ]
 dependencies = [
     "boto3>=1.34.73",
     "botocore>=1.34.73",
-    "google_api_python_client>=2.122.0",
+    "aioboto3>=14.1.0"
 ]
 
 [project.urls]
