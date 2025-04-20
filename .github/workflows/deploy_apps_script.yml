@@ -24,13 +24,30 @@ jobs:
       - name: Install @google/clasp globally
         run: npm install -g @google/clasp
         
-      - name: Authenticate with Google
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Authenticate with Google and Verify JSON
         env:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
         run: |
-          # Create .clasprc.json in the Apps Script directory using printf
+          echo "Creating .clasprc.json..."
           printf "%s" "$CLASP_CREDENTIALS" > src/penguindb/apps_script/.clasprc.json
           chmod 600 src/penguindb/apps_script/.clasprc.json
+          echo ".clasprc.json created."
+          
+          echo "--- Verifying .clasprc.json content (raw) ---"
+          cat src/penguindb/apps_script/.clasprc.json
+          echo "--- End raw content ---"
+          
+          echo "--- Attempting to extract access_token using jq ---"
+          if jq -e '.tokens.default.access_token' src/penguindb/apps_script/.clasprc.json > /dev/null; then
+            echo "jq: Successfully found .tokens.default.access_token"
+          else
+            echo "jq ERROR: Could not find or parse .tokens.default.access_token in the JSON!"
+            # Optionally fail the job here if needed: exit 1
+          fi
+          echo "--- End jq verification ---"
           
       - name: Navigate to Apps Script directory and push changes
         working-directory: ./src/penguindb/apps_script
@@ -53,6 +70,7 @@ jobs:
               echo "Creating new deployment version..."
               # Update the API Gateway URL in Code.js with the actual URL from secrets
               sed -i 's|API_GATEWAY_URL|${{ secrets.API_GATEWAY_URL }}|g' Code.js
+              
               # Push again with the updated URL, using explicit auth path
               clasp push -f --auth ./.clasprc.json
               
