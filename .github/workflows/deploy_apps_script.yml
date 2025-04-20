@@ -21,76 +21,80 @@ jobs:
         with:
           node-version: '18'
           
-      - name: Install @google/clasp globally
-        run: npm install -g @google/clasp
-
-      - name: Extract credentials and format new .clasprc.json
-        env:
-          CLASP_CLIENT_ID: ${{ secrets.CLASP_CLIENT_ID }} 
-          CLASP_CLIENT_SECRET: ${{ secrets.CLASP_CLIENT_SECRET }}
-          CLASP_REFRESH_TOKEN: ${{ secrets.CLASP_REFRESH_TOKEN }}
+      - name: Install Required Packages
         run: |
-          # Create a simple script to generate a properly formatted .clasprc.json
-          cat > create_credentials.js << 'EOF'
+          npm install -g @google/clasp
+          npm install -g googleapis
+          
+      - name: Create Temporary Token Authentication
+        env:
+          CLIENT_ID: ${{ secrets.CLASP_CLIENT_ID }} 
+          CLIENT_SECRET: ${{ secrets.CLASP_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CLASP_REFRESH_TOKEN }}
+        run: |
+          # Create a Node.js script to fetch a new access token
+          cat > fetch_token.js << 'EOF'
+          const { google } = require('googleapis');
           const fs = require('fs');
           
-          // Create the expected structure
-          const credentials = {
-            "tokens": {
-              "default": {
-                "client_id": process.env.CLASP_CLIENT_ID || "1072944905499-vm2v2i5dvn0a0d2o4ca36i1vge8cvbn0.apps.googleusercontent.com",
-                "client_secret": process.env.CLASP_CLIENT_SECRET || "v6V3fKV_zWU7iw1DrpO1rknX",
-                "refresh_token": process.env.CLASP_REFRESH_TOKEN,
-                "access_token": "ya29.placeholder-token-will-be-refreshed-automatically",
-                "type": "authorized_user"
-              }
+          // Get environment variables
+          const clientId = process.env.CLIENT_ID;
+          const clientSecret = process.env.CLIENT_SECRET;
+          const refreshToken = process.env.REFRESH_TOKEN;
+          
+          async function getAccessToken() {
+            const oauth2Client = new google.auth.OAuth2(
+              clientId,
+              clientSecret,
+              'urn:ietf:wg:oauth:2.0:oob'
+            );
+            
+            oauth2Client.setCredentials({
+              refresh_token: refreshToken
+            });
+            
+            try {
+              const { token } = await oauth2Client.getAccessToken();
+              console.log('Successfully obtained new access token');
+              
+              // Create a minimal token file instead of the full .clasprc.json
+              fs.writeFileSync('./token.json', JSON.stringify({ token }));
+              
+              return token;
+            } catch (error) {
+              console.error('Error refreshing access token:', error);
+              process.exit(1);
             }
-          };
-          
-          // Write to both locations for maximum compatibility
-          fs.writeFileSync('src/penguindb/apps_script/.clasprc.json', JSON.stringify(credentials, null, 2));
-          fs.writeFileSync(process.env.HOME + '/.clasprc.json', JSON.stringify(credentials, null, 2));
-          
-          console.log('Created .clasprc.json files in both local and home directories');
-          console.log('Credentials structure (redacted):');
-          const redactedCreds = JSON.parse(JSON.stringify(credentials));
-          if (redactedCreds.tokens && redactedCreds.tokens.default) {
-            redactedCreds.tokens.default.client_id = redactedCreds.tokens.default.client_id.substring(0, 8) + '...';
-            redactedCreds.tokens.default.client_secret = redactedCreds.tokens.default.client_secret.substring(0, 8) + '...';
-            redactedCreds.tokens.default.refresh_token = redactedCreds.tokens.default.refresh_token.substring(0, 8) + '...';
           }
-          console.log(JSON.stringify(redactedCreds, null, 2));
+          
+          getAccessToken();
           EOF
           
-          # Run the script to create the credential files
-          node create_credentials.js
+          # Run the script to get a fresh token
+          node fetch_token.js
           
-          # Set proper permissions
-          chmod 600 src/penguindb/apps_script/.clasprc.json
-          chmod 600 ~/.clasprc.json
-          
-      - name: Navigate to Apps Script directory and push changes
+      - name: Configure Clasp and Push Changes
         working-directory: ./src/penguindb/apps_script
         run: |
-          # Validate clasp configuration
+          # Check clasp configuration
           echo "Checking clasp configuration..."
           clasp setting
           
-          # Try push without explicit auth flag first (using ~/.clasprc.json)
+          # Set minimal authentication options for this command only
+          export GOOGLE_APPLICATION_CREDENTIALS=../../token.json
+          
+          # Attempt to push using environment variable authentication
           echo "Pushing changes to Google Apps Script..."
           clasp push -f
           
-      - name: Create deployment (version) if needed
-        working-directory: ./src/penguindb/apps_script
-        run: |
-          # Only create a new deployment/version if API_GATEWAY_URL has changed
+          # Check if there are changes to Code.js that need API_GATEWAY_URL updated
           if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "Code.js"; then
             if git diff ${{ github.event.before }} ${{ github.sha }} -- Code.js | grep -q "API_GATEWAY_URL"; then
               echo "Creating new deployment version..."
-              # Update the API Gateway URL in Code.js with the actual URL from secrets
+              # Update the API Gateway URL in Code.js
               sed -i 's|API_GATEWAY_URL|${{ secrets.API_GATEWAY_URL }}|g' Code.js
               
-              # Push again with the updated URL
+              # Push again with updated URL
               clasp push -f
               
               # Create new deployment version
