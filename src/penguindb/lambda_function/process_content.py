@@ -85,6 +85,24 @@ def lambda_handler(event, context):
                 f"Error preparing data: {str(e)}"
             )
         
+        # Generate content using Claude LLM
+        try:
+            llm_generated = generate_content_with_llm(
+                content_type=body.get('content_type', ''),
+                description=body.get('description', ''),
+                tags=body.get('tags', '')
+            )
+            
+            # Add the generated content to the body
+            body['generated_title'] = llm_generated.get('title', '')
+            body['generated_description'] = llm_generated.get('description', '')
+            body['generated_tags'] = llm_generated.get('tags', '')
+            
+            logger.info(f"Generated content: {json.dumps(llm_generated)}")
+        except Exception as llm_error:
+            logger.error(f"Error generating content with LLM: {str(llm_error)}")
+            # Continue processing even if LLM fails
+        
         # Write to DynamoDB with proper error handling
         try:
             # Initialize DynamoDB client
@@ -92,7 +110,7 @@ def lambda_handler(event, context):
             table = dynamodb.Table('LinkedInContent')
             
             # Write to DynamoDB
-            response = table.put_item(Item=body)
+            table.put_item(Item=body)
             
             # Log success
             logger.info(f"Successfully wrote item {body['id']} to DynamoDB")
@@ -103,7 +121,10 @@ def lambda_handler(event, context):
                 'body': json.dumps({
                     'message': 'Data successfully processed',
                     'id': body['id'],
-                    'timestamp': body['timestamp']
+                    'timestamp': body['timestamp'],
+                    'generated_title': body.get('generated_title', ''),
+                    'generated_description': body.get('generated_description', ''),
+                    'generated_tags': body.get('generated_tags', '')
                 }),
                 'headers': {
                     'Content-Type': 'application/json'
