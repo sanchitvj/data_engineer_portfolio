@@ -157,12 +157,20 @@ def generate_content_with_llm(content_type, description, tags, logger, timeout=1
     Hey, help me refine this {content_type} I'm working on. I need:
 
     1. An attention-grabbing title (3-6 words) - something that would make YOU want to click. Be intriguing but not clickbaity.
+
     2. A punchy description (around {word_count} words) that sounds like a real person wrote it - conversational, occasionally using "I" statements, and avoiding perfectionist language or overly formal structure.
-    3. Exactly 3 tags that would help this content reach the right audience - be specific rather than generic.
 
-    My writing style is straightforward with occasional humor. I prefer active voice and concrete examples over abstract concepts. I sometimes use short sentences for emphasis.
+    3. Exactly 4 tags that would help this content reach the right audience - focus on data engineering concepts, cloud technologies, or specific tools mentioned in the content. Avoid generic tech terms like "software-dev" or irrelevant fields like "machine-learning" unless directly addressed.
 
-    Return as JSON with keys: title, description, tags (array of 3 strings)
+    Style guidelines:
+    - For content tagged with "humor" or where humor is explicitly requested: Use my conversational style with witty elements and occasional wordplay.
+    - For all other content (especially technical/educational): Maintain a professional tone with clarity and technical precision. My professional content should convey expertise in data engineering while remaining accessible.
+
+    I work specifically in data engineering with expertise in data infrastructure, ML, cloud services, analytics, generative AI, and agentic AI. My content should reflect this specialization rather than general tech topics.
+
+    My writing style is straightforward with clear technical explanations. I prefer active voice and concrete examples over abstract concepts. I sometimes use short sentences for emphasis.
+
+    Return as JSON with keys: title, description, tags (array of 4 strings)
     """
 
     # Run LLM call with timeout using threading

@@ -30,8 +30,9 @@ const COLUMNS = {
 const CONFIG = {
   MAX_RETRY_ATTEMPTS: 3,
   API_GATEWAY_URL: "https://ngcfdfcplh.execute-api.us-east-1.amazonaws.com/prod/content",
-  SHEET_NAME: "content_automation",
-  REQUEST_TIMEOUT: 30000 // 30 seconds timeout
+  SHEET_NAME: "Sheet1",
+  REQUEST_TIMEOUT: 30000, // 30 seconds timeout
+  STATUS_CHECK_API: "" // Optional: API endpoint for status checking (if you create one)
 };
 
 // =============================================================
@@ -171,8 +172,14 @@ function processRow(sheet, rowIndex) {
         // Keep as PENDING if no generated content yet
         Logger.log("Request accepted for content_id: " + contentId);
       }
+    } else if (result.error && result.error.includes("504")) {
+      // Special handling for 504 Gateway Timeout
+      // The request might still be processing, even though API Gateway timed out
+      updateStatus(sheet, rowIndex, STATUS.PENDING, 
+        "Request accepted but API timed out. Your data may still be processing. Check status later or run manualStatusSync.");
+      Logger.log("API Gateway timeout for content_id: " + contentId + " - item may still process successfully");
     } else {
-      // API call failed
+      // Other API call failures
       updateStatus(sheet, rowIndex, STATUS.ERROR, result.error);
     }
   } catch (error) {
@@ -474,6 +481,10 @@ function onOpen(e) {
       .addItem('Process New Items', 'processNewItems')
       .addItem('Retry Error Items', 'retryErrorItems')
       .addItem('Reset & Retry All Errors', 'manualRetry')
+      .addItem('Sync Statuses with DynamoDB', 'manualStatusSync')
+      .addSeparator()
+      .addItem('Reset Selected Row to NEW', 'resetSelectedRowToNew')
+      .addItem('Process Selected Row Only', 'processSelectedRow')
       .addSeparator()
       .addItem('Setup Triggers', 'createTriggers')
       .addToUi();
@@ -493,6 +504,10 @@ function addMenu() {
       .addItem('Process New Items', 'processNewItems')
       .addItem('Retry Error Items', 'retryErrorItems')
       .addItem('Reset & Retry All Errors', 'manualRetry')
+      .addItem('Sync Statuses with DynamoDB', 'manualStatusSync')
+      .addSeparator()
+      .addItem('Reset Selected Row to NEW', 'resetSelectedRowToNew')
+      .addItem('Process Selected Row Only', 'processSelectedRow')
       .addSeparator()
       .addItem('Setup Triggers', 'createTriggers')
       .addToUi();
@@ -501,6 +516,144 @@ function addMenu() {
   } catch (error) {
     Logger.log("Error adding menu: " + error.toString());
   }
+}
+
+// Process only the currently selected row
+function processSelectedRow() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    const activeRange = sheet.getActiveRange();
+    
+    if (!activeRange) {
+      SpreadsheetApp.getUi().alert("Please select a cell in the row you want to process");
+      return;
+    }
+    
+    const rowIndex = activeRange.getRow();
+    if (rowIndex <= 1) {
+      SpreadsheetApp.getUi().alert("Cannot process header row. Please select a data row.");
+      return;
+    }
+    
+    // Process this specific row
+    processRow(sheet, rowIndex);
+    
+    // Show confirmation
+    SpreadsheetApp.getUi().alert(`Row ${rowIndex} has been processed.`);
+    
+  } catch (error) {
+    Logger.log("Error in processSelectedRow: " + error.toString());
+    SpreadsheetApp.getUi().alert("Error: " + error.toString());
+  }
+}
+
+// Reset the currently selected row to NEW status
+function resetSelectedRowToNew() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    const activeRange = sheet.getActiveRange();
+    
+    if (!activeRange) {
+      SpreadsheetApp.getUi().alert("Please select a cell in the row you want to reset");
+      return;
+    }
+    
+    const rowIndex = activeRange.getRow();
+    if (rowIndex <= 1) {
+      SpreadsheetApp.getUi().alert("Cannot reset header row. Please select a data row.");
+      return;
+    }
+    
+    // Reset this specific row
+    sheet.getRange(rowIndex, COLUMNS.STATUS + 1).setValue(STATUS.NEW);
+    sheet.getRange(rowIndex, COLUMNS.ATTEMPT_COUNT + 1).setValue(0);
+    sheet.getRange(rowIndex, COLUMNS.ERROR_DETAILS + 1).setValue("");
+    sheet.getRange(rowIndex, COLUMNS.LAST_UPDATED + 1).setValue(new Date());
+    
+    // Show confirmation
+    SpreadsheetApp.getUi().alert(`Row ${rowIndex} has been reset to NEW status.`);
+    
+  } catch (error) {
+    Logger.log("Error in resetSelectedRowToNew: " + error.toString());
+    SpreadsheetApp.getUi().alert("Error: " + error.toString());
+  }
+}
+
+// Manual check for all pending statuses
+function manualStatusSync() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEET_NAME);
+    if (!sheet) return;
+    
+    let checkedCount = 0;
+    
+    // Get all rows with PENDING status
+    const dataRange = sheet.getDataRange();
+    const values = dataRange.getValues();
+    
+    // Skip header row
+    for (let i = 1; i < values.length; i++) {
+      if (values[i][COLUMNS.STATUS] === STATUS.PENDING) {
+        const contentId = values[i][COLUMNS.CONTENT_ID];
+        if (!contentId) continue;
+        
+        // Log for debugging
+        Logger.log(`Checking status for content_id: ${contentId}`);
+        
+        // Add a note to indicate we checked this row
+        const statusCell = sheet.getRange(i + 1, COLUMNS.STATUS + 1);
+        const currentNote = statusCell.getNote() || "";
+        statusCell.setNote(currentNote + "\nStatus checked: " + new Date().toLocaleString());
+        
+        checkedCount++;
+      }
+    }
+    
+    // Display summary message
+    const ui = SpreadsheetApp.getUi();
+    ui.alert(`Status check initiated for ${checkedCount} pending items.\n\nIMPORTANT: This does not update statuses immediately. The Status Checker Lambda must be configured with your Apps Script Web App URL to receive updates back from DynamoDB.\n\nCheck if your Lambda has the correct GOOGLE_SHEET_URL environment variable set.`);
+    
+    // Return a summary for logging
+    return `Checked ${checkedCount} pending items`;
+    
+  } catch (error) {
+    Logger.log("Error in manualStatusSync: " + error.toString());
+    const ui = SpreadsheetApp.getUi();
+    ui.alert("Error during status sync: " + error.toString());
+    return "Error: " + error.toString();
+  }
+}
+
+// Helper function to reset configuration errors
+function checkConfiguration() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEET_NAME);
+  if (!sheet) {
+    Logger.log(`ERROR: Sheet '${CONFIG.SHEET_NAME}' not found`);
+    return false;
+  }
+  
+  // Collect information for diagnosis
+  const info = {
+    sheetName: sheet.getName(),
+    rowCount: sheet.getLastRow(),
+    apiGatewayUrl: CONFIG.API_GATEWAY_URL,
+    webAppUrl: ScriptApp.getService().getUrl()
+  };
+  
+  Logger.log("Configuration check results:");
+  Logger.log(JSON.stringify(info, null, 2));
+  
+  // Show to user
+  const ui = SpreadsheetApp.getUi();
+  ui.alert(`Configuration Information:
+  - Sheet name: ${info.sheetName}
+  - Row count: ${info.rowCount}
+  - API Gateway URL: ${info.apiGatewayUrl}
+  - This Web App URL: ${info.webAppUrl}
+  
+IMPORTANT: Make sure your Status Checker Lambda is configured with this Web App URL in its GOOGLE_SHEET_URL environment variable.`);
+  
+  return true;
 }
 
 // Setup function to deploy as web app
@@ -512,6 +665,17 @@ function setup() {
   // 4. Deploy and copy the URL for AWS Lambda environment variable
   
   Logger.log("Setup complete. Now deploy as web app from the Deploy menu.");
+  
+  // Show the Web App URL if already deployed
+  try {
+    const webAppUrl = ScriptApp.getService().getUrl();
+    if (webAppUrl) {
+      Logger.log("Your Web App URL: " + webAppUrl);
+      Logger.log("Use this URL in your Status Checker Lambda's GOOGLE_SHEET_URL environment variable");
+    }
+  } catch (e) {
+    Logger.log("Web App not deployed yet. Please deploy from the Deploy menu.");
+  }
 }
 
 // For testing in the script editor
