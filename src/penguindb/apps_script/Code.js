@@ -463,15 +463,44 @@ function createTriggers() {
 }
 
 // Create a menu in the spreadsheet with actions
-function onOpen() {
-  const ui = SpreadsheetApp.getUi();
-  ui.createMenu('Content Pipeline')
-    .addItem('Process New Items', 'processNewItems')
-    .addItem('Retry Error Items', 'retryErrorItems')
-    .addItem('Reset & Retry All Errors', 'manualRetry')
-    .addSeparator()
-    .addItem('Setup Triggers', 'createTriggers')
-    .addToUi();
+function onOpen(e) {
+  // This is a safer way to handle both simple and installable triggers
+  try {
+    // Check if we're in a UI context where getUi() is available
+    var ui = SpreadsheetApp.getUi();
+    
+    // Create the menu
+    ui.createMenu('Content Pipeline')
+      .addItem('Process New Items', 'processNewItems')
+      .addItem('Retry Error Items', 'retryErrorItems')
+      .addItem('Reset & Retry All Errors', 'manualRetry')
+      .addSeparator()
+      .addItem('Setup Triggers', 'createTriggers')
+      .addToUi();
+      
+    Logger.log("Added Content Pipeline menu");
+  } catch (error) {
+    // If getUi() isn't available (web app context, etc.), log and continue
+    Logger.log("Running in non-UI context, skipping menu creation: " + error.toString());
+  }
+}
+
+// Function to manually add the menu (run this from the script editor)
+function addMenu() {
+  try {
+    var ui = SpreadsheetApp.getUi();
+    ui.createMenu('Content Pipeline')
+      .addItem('Process New Items', 'processNewItems')
+      .addItem('Retry Error Items', 'retryErrorItems')
+      .addItem('Reset & Retry All Errors', 'manualRetry')
+      .addSeparator()
+      .addItem('Setup Triggers', 'createTriggers')
+      .addToUi();
+    
+    Logger.log("Menu added successfully");
+  } catch (error) {
+    Logger.log("Error adding menu: " + error.toString());
+  }
 }
 
 // Setup function to deploy as web app
