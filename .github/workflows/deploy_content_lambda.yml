@@ -9,6 +9,7 @@ on:
       - src/penguindb/lambda_functions/process_content.py
       - docker_images/content_lambda_image.Dockerfile
       - .github/workflows/deploy_content_lambda.yml
+      - src/penguindb/utils/**
 
 jobs:
   deploy:
