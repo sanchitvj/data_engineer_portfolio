@@ -5,6 +5,8 @@ on:
     branches:
       # - dev
       - content
+      # - dev
+      - content
     paths:
       - src/penguindb/lambda_function/**
       - src/penguindb/utils/**
@@ -68,6 +70,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.OIDC_ROLE }}
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.OIDC_ROLE }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Set up Docker Buildx
@@ -103,6 +106,7 @@ jobs:
         if: ${{ needs.check_changes.outputs.sqs_worker_changed == 'true' || needs.check_changes.outputs.utils_changed == 'true' || needs.check_changes.outputs.dockerfile_changed == 'true' }}
         env:
           ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          ECR_REPOSITORY: content_lambda
           ECR_REPOSITORY: content_lambda
           IMAGE_TAG: latest
         run: |
