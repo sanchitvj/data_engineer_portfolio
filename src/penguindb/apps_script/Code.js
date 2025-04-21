@@ -157,8 +157,20 @@ function processRow(sheet, rowIndex) {
 
     // Update status based on result
     if (result.success) {
-      // A 202 response means it was accepted, keep status as PENDING
-      Logger.log("Request accepted for content_id: " + contentId);
+      // Success response means it was either accepted (202) or processed (200)
+      // If we get generated content back, we can update status to PROCESSED immediately
+      if (result.data && result.data.generated_title) {
+        updateStatus(sheet, rowIndex, STATUS.PROCESSED);
+        
+        // Optionally add generated title as a note
+        const statusCell = sheet.getRange(rowIndex, COLUMNS.STATUS + 1);
+        statusCell.setNote("Generated title: " + result.data.generated_title);
+        
+        Logger.log("Content processed for content_id: " + contentId + " with title: " + result.data.generated_title);
+      } else {
+        // Keep as PENDING if no generated content yet
+        Logger.log("Request accepted for content_id: " + contentId);
+      }
     } else {
       // API call failed
       updateStatus(sheet, rowIndex, STATUS.ERROR, result.error);
@@ -208,14 +220,28 @@ function sendToAWS(data) {
     const responseCode = response.getResponseCode();
     const responseText = response.getContentText();
 
-    // Check for 202 Accepted (async processing)
-    if (responseCode === 202) {
-      return {
-        success: true,
-        data: JSON.parse(responseText)
-      };
+    // Log the full response for debugging
+    Logger.log(`API Response (${responseCode}): ${responseText}`);
+
+    // Accept both 200 OK and 202 Accepted as success
+    if (responseCode === 200 || responseCode === 202) {
+      try {
+        // Parse response data
+        const responseData = JSON.parse(responseText);
+        return {
+          success: true,
+          data: responseData
+        };
+      } catch (parseError) {
+        // Handle JSON parse errors
+        console.error(`Error parsing API response: ${parseError.toString()}`);
+        return {
+          success: true,  // Still treat as success even if parse fails
+          data: { message: responseText }
+        };
+      }
     } else {
-      // Handle errors
+      // Handle errors (4xx, 5xx)
       let errorMessage = `API Error ${responseCode}: `;
       try {
         const errorResponse = JSON.parse(responseText);
@@ -434,6 +460,18 @@ function createTriggers() {
     .timeBased()
     .everyHours(1)
     .create();
+}
+
+// Create a menu in the spreadsheet with actions
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('Content Pipeline')
+    .addItem('Process New Items', 'processNewItems')
+    .addItem('Retry Error Items', 'retryErrorItems')
+    .addItem('Reset & Retry All Errors', 'manualRetry')
+    .addSeparator()
+    .addItem('Setup Triggers', 'createTriggers')
+    .addToUi();
 }
 
 // Setup function to deploy as web app

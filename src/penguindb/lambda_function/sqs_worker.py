@@ -52,7 +52,7 @@ def lambda_handler(event, context):
             body['sqs_message_id'] = message_id
             body['sqs_receipt_handle'] = receipt_handle
             body['worker_request_id'] = context.aws_request_id
-            body['processed_by'] = context.function_name
+            # body['processed_by'] = context.function_name
             body['processed_at'] = datetime.now().isoformat()
 
             # Generate content with LLM
