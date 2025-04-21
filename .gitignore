@@ -36,3 +36,5 @@ yarn-error.log*
 .vscode
 **.pdf
 **portfolio_gcp.json
+**.docx
+.clasprc.json
