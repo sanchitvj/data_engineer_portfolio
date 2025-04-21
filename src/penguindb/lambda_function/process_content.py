@@ -112,10 +112,8 @@ def lambda_handler(event, context):
             # Write to DynamoDB
             table.put_item(Item=body)
             
-            # Log success
             logger.info(f"Successfully wrote item {body['id']} to DynamoDB")
             
-            # Return success response
             return {
                 'statusCode': 200,
                 'body': json.dumps({
