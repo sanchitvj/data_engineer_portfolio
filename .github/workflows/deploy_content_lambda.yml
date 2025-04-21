@@ -40,7 +40,7 @@ jobs:
           ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
           ECR_REPOSITORY: content_lambda
           IMAGE_TAG: latest
-          # _GCP_CREDS: ${{ secrets._GCP_CREDS }}
+
         run: |
           # echo "${_GCP_CREDS}" > src/......lambda_functions/_gcp.json
           # cat src/......lambda_functions/_gcp.json | jq .
