@@ -8,6 +8,7 @@ const STATUS = {
 
 // Column indices (adjust based on your actual sheet structure)
 const COLUMNS = {
+  CONTENT_ID: 0,  // New column for the unique identifier
   CONTENT_TYPE: 1,
   DATE_PUBLISHED: 2,
   DESCRIPTION: 3,
@@ -49,7 +50,7 @@ function processNewItems() {
     
     // Skip header row
     for (let i = 1; i < values.length; i++) {
-      if (values[i][COLUMNS.STATUS - 1] === STATUS.NEW) {
+      if (values[i][COLUMNS.STATUS] === STATUS.NEW) {
         processRow(sheet, i + 1); // +1 because array is 0-indexed but sheet is 1-indexed
       }
     }
@@ -67,8 +68,8 @@ function retryErrorItems() {
     
     // Skip header row
     for (let i = 1; i < values.length; i++) {
-      const status = values[i][COLUMNS.STATUS - 1];
-      const attemptCount = values[i][COLUMNS.ATTEMPT_COUNT - 1] || 0;
+      const status = values[i][COLUMNS.STATUS];
+      const attemptCount = values[i][COLUMNS.ATTEMPT_COUNT] || 0;
       
       if (status === STATUS.ERROR && attemptCount < MAX_RETRY_ATTEMPTS) {
         processRow(sheet, i + 1);
@@ -82,7 +83,7 @@ function retryErrorItems() {
 // Check if the status column was edited to "new"
 function isStatusColumnEditedToNew(sheet, range) {
   return sheet.getName() === "Sheet1" && 
-         range.getColumn() === COLUMNS.STATUS && 
+         range.getColumn() === COLUMNS.STATUS + 1 && 
          range.getValue().toLowerCase() === STATUS.NEW;
 }
 
@@ -92,20 +93,30 @@ function processRow(sheet, rowIndex) {
     // Get row data
     if (rowIndex <= 1) return; // Skip header row
     
+    // Check if content_id exists, if not generate one
+    const contentIdCell = sheet.getRange(rowIndex, COLUMNS.CONTENT_ID + 1);
+    let contentId = contentIdCell.getValue();
+    
+    // Generate a new UUID if the content_id is empty
+    if (!contentId) {
+      contentId = generateUUID();
+      contentIdCell.setValue(contentId);
+    }
+    
     // Get current attempt count and increment
-    const attemptCell = sheet.getRange(rowIndex, COLUMNS.ATTEMPT_COUNT);
+    const attemptCell = sheet.getRange(rowIndex, COLUMNS.ATTEMPT_COUNT + 1);
     const attemptCount = attemptCell.getValue() || 0;
     attemptCell.setValue(attemptCount + 1);
     
     // Clear previous error if any
-    sheet.getRange(rowIndex, COLUMNS.ERROR_DETAILS).setValue("");
+    sheet.getRange(rowIndex, COLUMNS.ERROR_DETAILS + 1).setValue("");
     
     // Update status to pending and timestamp
     updateStatus(sheet, rowIndex, STATUS.PENDING);
     
     // Get all data from the row
-    const rowData = sheet.getRange(rowIndex, 1, 1, COLUMNS.ATTEMPT_COUNT).getValues()[0];
-    const headers = sheet.getRange(1, 1, 1, COLUMNS.ATTEMPT_COUNT).getValues()[0];
+    const rowData = sheet.getRange(rowIndex, 1, 1, COLUMNS.ATTEMPT_COUNT + 1).getValues()[0];
+    const headers = sheet.getRange(1, 1, 1, COLUMNS.ATTEMPT_COUNT + 1).getValues()[0];
     
     // Create an object with the data
     const data = {};
@@ -114,6 +125,9 @@ function processRow(sheet, rowIndex) {
         data[headers[i]] = rowData[i];
       }
     }
+    
+    // Ensure content_id is explicitly set
+    data.content_id = contentId;
     
     // Add metadata
     data.rowIndex = rowIndex;
@@ -136,11 +150,11 @@ function processRow(sheet, rowIndex) {
 
 // Update status column and timestamp
 function updateStatus(sheet, rowIndex, status, errorDetails = "") {
-  sheet.getRange(rowIndex, COLUMNS.STATUS).setValue(status);
-  sheet.getRange(rowIndex, COLUMNS.LAST_UPDATED).setValue(new Date());
+  sheet.getRange(rowIndex, COLUMNS.STATUS + 1).setValue(status);
+  sheet.getRange(rowIndex, COLUMNS.LAST_UPDATED + 1).setValue(new Date());
   
   if (errorDetails) {
-    sheet.getRange(rowIndex, COLUMNS.ERROR_DETAILS).setValue(errorDetails);
+    sheet.getRange(rowIndex, COLUMNS.ERROR_DETAILS + 1).setValue(errorDetails);
   }
 }
 
@@ -175,14 +189,31 @@ function sendToAWSWithRetry(data, attemptCount) {
 
 function sendToAWS(data) {
   try {
-    // Your API Gateway URL
-    const url = "API_GATEWAY_URL"; // Replace with your actual URL
+    // Your API Gateway URL for the content processing Lambda
+    const url = "https://ngcfdfcplh.execute-api.us-east-1.amazonaws.com/prod/content"; // Replace with your actual API Gateway URL
+    
+    // Ensure content_id is included
+    if (!data.content_id) {
+      throw new Error("Missing content_id in the data");
+    }
+    
+    // Extract key fields and structure payload according to Lambda expectations
+    const payload = {
+      content_type: data.content_type || "",
+      content_id: data.content_id,
+      description: data.description || "",
+      url: data.url || "",
+      embed_link: data.embed_link || "",
+      tags: data.tags || "",
+      media_link: data.media_link || "",
+      timestamp: data.timestamp || new Date().toISOString()
+    };
     
     // Prepare the HTTP request
     const options = {
       'method': 'post',
       'contentType': 'application/json',
-      'payload': JSON.stringify(data),
+      'payload': JSON.stringify(payload),
       'muteHttpExceptions': true
     };
     
@@ -254,14 +285,19 @@ function manualRetry() {
   
   // Skip header row
   for (let i = 1; i < values.length; i++) {
-    if (values[i][COLUMNS.STATUS - 1] === STATUS.ERROR) {
+    if (values[i][COLUMNS.STATUS] === STATUS.ERROR) {
       // Reset attempt count
-      sheet.getRange(i + 1, COLUMNS.ATTEMPT_COUNT).setValue(0);
+      sheet.getRange(i + 1, COLUMNS.ATTEMPT_COUNT + 1).setValue(0);
       // Set status to new
-      sheet.getRange(i + 1, COLUMNS.STATUS).setValue(STATUS.NEW);
+      sheet.getRange(i + 1, COLUMNS.STATUS + 1).setValue(STATUS.NEW);
     }
   }
   
   // Then process all "new" rows
   processNewItems();
+}
+
+// Generate a UUID (RFC4122 version 4 compliant)
+function generateUUID() {
+  return Utilities.getUuid();
 }

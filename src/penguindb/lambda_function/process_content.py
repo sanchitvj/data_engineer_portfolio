@@ -64,11 +64,15 @@ def lambda_handler(event, context):
 
         # Add metadata
         try:
-            # Generate ID if not provided
-            if 'id' not in body or not body['id']:
-                body['id'] = str(uuid.uuid4())
+            # Use content_id from request if provided, otherwise generate a new one
+            # (Since Google Sheets is now generating content_ids, this will respect what comes from the sheet)
+            if 'content_id' not in body or not body['content_id']:
+                body['content_id'] = str(uuid.uuid4())
+                logger.info(f"Generated new content_id: {body['content_id']}")
+            else:
+                logger.info(f"Using existing content_id from request: {body['content_id']}")
             
-            # Add timestamp if not present
+            # Add timestamp if not present (this can be used as sort key if needed)
             if 'timestamp' not in body:
                 body['timestamp'] = datetime.now().isoformat()
                 
@@ -102,26 +106,47 @@ def lambda_handler(event, context):
             logger.error(f"Error generating content with LLM: {str(llm_error)}")
             # Continue processing even if LLM fails
         
-        # Write to DynamoDB with proper error handling
+        # Prepare data for DynamoDB
         try:
+            body = prepare_data_for_dynamodb(body)
+            
             # Initialize DynamoDB client
             dynamodb = boto3.resource('dynamodb')
             table = dynamodb.Table('LinkedInContent')
             
+            # Check if an item with this content_id already exists
+            try:
+                existing_item = table.get_item(
+                    Key={'content_id': body['content_id']}
+                )
+                is_update = 'Item' in existing_item
+            except Exception as e:
+                logger.warning(f"Error checking for existing item: {str(e)}")
+                is_update = False
+            
             # Write to DynamoDB
             table.put_item(Item=body)
             
-            logger.info(f"Successfully wrote item {body['id']} to DynamoDB")
+            if is_update:
+                logger.info(f"Updated existing item with content_id: {body['content_id']}")
+            else:
+                logger.info(f"Created new item with content_id: {body['content_id']}")
+            
+            # Convert sets back to lists for JSON serialization in response
+            response_body = body.copy()
+            for field in ['tags', 'media_link', 'generated_tags']:
+                if field in response_body and isinstance(response_body[field], set):
+                    response_body[field] = list(response_body[field])
             
             return {
                 'statusCode': 200,
                 'body': json.dumps({
                     'message': 'Data successfully processed',
-                    'id': body['id'],
-                    'timestamp': body['timestamp'],
-                    'generated_title': body.get('generated_title', ''),
-                    'generated_description': body.get('generated_description', ''),
-                    'generated_tags': body.get('generated_tags', '')
+                    'content_id': response_body['content_id'],
+                    'timestamp': response_body['timestamp'],
+                    'generated_title': response_body.get('generated_title', ''),
+                    'generated_description': response_body.get('generated_description', ''),
+                    'generated_tags': response_body.get('generated_tags', [])
                 }),
                 'headers': {
                     'Content-Type': 'application/json'
@@ -169,12 +194,39 @@ def validate_field_types(body):
     if 'url' in body and not isinstance(body['url'], str):
         errors.append("url must be a string")
     
-    # Check tags (should be a string for comma-separated values)
-    if 'tags' in body and body['tags'] and not isinstance(body['tags'], str):
-        errors.append("tags must be a comma-separated string")
+    # Check tags (should be a list or comma-separated string)
+    if 'tags' in body and body['tags']:
+        if not (isinstance(body['tags'], str) or isinstance(body['tags'], list)):
+            errors.append("tags must be a comma-separated string or list")
+    
+    # Check media_link (should be a list or comma-separated string)
+    if 'media_link' in body and body['media_link']:
+        if not (isinstance(body['media_link'], str) or isinstance(body['media_link'], list)):
+            errors.append("media_link must be a comma-separated string or list")
     
     return "; ".join(errors) if errors else None
 
+def prepare_data_for_dynamodb(body):
+    """
+    Prepare the data for DynamoDB by converting comma-separated strings to sets.
+    
+    Args:
+        body: The request body to prepare
+        
+    Returns:
+        The prepared body with string sets
+    """
+    # Convert comma-separated strings to sets for DynamoDB
+    for field in ['tags', 'media_link', 'generated_tags']:
+        if field in body and body[field]:
+            if isinstance(body[field], str):
+                # Split by comma and strip whitespace
+                body[field] = set(tag.strip() for tag in body[field].split(','))
+            elif isinstance(body[field], list):
+                # Convert list to set
+                body[field] = set(body[field])
+    
+    return body
 
 def create_error_response(status_code, error_type, message):
     """
