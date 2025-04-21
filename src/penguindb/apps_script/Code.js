@@ -244,3 +244,24 @@ function createTriggers() {
     .everyHours(1)
     .create();
 }
+
+// To run all rows with "error" status:
+function manualRetry() {
+  // First reset the status of rows you want to retry to "new"
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet1");
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  
+  // Skip header row
+  for (let i = 1; i < values.length; i++) {
+    if (values[i][COLUMNS.STATUS - 1] === STATUS.ERROR) {
+      // Reset attempt count
+      sheet.getRange(i + 1, COLUMNS.ATTEMPT_COUNT).setValue(0);
+      // Set status to new
+      sheet.getRange(i + 1, COLUMNS.STATUS).setValue(STATUS.NEW);
+    }
+  }
+  
+  // Then process all "new" rows
+  processNewItems();
+}
