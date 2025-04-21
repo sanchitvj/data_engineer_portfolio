@@ -1,32 +1,174 @@
+// Constants for status values
+const STATUS = {
+  NEW: "new",
+  PENDING: "pending",
+  PROCESSED: "processed",
+  ERROR: "error"
+};
+
+// Column indices (adjust based on your actual sheet structure)
+const COLUMNS = {
+  CONTENT_TYPE: 1,
+  DATE_PUBLISHED: 2,
+  DESCRIPTION: 3,
+  URL: 4,
+  EMBED_LINK: 5,
+  TAGS: 6,
+  MEDIA_LINK: 7,
+  STATUS: 8,
+  ERROR_DETAILS: 9,
+  LAST_UPDATED: 10,
+  ATTEMPT_COUNT: 11
+};
+
+// Maximum retry attempts
+const MAX_RETRY_ATTEMPTS = 3;
+
+// Main function triggered on edit
 function onEdit(e) {
-  // Get the edited range and sheet
-  var range = e.range;
-  var sheet = range.getSheet();
-  
-  // Check if we're in the right sheet and if the status column was edited to "new"
-  if (sheet.getName() === "Sheet1" && range.getColumn() === 8 && range.getValue().toLowerCase() === "new") {
-    // Get the row data
-    var row = range.getRow();
-    if (row <= 1) return; // Skip header row
+  try {
+    // Get the edited range and sheet
+    const range = e.range;
+    const sheet = range.getSheet();
+    
+    // Check if we're in the right sheet and if the status column was edited to "new"
+    if (isStatusColumnEditedToNew(sheet, range)) {
+      processRow(sheet, range.getRow());
+    }
+  } catch (error) {
+    console.error("Error in onEdit: " + error.toString());
+  }
+}
+
+// Process rows with "new" status
+function processNewItems() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet1");
+    const dataRange = sheet.getDataRange();
+    const values = dataRange.getValues();
+    
+    // Skip header row
+    for (let i = 1; i < values.length; i++) {
+      if (values[i][COLUMNS.STATUS - 1] === STATUS.NEW) {
+        processRow(sheet, i + 1); // +1 because array is 0-indexed but sheet is 1-indexed
+      }
+    }
+  } catch (error) {
+    console.error("Error in processNewItems: " + error.toString());
+  }
+}
+
+// Retry items in error state (can be triggered manually or on a schedule)
+function retryErrorItems() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet1");
+    const dataRange = sheet.getDataRange();
+    const values = dataRange.getValues();
+    
+    // Skip header row
+    for (let i = 1; i < values.length; i++) {
+      const status = values[i][COLUMNS.STATUS - 1];
+      const attemptCount = values[i][COLUMNS.ATTEMPT_COUNT - 1] || 0;
+      
+      if (status === STATUS.ERROR && attemptCount < MAX_RETRY_ATTEMPTS) {
+        processRow(sheet, i + 1);
+      }
+    }
+  } catch (error) {
+    console.error("Error in retryErrorItems: " + error.toString());
+  }
+}
+
+// Check if the status column was edited to "new"
+function isStatusColumnEditedToNew(sheet, range) {
+  return sheet.getName() === "Sheet1" && 
+         range.getColumn() === COLUMNS.STATUS && 
+         range.getValue().toLowerCase() === STATUS.NEW;
+}
+
+// Process a single row
+function processRow(sheet, rowIndex) {
+  try {
+    // Get row data
+    if (rowIndex <= 1) return; // Skip header row
+    
+    // Get current attempt count and increment
+    const attemptCell = sheet.getRange(rowIndex, COLUMNS.ATTEMPT_COUNT);
+    const attemptCount = attemptCell.getValue() || 0;
+    attemptCell.setValue(attemptCount + 1);
+    
+    // Clear previous error if any
+    sheet.getRange(rowIndex, COLUMNS.ERROR_DETAILS).setValue("");
+    
+    // Update status to pending and timestamp
+    updateStatus(sheet, rowIndex, STATUS.PENDING);
     
     // Get all data from the row
-    var rowData = sheet.getRange(row, 1, 1, 8).getValues()[0];
-    var headers = sheet.getRange(1, 1, 1, 8).getValues()[0];
+    const rowData = sheet.getRange(rowIndex, 1, 1, COLUMNS.ATTEMPT_COUNT).getValues()[0];
+    const headers = sheet.getRange(1, 1, 1, COLUMNS.ATTEMPT_COUNT).getValues()[0];
     
     // Create an object with the data
-    var data = {};
-    for (var i = 0; i < headers.length; i++) {
-      data[headers[i]] = rowData[i];
+    const data = {};
+    for (let i = 0; i < headers.length; i++) {
+      if (headers[i]) { // Skip empty headers
+        data[headers[i]] = rowData[i];
+      }
     }
     
-    // Send data to AWS API Gateway
-    var result = sendToAWS(data);
+    // Add metadata
+    data.rowIndex = rowIndex;
+    data.timestamp = new Date().toISOString();
+    
+    // Send data to AWS API Gateway with exponential backoff
+    const result = sendToAWSWithRetry(data, attemptCount);
     
     // Update status based on result
     if (result.success) {
-      sheet.getRange(row, 8).setValue("processed");
+      updateStatus(sheet, rowIndex, STATUS.PROCESSED);
     } else {
-      sheet.getRange(row, 8).setValue("error");
+      updateStatus(sheet, rowIndex, STATUS.ERROR, result.error);
+    }
+  } catch (error) {
+    console.error("Error in processRow: " + error.toString());
+    updateStatus(sheet, rowIndex, STATUS.ERROR, "Script error: " + error.toString());
+  }
+}
+
+// Update status column and timestamp
+function updateStatus(sheet, rowIndex, status, errorDetails = "") {
+  sheet.getRange(rowIndex, COLUMNS.STATUS).setValue(status);
+  sheet.getRange(rowIndex, COLUMNS.LAST_UPDATED).setValue(new Date());
+  
+  if (errorDetails) {
+    sheet.getRange(rowIndex, COLUMNS.ERROR_DETAILS).setValue(errorDetails);
+  }
+}
+
+// Send data to AWS with exponential backoff retry logic
+function sendToAWSWithRetry(data, attemptCount) {
+  const maxRetries = 3;
+  const baseDelay = 1000; // Start with 1 second delay
+  
+  for (let retryAttempt = 0; retryAttempt < maxRetries; retryAttempt++) {
+    try {
+      // Calculate backoff delay: 1s, 2s, 4s for retries within this function
+      if (retryAttempt > 0) {
+        const backoffDelay = baseDelay * Math.pow(2, retryAttempt - 1);
+        Utilities.sleep(backoffDelay);
+      }
+      
+      const result = sendToAWS(data);
+      return result;
+    } catch (error) {
+      console.warn(`Retry ${retryAttempt + 1}/${maxRetries} failed: ${error.toString()}`);
+      
+      // If we've exhausted all retries, throw the error to be caught by the caller
+      if (retryAttempt === maxRetries - 1) {
+        return { 
+          success: false, 
+          error: `Failed after ${maxRetries} attempts: ${error.toString()}` 
+        };
+      }
     }
   }
 }
@@ -34,10 +176,10 @@ function onEdit(e) {
 function sendToAWS(data) {
   try {
     // Your API Gateway URL
-    var url = "API_GATEWAY_URL"; // Replace with your actual URL
+    const url = "API_GATEWAY_URL"; // Replace with your actual URL
     
     // Prepare the HTTP request
-    var options = {
+    const options = {
       'method': 'post',
       'contentType': 'application/json',
       'payload': JSON.stringify(data),
@@ -45,17 +187,60 @@ function sendToAWS(data) {
     };
     
     // Send the request
-    var response = UrlFetchApp.fetch(url, options);
+    const response = UrlFetchApp.fetch(url, options);
+    const responseCode = response.getResponseCode();
+    const responseText = response.getContentText();
     
     // Process response
-    if (response.getResponseCode() === 200) {
-      return { success: true, data: JSON.parse(response.getContentText()) };
+    if (responseCode >= 200 && responseCode < 300) {
+      // Success (2xx status code)
+      return { 
+        success: true, 
+        data: JSON.parse(responseText) 
+      };
     } else {
-      Logger.log("Error: " + response.getContentText());
-      return { success: false, error: response.getContentText() };
+      // Handle different error types based on status code
+      let errorMessage = `HTTP Error ${responseCode}: `;
+      
+      try {
+        const errorResponse = JSON.parse(responseText);
+        errorMessage += errorResponse.message || responseText;
+      } catch (e) {
+        errorMessage += responseText || "Unknown error";
+      }
+      
+      console.error(errorMessage);
+      return { 
+        success: false, 
+        error: errorMessage 
+      };
     }
   } catch (e) {
-    Logger.log("Exception: " + e.toString());
-    return { success: false, error: e.toString() };
+    console.error("Exception in sendToAWS: " + e.toString());
+    return { 
+      success: false, 
+      error: e.toString() 
+    };
   }
+}
+
+// Create time-based triggers (run once to set up automated processing)
+function createTriggers() {
+  // Delete any existing triggers
+  const triggers = ScriptApp.getProjectTriggers();
+  for (let i = 0; i < triggers.length; i++) {
+    ScriptApp.deleteTrigger(triggers[i]);
+  }
+  
+  // Create a trigger to process new items every 5 minutes
+  ScriptApp.newTrigger('processNewItems')
+    .timeBased()
+    .everyMinutes(5)
+    .create();
+  
+  // Create a trigger to retry error items every hour
+  ScriptApp.newTrigger('retryErrorItems')
+    .timeBased()
+    .everyHours(1)
+    .create();
 }

@@ -3,81 +3,188 @@ import boto3
 import uuid
 from datetime import datetime
 import logging
+import traceback
 
 from penguindb.utils.llm_client import call_claude
 
-# Set up logging
+# Configure logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+# Define error types
+class ErrorTypes:
+    VALIDATION_ERROR = "ValidationError"
+    DATABASE_ERROR = "DatabaseError"
+    INTERNAL_ERROR = "InternalError"
+    AUTHENTICATION_ERROR = "AuthenticationError"
+
 def lambda_handler(event, context):
+    """
+    Main Lambda handler function with comprehensive error handling.
+    
+    Args:
+        event: The event from API Gateway
+        context: The Lambda context
+        
+    Returns:
+        A response object with statusCode and body
+    """
     try:
+        # Log the incoming event
+        logger.info(f"Processing event: {json.dumps(event)}")
+        
         # Parse input from API Gateway
-        body = json.loads(event['body']) if isinstance(event['body'], str) else event['body']
-        logger.info(f"Received data: {json.dumps(body)}")
-        
-        # Initialize DynamoDB client
-        dynamodb = boto3.resource('dynamodb')
-        table = dynamodb.Table('LinkedInContent')  # Use your table name
-        
-        # Generate ID if not provided
-        if 'id' not in body or not body['id']:
-            body['id'] = str(uuid.uuid4())
-        
-        # Add timestamp if not present
-        if 'timestamp' not in body:
-            body['timestamp'] = datetime.now().isoformat()
+        try:
+            body = json.loads(event['body']) if isinstance(event['body'], str) else event['body']
+        except (KeyError, json.JSONDecodeError) as e:
+            return create_error_response(
+                400,
+                ErrorTypes.VALIDATION_ERROR,
+                f"Invalid request body: {str(e)}"
+            )
         
         # Validate required fields
         required_fields = ['content_type', 'description', 'url']
-        for field in required_fields:
-            if field not in body or not body[field]:
-                return {
-                    'statusCode': 400,
-                    'body': json.dumps({
-                        'message': f'Missing required field: {field}'
-                    })
-                }
+        missing_fields = [field for field in required_fields if field not in body or not body[field]]
         
-        # Generate content using Claude LLM
-        try:
-            llm_generated = generate_content_with_llm(
-                content_type=body.get('content_type', ''),
-                description=body.get('description', ''),
-                tags=body.get('tags', '')
+        if missing_fields:
+            return create_error_response(
+                400,
+                ErrorTypes.VALIDATION_ERROR,
+                f"Missing required fields: {', '.join(missing_fields)}"
             )
             
-            # Add the generated content to the body
-            body['generated_title'] = llm_generated.get('title', '')
-            body['generated_description'] = llm_generated.get('description', '')
-            body['generated_tags'] = llm_generated.get('tags', '')
+        # Validate field types
+        validation_errors = validate_field_types(body)
+        if validation_errors:
+            return create_error_response(
+                400,
+                ErrorTypes.VALIDATION_ERROR,
+                f"Field validation errors: {validation_errors}"
+            )
+
+        # Add metadata
+        try:
+            # Generate ID if not provided
+            if 'id' not in body or not body['id']:
+                body['id'] = str(uuid.uuid4())
             
-            logger.info(f"Generated content: {json.dumps(llm_generated)}")
-        except Exception as llm_error:
-            logger.error(f"Error generating content with LLM: {str(llm_error)}")
-            # Continue processing even if LLM fails
+            # Add timestamp if not present
+            if 'timestamp' not in body:
+                body['timestamp'] = datetime.now().isoformat()
+                
+            # Add processing metadata
+            body['processed_at'] = datetime.now().isoformat()
+            body['processed_by'] = context.function_name
+            body['aws_request_id'] = context.aws_request_id
+        except Exception as e:
+            logger.error(f"Error adding metadata: {str(e)}")
+            return create_error_response(
+                500,
+                ErrorTypes.INTERNAL_ERROR,
+                f"Error preparing data: {str(e)}"
+            )
         
-        # Write to DynamoDB
-        response = table.put_item(Item=body)
-        
-        return {
-            'statusCode': 200,
-            'body': json.dumps({
-                'message': 'Data successfully processed',
-                'id': body['id'],
-                'generated_title': body.get('generated_title', ''),
-                'generated_description': body.get('generated_description', ''),
-                'generated_tags': body.get('generated_tags', '')
-            })
-        }
+        # Write to DynamoDB with proper error handling
+        try:
+            # Initialize DynamoDB client
+            dynamodb = boto3.resource('dynamodb')
+            table = dynamodb.Table('LinkedInContent')
+            
+            # Write to DynamoDB
+            response = table.put_item(Item=body)
+            
+            # Log success
+            logger.info(f"Successfully wrote item {body['id']} to DynamoDB")
+            
+            # Return success response
+            return {
+                'statusCode': 200,
+                'body': json.dumps({
+                    'message': 'Data successfully processed',
+                    'id': body['id'],
+                    'timestamp': body['timestamp']
+                }),
+                'headers': {
+                    'Content-Type': 'application/json'
+                }
+            }
+        except boto3.exceptions.Boto3Error as e:
+            logger.error(f"DynamoDB error: {str(e)}")
+            return create_error_response(
+                500,
+                ErrorTypes.DATABASE_ERROR,
+                f"Database error: {str(e)}"
+            )
+            
     except Exception as e:
-        logger.error(f"Error: {str(e)}")
-        return {
-            'statusCode': 500,
-            'body': json.dumps({
-                'message': f'Error processing data: {str(e)}'
-            })
+        # Catch any unexpected errors
+        trace = traceback.format_exc()
+        logger.error(f"Unexpected error: {str(e)}\n{trace}")
+        return create_error_response(
+            500,
+            ErrorTypes.INTERNAL_ERROR,
+            f"Internal server error: {str(e)}"
+        )
+
+def validate_field_types(body):
+    """
+    Validate the types of fields in the request body.
+    
+    Args:
+        body: The request body to validate
+        
+    Returns:
+        A string with validation errors or None if validation passes
+    """
+    errors = []
+    
+    # Check content_type
+    if 'content_type' in body and not isinstance(body['content_type'], str):
+        errors.append("content_type must be a string")
+    
+    # Check description
+    if 'description' in body and not isinstance(body['description'], str):
+        errors.append("description must be a string")
+    
+    # Check url
+    if 'url' in body and not isinstance(body['url'], str):
+        errors.append("url must be a string")
+    
+    # Check tags (should be a string for comma-separated values)
+    if 'tags' in body and body['tags'] and not isinstance(body['tags'], str):
+        errors.append("tags must be a comma-separated string")
+    
+    return "; ".join(errors) if errors else None
+
+
+def create_error_response(status_code, error_type, message):
+    """
+    Create a standardized error response.
+    
+    Args:
+        status_code: HTTP status code
+        error_type: Type of error (from ErrorTypes)
+        message: Error message
+        
+    Returns:
+        A formatted error response object
+    """
+    logger.error(f"{error_type}: {message}")
+    
+    return {
+        'statusCode': status_code,
+        'body': json.dumps({
+            'error': {
+                'type': error_type,
+                'message': message,
+                'timestamp': datetime.now().isoformat()
+            }
+        }),
+        'headers': {
+            'Content-Type': 'application/json'
         }
+    }
 
 def generate_content_with_llm(content_type, description, tags):
     """
@@ -113,7 +220,7 @@ def generate_content_with_llm(content_type, description, tags):
         result = call_claude(
             prompt=prompt,
             extract_json=True,
-            max_tokens=1000
+            max_tokens=1500
         )
         
         # Check for errors from LLM call

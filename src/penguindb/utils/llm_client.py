@@ -1,9 +1,9 @@
 import json
-import boto3
+
 import logging
 import asyncio
 import aioboto3
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 async def call_claude_async(
     prompt: str,
     model_id: str = "anthropic.claude-3-5-haiku-20241022-v1:0",
-    max_tokens: int = 1000,
+    max_tokens: int = 1500,
     region_name: str = "us-east-1",
     extract_json: bool = False
 ) -> Dict[str, Any]:
@@ -83,7 +83,7 @@ async def call_claude_async(
 def call_claude(
     prompt: str,
     model_id: str = "anthropic.claude-3-sonnet-20240229-v1:0",
-    max_tokens: int = 1000,
+    max_tokens: int = 1500,
     region_name: str = "us-east-1",
     extract_json: bool = False
 ) -> Dict[str, Any]:
