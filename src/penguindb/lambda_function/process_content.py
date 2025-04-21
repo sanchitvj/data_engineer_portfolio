@@ -7,7 +7,6 @@ import traceback
 
 from penguindb.utils.llm_client import call_claude
 
-# Configure logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
