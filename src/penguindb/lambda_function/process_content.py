@@ -271,21 +271,24 @@ def generate_content_with_llm(content_type, description, tags):
     try:
         # Prepare prompt based on content type
         word_count = "10-15" if content_type.lower() == "post" else "15-20"
-        
         prompt = f"""
         Content Type: {content_type}
-        Original Description: {description}
-        Original Tags: {tags}
-        
-        Based on the above content, please generate the following:
-        
-        1. A concise title (3-6 words)
-        2. A small description ({word_count} words)
-        3. Additional relevant keyword tags that could improve search functionality
-        
-        Format your response as a JSON object with keys: title, description, tags
+        My Draft: {description}
+        Current Tags: {tags}
+
+        Hey, help me refine this {content_type} I'm working on. I need:
+
+        1. An attention-grabbing title (3-6 words) - something that would make YOU want to click. Be intriguing but not clickbaity.
+
+        2. A punchy description (around {word_count} words) that sounds like a real person wrote it - conversational, occasionally using "I" statements, and avoiding perfectionist language or overly formal structure.
+
+        3. Exactly 3 tags that would help this content reach the right audience - be specific rather than generic.
+
+        My writing style is straightforward with occasional humor. I prefer active voice and concrete examples over abstract concepts. I sometimes use short sentences for emphasis.
+
+        Return as JSON with keys: title, description, tags (array of 3 strings)
         """
-        
+
         # Call our generic LLM client
         result = call_claude(
             prompt=prompt,
