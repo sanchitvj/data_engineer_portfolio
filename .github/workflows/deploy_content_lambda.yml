@@ -104,7 +104,6 @@ jobs:
         env:
           ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
           ECR_REPOSITORY: content_lambda
-          ECR_REPOSITORY: content_lambda
           IMAGE_TAG: latest
         run: |
           echo "Updating SQS Worker Lambda..."
