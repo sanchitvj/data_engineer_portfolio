@@ -82,7 +82,7 @@ async def call_claude_async(
 # Synchronous version for compatibility
 def call_claude(
     prompt: str,
-    model_id: str = "anthropic.claude-3-sonnet-20240229-v1:0",
+    model_id: str,
     max_tokens: int = 1500,
     region_name: str = "us-east-1",
     extract_json: bool = False

@@ -237,6 +237,7 @@ def generate_content_with_llm(content_type, description, tags):
         # Call our generic LLM client
         result = call_claude(
             prompt=prompt,
+            model_id="anthropic.claude-3-5-haiku-20241022-v1:0",
             extract_json=True,
             max_tokens=1500
         )
