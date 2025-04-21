@@ -3,7 +3,6 @@ name: Deploy Lambda Functions
 on:
   push:
     branches:
-      # - dev
       - content
     paths:
       - src/penguindb/lambda_function/**
