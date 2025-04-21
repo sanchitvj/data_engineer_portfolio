@@ -112,7 +112,7 @@ def lambda_handler(event, context):
             
             # Initialize DynamoDB client
             dynamodb = boto3.resource('dynamodb')
-            table = dynamodb.Table('LinkedInContent')
+            table = dynamodb.Table('content_data')
             
             # Check if an item with this content_id already exists
             try:
