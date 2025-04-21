@@ -7,7 +7,6 @@ from datetime import datetime
 from botocore.exceptions import ClientError
 import requests  # Added for HTTP requests
 
-# Import utility functions
 from penguindb.utils.content_processing_utils import (
     ErrorTypes,
 )

@@ -5,7 +5,6 @@ import logging
 import traceback
 import os
 
-# Import utility functions
 from penguindb.utils.content_processing_utils import (
     ErrorTypes, 
     create_error_response, 

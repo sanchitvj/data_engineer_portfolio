@@ -11,7 +11,6 @@ from penguindb.utils.content_processing_utils import (
     generate_content_with_llm
 )
 
-# Set up logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
