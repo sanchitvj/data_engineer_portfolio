@@ -5,6 +5,7 @@ import logging
 import traceback
 from datetime import datetime
 from botocore.exceptions import ClientError
+import requests  # Added for HTTP requests
 
 # Import utility functions
 from penguindb.utils.content_processing_utils import (
@@ -17,7 +18,7 @@ logger.setLevel(logging.INFO)
 
 # Environment Variables
 DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME', 'content_data')
-GOOGLE_SHEET_URL = os.environ.get('GOOGLE_SHEET_URL', '')  # Apps Script Web App URL
+GOOGLE_SHEET_URL = os.environ.get('GOOGLE_SHEET_URL', 'https://docs.google.com/spreadsheets/d/1TIIfrEKqb58ljctZorOqJmO3EZtCS0VkfqRkBTt2ULY/edit?gid=0#gid=0')  # Apps Script Web App URL
 
 # Initialize clients
 dynamodb = boto3.resource('dynamodb')
@@ -68,9 +69,14 @@ def lambda_handler(event, context):
                 # The item exists in DynamoDB, meaning it was processed
                 # Send status update to Google Sheets
                 if GOOGLE_SHEET_URL:
-                    send_status_update(content_id, "PROCESSED", db_item)
-                    response['body']['updates_sent'] += 1
-                    logger.info(f"Sent status update for {content_id}")
+                    success = send_status_update(content_id, "PROCESSED", db_item)
+                    if success:
+                        response['body']['updates_sent'] += 1
+                        logger.info(f"Sent status update for {content_id}")
+                    else:
+                        error_msg = f"Failed to update status for {content_id}"
+                        logger.error(error_msg)
+                        response['body']['errors'].append(error_msg)
                 else:
                     logger.warning("No Google Sheet URL configured, skipping update")
                 
@@ -117,13 +123,30 @@ def get_pending_items_from_event(event):
             logger.warning(f"Error parsing content_ids from event: {str(e)}")
             pass
     
-    # If no content_ids provided, we could scan DynamoDB for recent items
-    # This is optional and would be more expensive for large tables
-    # You can implement this if needed or handle it differently
-    
-    # For now, we'll return an empty list
-    logger.warning("No content_ids provided in event, returning empty list")
-    return []
+    # If no content_ids provided, scan DynamoDB for pending items
+    try:
+        logger.info("No specific content_ids provided, scanning for PENDING items")
+        response = table.scan(
+            FilterExpression="attribute_exists(#status) AND #status = :status_val",
+            ExpressionAttributeNames={
+                "#status": "status"
+            },
+            ExpressionAttributeValues={
+                ":status_val": "pending"
+            },
+            Limit=50  # Limit to avoid too many items at once
+        )
+        
+        if 'Items' in response and response['Items']:
+            logger.info(f"Found {len(response['Items'])} pending items in DynamoDB")
+            return response['Items']
+        else:
+            logger.info("No pending items found in DynamoDB")
+            return []
+            
+    except Exception as e:
+        logger.error(f"Error scanning for pending items: {str(e)}")
+        return []
 
 def get_item_from_dynamodb(content_id):
     """Fetch an item from DynamoDB."""
@@ -138,8 +161,13 @@ def send_status_update(content_id, status, db_item=None):
     """
     Send status update to Google Sheets using the Apps Script Web App.
     
-    This would typically be a POST request to the Google Apps Script 
-    Web App URL that you deploy as part of your Google Sheets solution.
+    Args:
+        content_id: The unique ID of the content to update
+        status: The new status value (PROCESSED or ERROR)
+        db_item: Optional DynamoDB item with additional data
+        
+    Returns:
+        Boolean indicating success or failure
     """
     if not GOOGLE_SHEET_URL:
         logger.warning("No Google Sheet URL configured")
@@ -155,16 +183,74 @@ def send_status_update(content_id, status, db_item=None):
         
         # Include additional details that might be helpful
         if db_item:
-            payload['processed_at'] = db_item.get('processed_at', '')
-            payload['generated_title'] = db_item.get('generated_title', '')
+            if 'processed_at' in db_item:
+                payload['processed_at'] = db_item['processed_at']
             
-        # Here's where you'd make the HTTP request to your Google Apps Script Web App
-        # Using requests or similar library
-        logger.info(f"Would send status update to Google Sheet: {json.dumps(payload)}")
+            if 'generated_title' in db_item:
+                payload['generated_title'] = db_item['generated_title']
+            
+            # Include generated tags if available
+            if 'generated_tags' in db_item:
+                tags = db_item['generated_tags']
+                if isinstance(tags, set):
+                    payload['generated_tags'] = list(tags)
+                else:
+                    payload['generated_tags'] = tags
+            
+        # Log the payload for debugging
+        logger.info(f"Sending status update to Google Sheet: {json.dumps(payload)}")
         
-        # For now, we'll just log it (you'll need to add actual HTTP call)
-        return True
+        # Make the HTTP request to the Google Apps Script Web App
+        headers = {
+            'Content-Type': 'application/json'
+        }
         
+        # Set a timeout to prevent hanging
+        timeout = 10  # seconds
+        
+        # Send the POST request
+        response = requests.post(
+            GOOGLE_SHEET_URL,
+            json=payload,
+            headers=headers,
+            timeout=timeout
+        )
+        
+        # Check if request was successful
+        if response.status_code == 200:
+            try:
+                # Parse response to see if Google Script reported success
+                response_data = response.json()
+                if response_data.get('status') == 'success':
+                    logger.info(f"Status update successful for {content_id}")
+                    
+                    # Update DynamoDB item to mark as reported to sheet
+                    try:
+                        table.update_item(
+                            Key={'content_id': content_id},
+                            UpdateExpression="SET sheet_updated = :val, sheet_updated_at = :time",
+                            ExpressionAttributeValues={
+                                ':val': True,
+                                ':time': datetime.now().isoformat()
+                            }
+                        )
+                    except Exception as update_error:
+                        logger.warning(f"Failed to mark item as updated in DynamoDB: {str(update_error)}")
+                    
+                    return True
+                else:
+                    logger.error(f"Google Apps Script returned error: {response_data}")
+                    return False
+            except json.JSONDecodeError:
+                logger.error(f"Failed to parse response from Google Apps Script: {response.text}")
+                return False
+        else:
+            logger.error(f"HTTP error {response.status_code} when updating Google Sheet: {response.text}")
+            return False
+            
+    except requests.RequestException as e:
+        logger.error(f"Request exception when sending status update for {content_id}: {str(e)}")
+        return False
     except Exception as e:
         logger.error(f"Error sending status update for {content_id}: {str(e)}")
         return False
