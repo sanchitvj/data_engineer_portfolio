@@ -417,7 +417,7 @@ function updateItemStatus(contentId, status, processedAt, generatedTitle) {
     newStatus = STATUS.PROCESSED;
   } else if (status === "ERROR") {
     newStatus = STATUS.ERROR;
-  } else {
+    } else {
     newStatus = status; // Use as-is if it's a valid status
   }
   
