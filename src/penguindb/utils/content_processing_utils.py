@@ -108,8 +108,27 @@ def prepare_data_for_dynamodb(item):
     """
     dynamodb_item = {}
     
+    # Fields to exclude from DynamoDB (often from spreadsheet metadata)
+    excluded_fields = [
+        'Column 1',                   # Spreadsheet metadata
+        'Column 2',                   # Spreadsheet metadata
+        'Column 3',                   # Spreadsheet metadata
+        'Row',                        # Spreadsheet metadata
+        'Row Number',                 # Spreadsheet metadata
+        'INDEX',                      # Spreadsheet metadata
+        'ID',                         # Use content_id instead
+        'sheet_id',                   # Spreadsheet metadata
+        'headers',                    # Spreadsheet metadata
+        'error_details',              # Handle separately
+        'attempt_count'               # Handle separately
+    ]
+    
     # Process each field
     for key, value in item.items():
+        # Skip excluded fields
+        if key in excluded_fields:
+            continue
+            
         # Skip null values
         if value is None:
             continue

@@ -246,17 +246,77 @@ function sendToAWS(data) {
       responseBody = response.getContentText();
 
       Logger.log(`Response Code: ${responseCode}`);
-      // Logger.log(`Response Body: ${responseBody}`); // Uncomment for detailed debugging if needed
+      Logger.log(`Response Body: ${responseBody}`); // For debugging API response format
 
-      if (responseCode === 202) {
-        Logger.log(`Request accepted by API Gateway for content_id: ${data.content_id}. Message ID: ${responseBody}`);
-        // Status remains PENDING - it's accepted, not fully processed yet.
+      // Handle API Gateway wrapped responses, which might contain a statusCode within a 200 response
+      let actualResponseCode = responseCode;
+      let actualResponseBody = responseBody;
+      let parsedResponse = null;
+      
+      // Try to parse the response to see if it's wrapped by API Gateway
+      try {
+        parsedResponse = JSON.parse(responseBody);
+        
+        // Check if this is an API Gateway wrapped response
+        if (parsedResponse.statusCode && parsedResponse.body) {
+          actualResponseCode = parsedResponse.statusCode;
+          
+          // The body is often a stringified JSON, so we need to parse it again
+          try {
+            actualResponseBody = JSON.parse(parsedResponse.body);
+            Logger.log(`Unwrapped API Gateway response. Inner status: ${actualResponseCode}`);
+            Logger.log(`Unwrapped body: ${JSON.stringify(actualResponseBody)}`);
+          } catch (innerErr) {
+            // If inner parsing fails, use the string as is
+            actualResponseBody = parsedResponse.body;
+          }
+        }
+      } catch (parseErr) {
+        // If parsing fails, use original response
+        Logger.log(`Failed to parse response as JSON: ${parseErr.toString()}`);
+        // Continue with original responseCode and responseBody
+      }
+      
+      // Now handle based on the actualResponseCode, which might be from the inner response
+      if (actualResponseCode === 202 || 
+          (actualResponseCode === 200 && parsedResponse && parsedResponse.statusCode === 202)) {
+        Logger.log(`Request accepted by API Gateway for content_id: ${data.content_id}.`);
         success = true;
-        break; // Exit loop on success
-      } else if (responseCode === 500 || responseCode === 429 || responseCode === 503 || responseCode === 504) {
+        
+        // Return the unwrapped response if available
+        if (typeof actualResponseBody === 'object') {
+          return {
+            success: true,
+            data: actualResponseBody
+          };
+        } else {
+          // Try to parse the actualResponseBody if it's a string
+          try {
+            const innerData = JSON.parse(actualResponseBody);
+            return {
+              success: true,
+              data: innerData
+            };
+          } catch (e) {
+            // Return the string as is if parsing fails
+            return {
+              success: true,
+              data: {
+                message: actualResponseBody
+              }
+            };
+          }
+        }
+      } else if (actualResponseCode === 500 || actualResponseCode === 429 || 
+                 actualResponseCode === 503 || actualResponseCode === 504) {
         // Retryable errors (Internal Server Error, Rate Limit, Service Unavailable)
-        Logger.log(`Received retryable error code: ${responseCode}. Retrying attempt ${attempt + 1}/${MAX_RETRIES + 1}...`);
-        lastError = `API Error ${responseCode}: ${responseBody}`;
+        Logger.log(`Received retryable error code: ${actualResponseCode}. Retrying attempt ${attempt + 1}/${MAX_RETRIES + 1}...`);
+        
+        if (typeof actualResponseBody === 'object') {
+          lastError = `API Error ${actualResponseCode}: ${JSON.stringify(actualResponseBody)}`;
+        } else {
+          lastError = `API Error ${actualResponseCode}: ${actualResponseBody}`;
+        }
         
         if (attempt < MAX_RETRIES) {
           // Calculate backoff with jitter
@@ -266,12 +326,17 @@ function sendToAWS(data) {
           Logger.log(`Waiting for ${waitTime.toFixed(0)} ms before next retry.`);
           Utilities.sleep(waitTime);
         } else {
-          Logger.log(`Max retries reached for content_id: ${data.content_id}. Final error code: ${responseCode}.`);
+          Logger.log(`Max retries reached for content_id: ${data.content_id}. Final error code: ${actualResponseCode}.`);
         }
       } else {
         // Non-retryable error (e.g., 400 Bad Request, 403 Forbidden)
-        Logger.log(`Received non-retryable error code: ${responseCode} for content_id: ${data.content_id}.`);
-        lastError = `API Error ${responseCode}: ${responseBody}`;
+        Logger.log(`Received non-retryable error code: ${actualResponseCode} for content_id: ${data.content_id}.`);
+        
+        if (typeof actualResponseBody === 'object') {
+          lastError = `API Error ${actualResponseCode}: ${JSON.stringify(actualResponseBody)}`;
+        } else {
+          lastError = `API Error ${actualResponseCode}: ${actualResponseBody}`;
+        }
         break; // Exit loop on non-retryable error
       }
     } catch (e) {
@@ -292,23 +357,14 @@ function sendToAWS(data) {
   }
 
   if (success) {
-    // Try to parse the response body for message_id and request_id
-    try {
-      const parsedResponse = JSON.parse(responseBody);
-      return {
-        success: true,
-        data: parsedResponse
-      };
-    } catch (e) {
-      // If parsing fails, just return the raw response
-      return {
-        success: true,
-        data: {
-          message: responseBody,
-          raw_response: responseBody
-        }
-      };
-    }
+    // This code shouldn't be reached if success is true, but just in case
+    return {
+      success: true,
+      data: {
+        message: "Request accepted",
+        content_id: data.content_id
+      }
+    };
   } else {
     return {
       success: false,

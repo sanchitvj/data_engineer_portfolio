@@ -48,28 +48,52 @@ def get_pending_items():
             data = response.json()
             logger.info(f"Response data type: {type(data)}")
             
+            # Log full response structure for debugging (limit size for large responses)
+            response_str = str(data)
+            if len(response_str) > 500:
+                response_str = response_str[:500] + "..."
+            logger.info(f"Response structure: {response_str}")
+            
             # Handle different response formats
+            pending_items = []
+            
             if isinstance(data, list):
                 # Format: Array of items
                 pending_items = [item for item in data if isinstance(item, dict) and item.get('status') == 'PENDING']
             elif isinstance(data, dict):
-                # Format: Object with items property or other structure
-                if 'items' in data and isinstance(data['items'], list):
-                    pending_items = [item for item in data['items'] if isinstance(item, dict) and item.get('status') == 'PENDING']
-                elif 'data' in data and isinstance(data['data'], list):
-                    pending_items = [item for item in data['data'] if isinstance(item, dict) and item.get('status') == 'PENDING']
-                elif 'rows' in data and isinstance(data['rows'], list):
-                    pending_items = [item for item in data['rows'] if isinstance(item, dict) and item.get('status') == 'PENDING']
+                # Common patterns in Google Apps Script responses
+                if 'status' in data and data.get('status') == 'success' and 'data' in data:
+                    # Success response with data field
+                    if isinstance(data['data'], list):
+                        pending_items = [item for item in data['data'] if isinstance(item, dict) and item.get('status') == 'PENDING']
+                    elif isinstance(data['data'], dict) and 'items' in data['data']:
+                        pending_items = [item for item in data['data']['items'] if isinstance(item, dict) and item.get('status') == 'PENDING']
+                # If it's a simple success message without data, do an additional fetch to get the data
+                elif 'status' in data and data.get('status') in ['success', 'ok'] and 'message' in data:
+                    logger.info("Response indicates success but contains no data. Fetching data with action=getPendingItems")
+                    # Make a new request with explicit action parameter
+                    try:
+                        fetch_url = f"{sheet_url}?action=getPendingItems"
+                        fetch_response = requests.get(fetch_url, timeout=15)
+                        if fetch_response.status_code == 200:
+                            fetch_data = fetch_response.json()
+                            if isinstance(fetch_data, dict) and 'data' in fetch_data and isinstance(fetch_data['data'], list):
+                                pending_items = [item for item in fetch_data['data'] if isinstance(item, dict) and item.get('status') == 'PENDING']
+                            elif isinstance(fetch_data, list):
+                                pending_items = [item for item in fetch_data if isinstance(item, dict) and item.get('status') == 'PENDING']
+                        else:
+                            logger.error(f"Failed to fetch pending items with action parameter: {fetch_response.status_code}")
+                    except Exception as fetch_err:
+                        logger.error(f"Error making secondary request: {str(fetch_err)}")
                 else:
                     # Log the structure to better understand it
                     logger.error(f"Unknown dictionary structure: {list(data.keys())}")
-                    pending_items = []
             else:
                 logger.error(f"Unexpected response format from Google Sheet: {type(data)}")
-                pending_items = []
                 
             logger.info(f"Found {len(pending_items)} pending items")
             return pending_items
+            
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON response from Google Sheet: {str(e)}")
             logger.error(f"Response content: {response.text}")
