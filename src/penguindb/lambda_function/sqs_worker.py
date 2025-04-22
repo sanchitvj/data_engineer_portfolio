@@ -23,37 +23,6 @@ LLM_MODEL = os.environ.get('LLM_MODEL', 'us.anthropic.claude-3-5-haiku-20241022-
 # Initialize clients
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(DYNAMODB_TABLE_NAME)
-cloudwatch = boto3.client('cloudwatch')
-
-# Function to publish metrics to CloudWatch
-def publish_metric(metric_name, value, unit='Count', dimensions=None):
-    """
-    Publish a metric to CloudWatch.
-    
-    Args:
-        metric_name: Name of the metric
-        value: Value of the metric
-        unit: Unit of the metric (default: Count)
-        dimensions: Optional dimensions for the metric
-    """
-    try:
-        metric_data = {
-            'MetricName': metric_name,
-            'Value': value,
-            'Unit': unit
-        }
-        
-        if dimensions:
-            metric_data['Dimensions'] = dimensions
-            
-        cloudwatch.put_metric_data(
-            Namespace='PenguinDB/ContentProcessing',
-            MetricData=[metric_data]
-        )
-        logger.debug(f"Published metric {metric_name}: {value} {unit}")
-    except Exception as e:
-        logger.warning(f"Failed to publish metric {metric_name}: {str(e)}")
-        # Non-critical operation, don't raise exception
 
 # Debug import paths
 def debug_imports():
@@ -82,6 +51,16 @@ def lambda_handler(event, context):
     # Debug logging on every invocation
     logger.info(f"SQS Worker received event: {json.dumps(event)}")
     
+    # Calculate available execution time (leave 15 seconds buffer)
+    remaining_time_ms = context.get_remaining_time_in_millis() - 15000 if hasattr(context, 'get_remaining_time_in_millis') else 180000
+    logger.info(f"Remaining execution time: {remaining_time_ms/1000} seconds")
+    
+    # If we have very little time left, defer processing to a new invocation
+    if remaining_time_ms < 30000:  # Less than 30 seconds
+        logger.warning("Insufficient time remaining, deferring processing")
+        # Let SQS retry this batch
+        raise Exception("Insufficient execution time remaining")
+    
     # Run import diagnostics on cold start
     debug_imports()
     
@@ -103,23 +82,36 @@ def lambda_handler(event, context):
         # Collect content_ids for batch status checking
         successful_content_ids = []
 
-        # Track metrics
+        # Track processing stats
         record_count = len(event.get('Records', []))
         success_count = 0
         llm_error_count = 0
         db_error_count = 0
         
-        # Publish initial metrics
-        publish_metric('RecordsReceived', record_count)
+        # Calculate time limit per record to prevent timeout
+        # Leave 10 seconds for final processing
+        time_per_record_ms = (remaining_time_ms - 10000) / record_count if record_count > 0 else 60000
+        logger.info(f"Allocating {time_per_record_ms/1000} seconds per record")
+        
+        # Import time for timeout tracking
+        import time
+        start_time = time.time()
 
-        for record in event.get('Records', []):
+        for record_index, record in enumerate(event.get('Records', [])):
             message_id = record.get('messageId', 'N/A')
             receipt_handle = record.get('receiptHandle', 'N/A')
             content_id = 'UNKNOWN_ID'  # Default
+            
+            # Calculate if we have sufficient time to process this record
+            elapsed_ms = (time.time() - start_time) * 1000
+            if elapsed_ms > (remaining_time_ms - 20000):  # 20 second safety margin
+                logger.warning(f"Approaching Lambda timeout, processed {record_index}/{record_count} records")
+                # Don't raise exception, just return what we've done so far
+                break
 
             try:
                 # Log the raw record first
-                logger.info(f"Processing SQS record: {json.dumps(record)}")
+                logger.info(f"Processing SQS record {record_index+1}/{record_count}: {json.dumps(record)}")
                 
                 # Extract and parse the message body
                 message_body = record.get('body')
@@ -181,9 +173,8 @@ def lambda_handler(event, context):
                     
                     # Track LLM success/failure
                     if has_content:
-                        publish_metric('LLMSuccess', 1)
+                        success_count += 1
                     else:
-                        publish_metric('LLMEmptyResult', 1)
                         llm_error_count += 1
                         
                 except Exception as llm_error:
@@ -194,7 +185,6 @@ def lambda_handler(event, context):
                     body['generated_tags'] = []
                     
                     # Track LLM errors
-                    publish_metric('LLMError', 1)
                     llm_error_count += 1
 
                 # Prepare and store data in DynamoDB
@@ -240,17 +230,12 @@ def lambda_handler(event, context):
                     
                     # Add to the list of successful content_ids for batch status checking
                     successful_content_ids.append(content_id)
-                    success_count += 1
                     
-                    # Track successful writes to DynamoDB
-                    publish_metric('DynamoDBSuccess', 1)
-
                 except Exception as db_error:
                     logger.error(f"SQS Worker - Database error for {content_id}: {str(db_error)}")
                     logger.error(traceback.format_exc())
                     
                     # Track DynamoDB errors
-                    publish_metric('DynamoDBError', 1)
                     db_error_count += 1
                     
                     # Since this is a critical operation, we re-raise to trigger SQS retry/DLQ
@@ -299,35 +284,15 @@ def lambda_handler(event, context):
                 status_code = response.get('StatusCode')
                 if status_code == 202:  # 202 Accepted indicates successful async invocation
                     logger.info(f"Successfully triggered status_checker Lambda for batch of {len(successful_content_ids)} items")
-                    
-                    # Track successful status checker invocation
-                    publish_metric('StatusCheckerInvoked', 1)
-                    publish_metric('ItemsSubmittedForStatusCheck', len(successful_content_ids))
                 else:
                     logger.error(f"Unexpected status code from Lambda invoke: {status_code}")
                     logger.error(f"Response: {response}")
                     
-                    # Track failed status checker invocation
-                    publish_metric('StatusCheckerError', 1)
-                    
             except Exception as trigger_error:
                 logger.error(f"Failed to trigger status_checker batch: {str(trigger_error)}")
                 logger.error(traceback.format_exc())
-                
-                # Track error
-                publish_metric('StatusCheckerInvocationError', 1)
         else:
             logger.info("No successful items to update status for")
-
-        # Publish final summary metrics
-        publish_metric('ProcessingSuccessCount', success_count)
-        publish_metric('ProcessingErrorCount', len(failed_message_ids))
-        publish_metric('LLMErrorCount', llm_error_count)
-        publish_metric('DynamoDBErrorCount', db_error_count)
-        
-        if record_count > 0:
-            success_rate = (success_count / record_count) * 100
-            publish_metric('ProcessingSuccessRate', success_rate, 'Percent')
 
         # If using batch item failures reporting
         if failed_message_ids:

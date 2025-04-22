@@ -7,6 +7,7 @@ from datetime import datetime
 from botocore.exceptions import ClientError
 import requests  # Added for HTTP requests
 import time
+import random
 
 
 
@@ -34,6 +35,18 @@ def lambda_handler(event, context):
     """
     logger.info("Status Checker Lambda started")
     logger.info(f"Received event: {json.dumps(event)}")
+    
+    # Calculate available execution time (leave 15 seconds buffer)
+    remaining_time_ms = context.get_remaining_time_in_millis() - 15000 if hasattr(context, 'get_remaining_time_in_millis') else 180000
+    logger.info(f"Remaining execution time: {remaining_time_ms/1000} seconds")
+    
+    # If we have very little time left, don't even try
+    if remaining_time_ms < 20000:  # Less than 20 seconds
+        logger.warning("Insufficient time remaining for status checking")
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': 'Insufficient execution time remaining'})
+        }
     
     # Validate GOOGLE_SHEET_URL is set
     if not GOOGLE_SHEET_URL:
@@ -111,10 +124,19 @@ def lambda_handler(event, context):
         updated_count = 0
         error_count = 0
         
-        # Process in batches of 5 to avoid overwhelming Apps Script quotas
-        batch_size = 5
+        # Process in smaller batches to avoid overwhelming Apps Script quotas
+        # and track time to prevent Lambda timeouts
+        batch_size = 3  # Reduce batch size to 3 (from 5)
+        start_time = time.time()
         
         for i in range(0, total_items, batch_size):
+            # Check if we're approaching Lambda timeout
+            elapsed_ms = (time.time() - start_time) * 1000
+            if elapsed_ms > (remaining_time_ms - 20000):  # 20 second safety margin
+                logger.warning(f"Approaching Lambda timeout, processed {i}/{total_items} items")
+                # Don't process more items, just return what we've done so far
+                break
+                
             batch = items[i:i+batch_size]
             logger.info(f"Processing batch {i//batch_size + 1} of {(total_items + batch_size - 1)//batch_size} ({len(batch)} items)")
             
@@ -159,6 +181,28 @@ def lambda_handler(event, context):
                 logger.info("Waiting 3 seconds before processing next batch...")
                 time.sleep(3)  # 3 second delay between batches
         
+        # If we processed some but not all items, and we're running out of time,
+        # trigger another Lambda to process the remaining items
+        remaining_items = total_items - (i + len(batch))
+        if remaining_items > 0:
+            logger.info(f"Still have {remaining_items} items to process, triggering another Lambda")
+            try:
+                # Create a new list of remaining content_ids
+                remaining_content_ids = [item.get('content_id') for item in items[i+batch_size:] if item.get('content_id')]
+                
+                if remaining_content_ids:
+                    # Self-invoke to process remaining items
+                    lambda_client = boto3.client('lambda')
+                    lambda_client.invoke(
+                        FunctionName=context.function_name,
+                        InvocationType='Event',  # Asynchronous
+                        Payload=json.dumps({'content_ids': remaining_content_ids})
+                    )
+                    logger.info(f"Triggered follow-up processing for {len(remaining_content_ids)} remaining items")
+            except Exception as invoke_error:
+                logger.error(f"Error triggering follow-up processing: {str(invoke_error)}")
+                logger.error(traceback.format_exc())
+        
         return {
             'statusCode': 200,
             'body': json.dumps({
@@ -166,6 +210,7 @@ def lambda_handler(event, context):
                 'updated_count': updated_count,
                 'error_count': error_count,
                 'total_items': total_items,
+                'remaining_items': remaining_items if 'remaining_items' in locals() else 0,
                 'content_ids_processed': content_ids if content_ids else "all recent items"
             })
         }
@@ -195,20 +240,30 @@ def update_sheet_status(content_id, status, processed_at, generated_title):
         logger.error("GOOGLE_SHEET_URL not configured")
         return {'success': False, 'error': 'Google Sheet URL not configured'}
     
-    # Maximum number of retries
-    max_retries = 3
+    # More aggressive retry settings
+    max_retries = 5
     retry_count = 0
+    initial_backoff = 1  # Start with 1 second
+    max_backoff = 16     # Maximum backoff of 16 seconds
+    backoff_time = initial_backoff
     
     while retry_count < max_retries:
         try:
+            if retry_count > 0:
+                logger.info(f"Retry attempt {retry_count}/{max_retries} for {content_id} after {backoff_time}s delay")
+                time.sleep(backoff_time)
+                # Exponential backoff with jitter to avoid thundering herd
+                backoff_time = min(max_backoff, backoff_time * 2) * (0.9 + 0.2 * random.random())
+            
             logger.info(f"Sending update to Google Sheet for {content_id}, status={status} (Attempt {retry_count+1})")
             
-            # Prepare payload for the Google Sheet Web App
+            # Prepare payload for the Google Sheet Web App with retry information
             payload = {
                 'action': 'updateStatus',
                 'content_id': content_id,
                 'status': status,
-                'processed_at': processed_at
+                'processed_at': processed_at,
+                'retry_count': retry_count
             }
             
             if generated_title:
@@ -227,8 +282,8 @@ def update_sheet_status(content_id, status, processed_at, generated_title):
             
             # Use requests library which has better error handling
             try:
-                # Set a timeout to prevent hanging
-                timeout = 15  # seconds
+                # Extend timeout for Google Apps Script
+                timeout = 20  # seconds
                 
                 # Send the request
                 response = requests.post(
@@ -250,32 +305,63 @@ def update_sheet_status(content_id, status, processed_at, generated_title):
                         else:
                             error_msg = response_data.get('message', 'Unknown error from Google Sheet')
                             logger.warning(f"Google Sheet returned error: {error_msg}")
-                            # This is a valid response but with an error message, 
-                            # don't retry as it's likely a data issue
+                            
+                            # If this looks like a quota error or timeout, retry
+                            if 'quota' in error_msg.lower() or 'timeout' in error_msg.lower() or 'limit' in error_msg.lower():
+                                retry_count += 1
+                                if retry_count < max_retries:
+                                    continue
+                            
+                            # For other errors, don't retry as it's likely a data issue
                             return {'success': False, 'error': error_msg}
                     except json.JSONDecodeError:
                         logger.error(f"Failed to parse response: {response.text}")
                         # Increment retry count and try again
                         retry_count += 1
                         if retry_count < max_retries:
-                            logger.info(f"Retrying ({retry_count}/{max_retries})...")
                             continue
                         return {'success': False, 'error': 'Failed to parse response from Google Sheet'}
-                else:
-                    logger.error(f"HTTP error {response.status_code}: {response.text}")
-                    # For HTTP errors, we'll retry
+                elif response.status_code >= 500:
+                    # For 5xx server errors, always retry
+                    logger.error(f"Server error {response.status_code}: {response.text}")
                     retry_count += 1
                     if retry_count < max_retries:
-                        logger.info(f"Retrying ({retry_count}/{max_retries})...")
                         continue
-                    return {'success': False, 'error': f"HTTP error {response.status_code}"}
+                    return {'success': False, 'error': f"Server error {response.status_code}"}
+                elif response.status_code >= 400:
+                    # For 4xx client errors, check if we should retry based on error type
+                    logger.error(f"Client error {response.status_code}: {response.text}")
                     
-            except requests.RequestException as req_error:
-                logger.error(f"Request error: {str(req_error)}")
-                # Network/timeout errors should be retried
+                    # Retry on 429 (Too Many Requests) and specific 4xx errors that might be temporary
+                    if response.status_code == 429 or response.status_code in [408, 425, 449]:
+                        retry_count += 1
+                        if retry_count < max_retries:
+                            # Use longer backoff for rate limiting errors
+                            backoff_time = min(max_backoff * 2, backoff_time * 3)
+                            continue
+                    
+                    return {'success': False, 'error': f"Client error {response.status_code}"}
+                else:
+                    logger.error(f"Unexpected HTTP status {response.status_code}: {response.text}")
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        continue
+                    return {'success': False, 'error': f"Unexpected HTTP status {response.status_code}"}
+                    
+            except requests.Timeout:
+                logger.error(f"Request timed out after {timeout}s")
                 retry_count += 1
                 if retry_count < max_retries:
-                    logger.info(f"Retrying ({retry_count}/{max_retries})...")
+                    # Increase timeout for next retry
+                    timeout += 5
+                    continue
+                return {'success': False, 'error': "Request timed out after multiple attempts"}
+                
+            except requests.RequestException as req_error:
+                logger.error(f"Request error: {str(req_error)}")
+                # Network errors should be retried
+                retry_count += 1
+                if retry_count < max_retries:
                     continue
                 return {'success': False, 'error': f"Request error: {str(req_error)}"}
                 
@@ -285,7 +371,6 @@ def update_sheet_status(content_id, status, processed_at, generated_title):
             # For unexpected errors, we'll also retry
             retry_count += 1
             if retry_count < max_retries:
-                logger.info(f"Retrying ({retry_count}/{max_retries})...")
                 continue
             return {'success': False, 'error': f"Unexpected error: {str(e)}"}
             
