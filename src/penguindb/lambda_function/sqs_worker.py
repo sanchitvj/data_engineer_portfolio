@@ -12,19 +12,15 @@ from penguindb.utils.content_processing_utils import (
     generate_content_with_llm
 )
 
-# Set up logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Environment Variables
 DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME', 'content_data')
 LLM_MODEL = os.environ.get('LLM_MODEL', 'us.anthropic.claude-3-5-haiku-20241022-v1:0')
 
-# Initialize clients
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(DYNAMODB_TABLE_NAME)
 
-# Debug import paths
 def debug_imports():
     logger.info(f"Python version: {sys.version}")
     logger.info(f"Python path: {sys.path}")

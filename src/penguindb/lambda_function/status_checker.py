@@ -4,23 +4,17 @@ import os
 import logging
 import traceback
 from datetime import datetime
-import requests  # Added for HTTP requests
+import requests
 import time
 import random
 
 
-
-# Setup logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Environment Variables
 DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME', 'content_data')
 GOOGLE_SHEET_URL = os.environ.get('GOOGLE_SHEET_URL')
 
-# WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzjDaqitE6g7wSCImSDgcujtCvyW0H_gIJuekQXAy3C9eKao0zf12d00o0FvNAbFmijxg/exec"
-
-# Initialize clients
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(DYNAMODB_TABLE_NAME)
 

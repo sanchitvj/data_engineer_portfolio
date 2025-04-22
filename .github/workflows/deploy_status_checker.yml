@@ -53,7 +53,7 @@ jobs:
       - name: Retry Update Lambda Configuration
         run: |
           for i in {1..5}; do
-            aws lambda update-function-configuration --function-name status_checker --environment "Variables={DYNAMODB_TABLE_NAME=content_data,GOOGLE_SHEET_URL=https://script.google.com/macros/s/AKfycbzjDaqitE6g7wSCImSDgcujtCvyW0H_gIJuekQXAy3C9eKao0zf12d00o0FvNAbFmijxg/exec}" && break || sleep 15;
+            aws lambda update-function-configuration --function-name status_checker --environment "Variables={DYNAMODB_TABLE_NAME=content_data,GOOGLE_SHEET_URL={{ secrets.GOOGLE_SHEET_URL }}}" && break || sleep 15;
           done
       # - name: Get latest image tag
       #   id: get-image

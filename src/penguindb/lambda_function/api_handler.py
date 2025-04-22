@@ -6,11 +6,9 @@ import datetime
 import uuid
 from penguindb.utils.content_processing_utils import ErrorTypes, create_error_response, validate_field_types
 
-# Set up logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Initialize SQS client
 sqs = boto3.client('sqs')
 SQS_QUEUE_URL = os.environ.get('SQS_QUEUE_URL')
 
