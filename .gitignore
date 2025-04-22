@@ -33,7 +33,7 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-.vscode
+**.vscode
 **.pdf
 **portfolio_gcp.json
 **.docx
