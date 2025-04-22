@@ -566,28 +566,61 @@ function addMenu() {
   }
 }
 
-// Process only the currently selected row
+// Process selected row(s)
 function processSelectedRow() {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     const activeRange = sheet.getActiveRange();
     
     if (!activeRange) {
-      SpreadsheetApp.getUi().alert("Please select a cell in the row you want to process");
+      SpreadsheetApp.getUi().alert("Please select cell(s) in the row(s) you want to process");
       return;
     }
     
-    const rowIndex = activeRange.getRow();
-    if (rowIndex <= 1) {
-      SpreadsheetApp.getUi().alert("Cannot process header row. Please select a data row.");
+    // Get all selected rows
+    const startRow = activeRange.getRow();
+    const numRows = activeRange.getNumRows();
+    
+    // Check if header row is selected
+    if (startRow <= 1 && startRow + numRows > 1) {
+      SpreadsheetApp.getUi().alert("Cannot process header row. Please select only data rows.");
       return;
     }
     
-    // Process this specific row
-    processRow(sheet, rowIndex);
+    // Track processed rows
+    let processedRows = 0;
+    let errorRows = 0;
     
-    // Show confirmation
-    SpreadsheetApp.getUi().alert(`Row ${rowIndex} has been processed.`);
+    // Process each selected row
+    for (let i = 0; i < numRows; i++) {
+      const currentRow = startRow + i;
+      
+      // Skip header row if somehow included
+      if (currentRow <= 1) continue;
+      
+      try {
+        // Process this specific row
+        processRow(sheet, currentRow);
+        processedRows++;
+        
+        // Log for debugging
+        Logger.log(`Processed row ${currentRow}`);
+      } catch (rowError) {
+        errorRows++;
+        Logger.log(`Error processing row ${currentRow}: ${rowError.toString()}`);
+      }
+    }
+    
+    // Show confirmation based on how many rows were processed
+    if (errorRows === 0) {
+      if (processedRows === 1) {
+        SpreadsheetApp.getUi().alert(`1 row has been processed successfully.`);
+      } else {
+        SpreadsheetApp.getUi().alert(`${processedRows} rows have been processed successfully.`);
+      }
+    } else {
+      SpreadsheetApp.getUi().alert(`Processed ${processedRows} rows with ${errorRows} errors. Check the logs for details.`);
+    }
     
   } catch (error) {
     Logger.log("Error in processSelectedRow: " + error.toString());
@@ -595,31 +628,55 @@ function processSelectedRow() {
   }
 }
 
-// Reset the currently selected row to NEW status
+// Reset the selected row(s) to NEW status
 function resetSelectedRowToNew() {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     const activeRange = sheet.getActiveRange();
     
     if (!activeRange) {
-      SpreadsheetApp.getUi().alert("Please select a cell in the row you want to reset");
+      SpreadsheetApp.getUi().alert("Please select cell(s) in the row(s) you want to reset");
       return;
     }
     
-    const rowIndex = activeRange.getRow();
-    if (rowIndex <= 1) {
-      SpreadsheetApp.getUi().alert("Cannot reset header row. Please select a data row.");
+    // Get all selected rows
+    const startRow = activeRange.getRow();
+    const numRows = activeRange.getNumRows();
+    
+    // Check if header row is selected
+    if (startRow <= 1 && startRow + numRows > 1) {
+      SpreadsheetApp.getUi().alert("Cannot reset header row. Please select only data rows.");
       return;
     }
     
-    // Reset this specific row
-    sheet.getRange(rowIndex, COLUMNS.STATUS + 1).setValue(STATUS.NEW);
-    sheet.getRange(rowIndex, COLUMNS.ATTEMPT_COUNT + 1).setValue(0);
-    sheet.getRange(rowIndex, COLUMNS.ERROR_DETAILS + 1).setValue("");
-    sheet.getRange(rowIndex, COLUMNS.LAST_UPDATED + 1).setValue(new Date());
+    // Track processed rows
+    let processedRows = 0;
     
-    // Show confirmation
-    SpreadsheetApp.getUi().alert(`Row ${rowIndex} has been reset to NEW status.`);
+    // Process each selected row
+    for (let i = 0; i < numRows; i++) {
+      const currentRow = startRow + i;
+      
+      // Skip header row if somehow included
+      if (currentRow <= 1) continue;
+      
+      // Reset this row
+      sheet.getRange(currentRow, COLUMNS.STATUS + 1).setValue(STATUS.NEW);
+      sheet.getRange(currentRow, COLUMNS.ATTEMPT_COUNT + 1).setValue(0);
+      sheet.getRange(currentRow, COLUMNS.ERROR_DETAILS + 1).setValue("");
+      sheet.getRange(currentRow, COLUMNS.LAST_UPDATED + 1).setValue(new Date());
+      
+      processedRows++;
+      
+      // Log for debugging
+      Logger.log(`Reset row ${currentRow} to NEW status`);
+    }
+    
+    // Show confirmation based on how many rows were processed
+    if (processedRows === 1) {
+      SpreadsheetApp.getUi().alert(`1 row has been reset to NEW status.`);
+    } else {
+      SpreadsheetApp.getUi().alert(`${processedRows} rows have been reset to NEW status.`);
+    }
     
   } catch (error) {
     Logger.log("Error in resetSelectedRowToNew: " + error.toString());
