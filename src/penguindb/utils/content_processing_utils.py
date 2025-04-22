@@ -6,6 +6,7 @@ import json
 from datetime import datetime
 import logging
 import threading
+import enum
 
 # Import LLM client with fallback
 try:
@@ -17,113 +18,125 @@ except ImportError:
         logging.error("call_claude is not available.")
         return {"error": "LLM client not imported"}
 
-# Error type classes
-class ErrorTypes:
+# Set up logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+# Define error types
+class ErrorTypes(enum.Enum):
     VALIDATION_ERROR = "ValidationError"
-    DATABASE_ERROR = "DatabaseError"
+    SERVICE_ERROR = "ServiceError"
     INTERNAL_ERROR = "InternalError"
     QUEUE_ERROR = "QueueError"
-    AUTHENTICATION_ERROR = "AuthenticationError"
+    DATABASE_ERROR = "DatabaseError"
 
-def create_error_response(status_code, error_type, message, logger):
+def create_error_response(error_type, message, log_message=None):
     """
-    Create a standardized error response for API Gateway.
+    Create a standardized error response.
     
     Args:
-        status_code: HTTP status code
-        error_type: Error type from ErrorTypes class
-        message: Error message
-        logger: Logger instance
+        error_type: Type of error (from ErrorTypes enum)
+        message: Error message to be returned to the client
+        log_message: Optional message to log (if different from client message)
     
     Returns:
-        Dictionary with format expected by API Gateway
+        Dictionary with statusCode, headers, and body containing error details
     """
-    logger.error(f"Error: {error_type} - {message}")
+    if log_message:
+        logger.error(log_message)
+    else:
+        logger.error(message)
+        
+    error_body = {
+        "error": {
+            "type": error_type.value if isinstance(error_type, ErrorTypes) else str(error_type),
+            "message": message,
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+    }
+    
     return {
-        'statusCode': status_code,
-        'body': json.dumps({
-            'error': {
-                'type': error_type,
-                'message': message,
-                'timestamp': datetime.now().isoformat()
-            }
-        }),
-        'headers': {'Content-Type': 'application/json'}
+        "statusCode": 400 if error_type == ErrorTypes.VALIDATION_ERROR else 500,
+        "body": json.dumps(error_body),
+        "headers": {
+            "Content-Type": "application/json"
+        }
     }
 
-def validate_field_types(body):
+def validate_field_types(data):
     """
-    Validate the types of fields in the request body.
+    Validates the types of fields in the request body.
     
     Args:
-        body: Request body dictionary
-    
+        data: Dictionary containing the request data
+        
     Returns:
-        String with error messages or None if validation passes
+        None if validation passes, error message string if validation fails
     """
-    errors = []
-    if 'content_type' in body and not isinstance(body['content_type'], str):
-        errors.append("content_type must be a string")
-    if 'description' in body and not isinstance(body['description'], str):
-        errors.append("description must be a string")
-    if 'url' in body and not isinstance(body['url'], str):
-        errors.append("url must be a string")
-    if 'tags' in body and body['tags'] and not isinstance(body['tags'], (str, list)):
-        errors.append("tags must be a comma-separated string or list")
-    if 'media_link' in body and body['media_link'] and not isinstance(body['media_link'], (str, list)):
-        errors.append("media_link must be a comma-separated string or list")
-    if 'generated_tags' in body and body['generated_tags'] and not isinstance(body['generated_tags'], list):
-        pass  # Handled during processing
-    return "; ".join(errors) if errors else None
+    type_validations = {
+        'content_id': str,
+        'media_link': str,
+        'tags': (str, list),
+        'generated_tags': (str, list)
+    }
+    
+    for field, expected_type in type_validations.items():
+        if field in data and data[field] is not None:
+            if isinstance(expected_type, tuple):
+                if not any(isinstance(data[field], t) for t in expected_type):
+                    type_names = [t.__name__ for t in expected_type]
+                    return f"Field '{field}' must be one of types: {', '.join(type_names)}"
+            elif not isinstance(data[field], expected_type):
+                return f"Field '{field}' must be of type {expected_type.__name__}"
+    
+    return None
 
-def prepare_data_for_dynamodb(body):
+def prepare_data_for_dynamodb(item):
     """
-    Prepare data for DynamoDB, converting fields to Sets and cleaning data.
+    Prepares data for writing to DynamoDB.
+    Converts string lists (comma-separated) to sets and handles other type conversions.
     
     Args:
-        body: Request body dictionary to prepare
-    
+        item: Dictionary containing the item data
+        
     Returns:
-        Modified body ready for DynamoDB
+        Dictionary with data formatted for DynamoDB
     """
-    # Create a copy to avoid modifying the original
-    prepared_body = body.copy()
+    dynamodb_item = {}
     
-    # Convert comma-separated strings or lists to sets for tags fields
-    for field in ['tags', 'media_link', 'generated_tags']:
-        if field in prepared_body and prepared_body[field]:
-            value = prepared_body[field]
-            processed_set = set()
+    # Process each field
+    for key, value in item.items():
+        # Skip null values
+        if value is None:
+            continue
             
-            if isinstance(value, str):
-                # Split comma-separated string and clean values
-                processed_set = set(item.strip() for item in value.split(',') if item.strip())
-            elif isinstance(value, list):
-                # Convert list to set with string conversion
-                processed_set = set(str(item).strip() for item in value if str(item).strip())
-
-            # Only keep the field if the set has values
-            if processed_set:
-                prepared_body[field] = processed_set
-            else:
-                # Remove empty sets
-                if field in prepared_body:
-                    del prepared_body[field]
-
-    # Remove transient fields not meant for persistent storage
-    transient_fields = [
-        'sqs_message_id', 'sqs_receipt_handle', 'api_request_id', 
-        'received_at', 'rowIndex'
-    ]
-    for field in transient_fields:
-        prepared_body.pop(field, None)
-
-    # Remove empty strings (DynamoDB doesn't allow them by default)
-    keys_to_delete = [k for k, v in prepared_body.items() if v == ""]
-    for k in keys_to_delete:
-        del prepared_body[k]
-
-    return prepared_body
+        # Handle comma-separated tags as StringSet
+        if key in ['tags', 'generated_tags'] and isinstance(value, str):
+            if value.strip():  # Only process non-empty strings
+                tag_list = [tag.strip() for tag in value.split(',') if tag.strip()]
+                if tag_list:
+                    dynamodb_item[key] = {'SS': tag_list}
+        # Handle actual list as StringSet
+        elif key in ['tags', 'generated_tags'] and isinstance(value, list):
+            if value:  # Only process non-empty lists
+                tag_list = [str(tag).strip() for tag in value if str(tag).strip()]
+                if tag_list:
+                    dynamodb_item[key] = {'SS': tag_list}
+        # Handle standard types
+        elif isinstance(value, str):
+            dynamodb_item[key] = {'S': value}
+        elif isinstance(value, (int, float)):
+            dynamodb_item[key] = {'N': str(value)}
+        elif isinstance(value, bool):
+            dynamodb_item[key] = {'BOOL': value}
+        elif isinstance(value, dict):
+            # Convert dict to JSON string
+            dynamodb_item[key] = {'S': json.dumps(value)}
+        else:
+            # Default to string representation
+            dynamodb_item[key] = {'S': str(value)}
+    
+    return dynamodb_item
 
 def generate_content_with_llm(content_type, description, tags, logger, timeout=120):
     """

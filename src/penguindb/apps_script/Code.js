@@ -202,13 +202,13 @@ function sendToAWS(data) {
 
     // Prepare payload for API Gateway
     const payload = {
-      content_type: data.content_type || "",
       content_id: data.content_id,
+      media_link: data.media_link || "",
+      tags: data.tags || "",
       description: data.description || "",
+      content_type: data.content_type || "",
       url: data.url || "",
-      embed_link: data.embed_link || "", 
-      tags: data.tags || "",             
-      media_link: data.media_link || "", 
+      embed_link: data.embed_link || "",
       timestamp: data.timestamp
     };
 
@@ -235,6 +235,12 @@ function sendToAWS(data) {
       try {
         // Parse response data
         const responseData = JSON.parse(responseText);
+        
+        // If we got a success message, log it
+        if (responseData.message && responseData.content_id) {
+          Logger.log(`Request accepted for content_id: ${responseData.content_id}`);
+        }
+        
         return {
           success: true,
           data: responseData
