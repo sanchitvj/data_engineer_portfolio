@@ -4,7 +4,6 @@ import os
 import logging
 import traceback
 from datetime import datetime
-from botocore.exceptions import ClientError
 import requests  # Added for HTTP requests
 import time
 import random
@@ -25,202 +24,165 @@ GOOGLE_SHEET_URL = os.environ.get('GOOGLE_SHEET_URL')
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(DYNAMODB_TABLE_NAME)
 
-def lambda_handler(event, context):
-    """
-    Check DynamoDB for items with pending status and update the Google Sheet.
-    This can be triggered on a schedule or manually.
-    
-    If content_ids are provided in the event, only those will be processed.
-    Otherwise, it scans for all recent items.
-    """
-    logger.info("Status Checker Lambda started")
-    logger.info(f"Received event: {json.dumps(event)}")
-    
-    # Calculate available execution time (leave 15 seconds buffer)
-    remaining_time_ms = context.get_remaining_time_in_millis() - 15000 if hasattr(context, 'get_remaining_time_in_millis') else 180000
-    logger.info(f"Remaining execution time: {remaining_time_ms/1000} seconds")
-    
-    # If we have very little time left, don't even try
-    if remaining_time_ms < 20000:  # Less than 20 seconds
-        logger.warning("Insufficient time remaining for status checking")
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'error': 'Insufficient execution time remaining'})
-        }
-    
-    # Validate GOOGLE_SHEET_URL is set
-    if not GOOGLE_SHEET_URL:
-        error_msg = "GOOGLE_SHEET_URL environment variable not set"
-        logger.error(error_msg)
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'error': error_msg})
-        }
-    elif not GOOGLE_SHEET_URL.startswith('https://script.google.com/'):
-        error_msg = f"Invalid GOOGLE_SHEET_URL: {GOOGLE_SHEET_URL}. Must be a Google Apps Script URL."
-        logger.error(error_msg)
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'error': error_msg})
-        }
-    
-    logger.info(f"Using Google Sheet URL: {GOOGLE_SHEET_URL}")
-    
+def debug_imports():
+    """Debug function to check if all imports are working"""
+    logger.info("All imports successful")
+
+def get_pending_items():
+    """Get pending items from Google Sheet"""
     try:
-        # Check if we received an empty or invalid event
-        if not event or not isinstance(event, dict):
-            logger.warning(f"Received empty or invalid event: {event}")
-            event = {}  # Initialize as empty dict to prevent further errors
+        # Get the Google Sheet URL from environment variables
+        sheet_url = os.environ.get('GOOGLE_SHEET_URL')
+        if not sheet_url:
+            logger.error("GOOGLE_SHEET_URL environment variable not set")
+            return []
             
-        # Check if specific content_ids were provided
-        content_ids = []
-        if 'content_ids' in event and isinstance(event['content_ids'], list):
-            content_ids = event['content_ids']
-            logger.info(f"Processing specific content_ids: {content_ids}")
+        # Make request to Google Sheet
+        response = requests.get(sheet_url)
+        if response.status_code != 200:
+            logger.error(f"Failed to get data from Google Sheet: {response.status_code}")
+            return []
+            
+        # Parse response and filter pending items
+        data = response.json()
+        pending_items = [item for item in data if item.get('status') == 'PENDING']
+        return pending_items
         
-        # Get items to process
-        items = []
+    except Exception as e:
+        logger.error(f"Error getting pending items: {str(e)}")
+        return []
+
+def get_item_from_dynamodb(content_id):
+    """Get item from DynamoDB using content_id"""
+    try:
+        response = table.scan(
+            FilterExpression='content_id = :content_id',
+            ExpressionAttributeValues={
+                ':content_id': content_id
+            }
+        )
         
-        if content_ids:
-            # Get specific items by content_id
-            for content_id in content_ids:
-                try:
-                    # Use scan instead of getItem to avoid schema mismatches
-                    scan_response = table.scan(
-                        FilterExpression=boto3.dynamodb.conditions.Key('content_id').eq(content_id),
-                        Limit=1
-                    )
-                    items_found = scan_response.get('Items', [])
-                    
-                    if items_found:
-                        items.append(items_found[0])
-                        logger.info(f"Retrieved item for content_id: {content_id}")
-                    else:
-                        logger.warning(f"Item not found for content_id: {content_id}")
-                except Exception as get_error:
-                    logger.error(f"Error getting item for {content_id}: {str(get_error)}")
-                    logger.error(traceback.format_exc())
-        else:
-            # Scan for all recent items if no specific IDs
-            logger.info("No specific content_ids provided, scanning for recent items")
-            try:
-                scan_filter = {
-                    'Limit': 50,  # Limit items per batch for efficiency
-                }
-                
-                scan_response = table.scan(**scan_filter)
-                items = scan_response.get('Items', [])
-                logger.info(f"Found {len(items)} items in scan")
-            except Exception as scan_error:
-                logger.error(f"Error scanning DynamoDB: {str(scan_error)}")
-                logger.error(traceback.format_exc())
-                return {
-                    'statusCode': 500,
-                    'body': json.dumps({'error': f"Failed to scan DynamoDB: {str(scan_error)}"})
-                }
+        items = response.get('Items', [])
+        if not items:
+            logger.warning(f"No items found for content_id: {content_id}")
+            return None
+            
+        return items[0]  # Return first matching item
         
-        # Process and update each item's status, but in smaller batches with delays
-        total_items = len(items)
-        updated_count = 0
-        error_count = 0
+    except Exception as e:
+        logger.error(f"Error getting item from DynamoDB: {str(e)}")
+        return None
+
+def update_google_sheet(content_id, dynamo_item):
+    """Update Google Sheet with DynamoDB item status"""
+    try:
+        # Get the Google Sheet URL from environment variables
+        sheet_url = os.environ.get('GOOGLE_SHEET_URL')
+        if not sheet_url:
+            logger.error("GOOGLE_SHEET_URL environment variable not set")
+            return False
+            
+        # Prepare update data
+        update_data = {
+            'content_id': content_id,
+            'status': dynamo_item.get('status', 'ERROR'),
+            'last_updated': datetime.now().isoformat()
+        }
         
-        # Process in smaller batches to avoid overwhelming Apps Script quotas
-        # and track time to prevent Lambda timeouts
-        batch_size = 3  # Reduce batch size to 3 (from 5)
-        start_time = time.time()
+        # Add generated content if available
+        if 'generated_content' in dynamo_item:
+            update_data['generated_content'] = dynamo_item['generated_content']
+            
+        # Make request to update Google Sheet
+        response = requests.post(sheet_url, json=update_data)
+        if response.status_code != 200:
+            logger.error(f"Failed to update Google Sheet: {response.status_code}")
+            return False
+            
+        logger.info(f"Successfully updated Google Sheet for content_id: {content_id}")
+        return True
         
+    except Exception as e:
+        logger.error(f"Error updating Google Sheet: {str(e)}")
+        return False
+
+def lambda_handler(event, context):
+    try:
+        logger.info("Starting status checker Lambda")
+        debug_imports()
+        
+        # Initialize variables
+        total_items = 0
+        processed_items = 0
+        remaining_items = 0
+        batch_size = 0
+        
+        # Get pending items from Google Sheet
+        pending_items = get_pending_items()
+        if not pending_items:
+            logger.info("No pending items found")
+            return {
+                'statusCode': 200,
+                'body': json.dumps({
+                    'message': 'No pending items found',
+                    'processed': 0
+                })
+            }
+            
+        total_items = len(pending_items)
+        logger.info(f"Found {total_items} pending items")
+        
+        # Process items in batches
+        batch_size = 10  # Process 10 items at a time
         for i in range(0, total_items, batch_size):
-            # Check if we're approaching Lambda timeout
-            elapsed_ms = (time.time() - start_time) * 1000
-            if elapsed_ms > (remaining_time_ms - 20000):  # 20 second safety margin
-                logger.warning(f"Approaching Lambda timeout, processed {i}/{total_items} items")
-                # Don't process more items, just return what we've done so far
-                break
-                
-            batch = items[i:i+batch_size]
-            logger.info(f"Processing batch {i//batch_size + 1} of {(total_items + batch_size - 1)//batch_size} ({len(batch)} items)")
+            batch = pending_items[i:i + batch_size]
+            remaining_items = total_items - (i + len(batch))
             
+            logger.info(f"Processing batch of {len(batch)} items (remaining: {remaining_items})")
+            
+            # Process each item in the batch
             for item in batch:
-                content_id = item.get('content_id')
-                if not content_id:
-                    logger.warning("Found item without content_id, skipping")
+                try:
+                    content_id = item['content_id']
+                    logger.info(f"Processing item with content_id: {content_id}")
+                    
+                    # Get item from DynamoDB
+                    dynamo_item = get_item_from_dynamodb(content_id)
+                    if not dynamo_item:
+                        logger.warning(f"Item not found in DynamoDB: {content_id}")
+                        continue
+                        
+                    # Update Google Sheet
+                    update_google_sheet(content_id, dynamo_item)
+                    processed_items += 1
+                    
+                except Exception as e:
+                    logger.error(f"Error processing item {content_id}: {str(e)}")
                     continue
                     
-                logger.info(f"Processing status for content_id: {content_id}")
+            # Check if we're running out of time
+            if context.get_remaining_time_in_millis() < 10000:  # Less than 10 seconds remaining
+                logger.warning(f"Lambda timeout approaching. Processed {processed_items}/{total_items} items")
+                break
                 
-                # Determine item status based on generated content
-                has_generated_title = item.get('generated_title', '') != ''
-                has_generated_tags = bool(item.get('generated_tags', []))
-                
-                # Set status based on what we found
-                status = "processed" if (has_generated_title or has_generated_tags) else "error"
-                
-                # Update Google Sheet
-                try:
-                    update_result = update_sheet_status(
-                        content_id=content_id,
-                        status=status.upper(),  # Use uppercase for the API
-                        processed_at=item.get('processed_at', datetime.now().isoformat()),
-                        generated_title=item.get('generated_title', '')
-                    )
-                    
-                    if update_result.get('success'):
-                        logger.info(f"Successfully updated sheet for {content_id} to {status}")
-                        updated_count += 1
-                    else:
-                        logger.error(f"Failed to update sheet for {content_id}: {update_result.get('error')}")
-                        error_count += 1
-                        
-                except Exception as update_error:
-                    logger.error(f"Error updating sheet for {content_id}: {str(update_error)}")
-                    logger.error(traceback.format_exc())
-                    error_count += 1
-            
-            # Add a delay between batches to avoid overwhelming Apps Script quotas
-            if i + batch_size < total_items:
-                logger.info("Waiting 3 seconds before processing next batch...")
-                time.sleep(3)  # 3 second delay between batches
-        
-        # If we processed some but not all items, and we're running out of time,
-        # trigger another Lambda to process the remaining items
-        remaining_items = total_items - (i + len(batch))
-        if remaining_items > 0:
-            logger.info(f"Still have {remaining_items} items to process, triggering another Lambda")
-            try:
-                # Create a new list of remaining content_ids
-                remaining_content_ids = [item.get('content_id') for item in items[i+batch_size:] if item.get('content_id')]
-                
-                if remaining_content_ids:
-                    # Self-invoke to process remaining items
-                    lambda_client = boto3.client('lambda')
-                    lambda_client.invoke(
-                        FunctionName=context.function_name,
-                        InvocationType='Event',  # Asynchronous
-                        Payload=json.dumps({'content_ids': remaining_content_ids})
-                    )
-                    logger.info(f"Triggered follow-up processing for {len(remaining_content_ids)} remaining items")
-            except Exception as invoke_error:
-                logger.error(f"Error triggering follow-up processing: {str(invoke_error)}")
-                logger.error(traceback.format_exc())
+        logger.info(f"Completed processing. Total items: {total_items}, Processed: {processed_items}")
         
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'message': f"Status check completed. Updated {updated_count} of {total_items} items, {error_count} errors",
-                'updated_count': updated_count,
-                'error_count': error_count,
+                'message': 'Status check completed',
                 'total_items': total_items,
-                'remaining_items': remaining_items if 'remaining_items' in locals() else 0,
-                'content_ids_processed': content_ids if content_ids else "all recent items"
+                'processed_items': processed_items
             })
         }
         
     except Exception as e:
-        logger.error(f"Unexpected error in Status Checker Lambda: {str(e)}")
-        logger.error(traceback.format_exc())
+        logger.error(f"Error in lambda_handler: {str(e)}")
         return {
             'statusCode': 500,
-            'body': json.dumps({'error': f"Unexpected error: {str(e)}"})
+            'body': json.dumps({
+                'error': str(e)
+            })
         }
 
 def update_sheet_status(content_id, status, processed_at, generated_title):
@@ -424,24 +386,6 @@ def get_pending_items_from_event(event):
     except Exception as e:
         logger.error(f"Error scanning for pending items: {str(e)}")
         return []
-
-def get_item_from_dynamodb(content_id):
-    """Fetch an item from DynamoDB using scan with filter."""
-    try:
-        # Use scan with filter instead of getItem
-        response = table.scan(
-            FilterExpression=boto3.dynamodb.conditions.Key('content_id').eq(content_id),
-            Limit=1
-        )
-        
-        items = response.get('Items', [])
-        if items:
-            return items[0]  # Return the first matching item
-        return None
-    except ClientError as e:
-        logger.error(f"Error getting item {content_id} from DynamoDB: {str(e)}")
-        logger.error(traceback.format_exc())
-        return None
 
 def send_status_update(content_id, status, db_item=None):
     """
