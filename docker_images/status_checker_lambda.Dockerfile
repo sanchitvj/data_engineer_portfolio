@@ -1,8 +1,8 @@
 # Use an official Python runtime as a parent image
 FROM public.ecr.aws/lambda/python:3.12
 
-RUN apt-get update
-RUN apt-get install -y git
+# Install git using dnf (Amazon Linux 2023 uses dnf instead of yum)
+RUN dnf install -y git && dnf clean all
 
 # ARG GITHUB_TOKEN
 
