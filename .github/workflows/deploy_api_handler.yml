@@ -5,14 +5,33 @@ on:
     workflows: ["Content Docker Image"]
     branches: 
       - content
-    paths:
-      - 'src/penguindb/lambda_function/api_handler.py'
-      - 'src/penguindb/utils/**'
-      - 'docker_images/content_lambda_image.Dockerfile'
-      - '.github/workflows/deploy_api_handler.yml'
+    types:
+      - completed
 
 jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check for changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            changes:
+              - 'src/penguindb/lambda_function/api_handler.py'
+              - 'src/penguindb/utils/**'
+              - 'docker_images/content_lambda_image.Dockerfile'
+              - '.github/workflows/deploy_api_handler.yml'
+
   deploy:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.should_deploy == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write

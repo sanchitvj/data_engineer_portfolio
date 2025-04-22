@@ -43,4 +43,4 @@ jobs:
         run: |
           docker buildx build --platform linux/amd64 --provenance=false -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f docker_images/content_lambda_image.Dockerfile --push .
           echo "::set-output name=image_uri::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-          echo "::set-output name=image_tag::$IMAGE_TAG" 
+          # echo "::set-output name=image_tag::$IMAGE_TAG" 
