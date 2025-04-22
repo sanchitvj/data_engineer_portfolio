@@ -1,0 +1,61 @@
+name: Deploy SQS Worker Lambda
+
+on:
+  workflow_run:
+    workflows: ["Build and Push Docker Image"]
+    branches: 
+      - content
+    paths:
+      - 'src/penguindb/lambda_function/sqs_worker.py'
+      - 'src/penguindb/utils/**'
+      - 'docker_images/content_lambda_image.Dockerfile'
+      - '.github/workflows/deploy_sqs_worker.yml'
+    types:
+      - completed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.OIDC_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Deploy Lambda function
+        env:
+          ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          ECR_REPOSITORY: content_lambda
+          IMAGE_TAG: latest
+        run: |
+          aws lambda update-function-code --function-name sqs_worker --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Retry Update Lambda Configuration
+        run: |
+          for i in {1..5}; do
+              aws lambda update-function-configuration --function-name sqs_worker --environment "Variables={DYNAMODB_TABLE_NAME=content_data}" && break || sleep 15;
+          done
+
+      # - name: Get latest image tag
+      #   id: get-image
+      #   run: |
+      #     aws ecr describe-images --repository-name penguindb-lambda --query 'sort_by(imageDetails, &imagePushedAt)[-1].imageTags[0]' --output text
+      #     echo "::set-output name=image_tag::$(aws ecr describe-images --repository-name penguindb-lambda --query 'sort_by(imageDetails, &imagePushedAt)[-1].imageTags[0]' --output text)"
+
+      # - name: Update Lambda function
+      #   run: |
+      #     aws lambda update-function-code \
+      #       --function-name sqs-worker-lambda \
+      #       --image-uri ${{ secrets.ECR_REGISTRY }}/penguindb-lambda:${{ steps.get-image.outputs.image_tag }}
+
+      # - name: Wait for update to complete
+      #   run: |
+      #     aws lambda wait function-updated --function-name sqs-worker-lambda 

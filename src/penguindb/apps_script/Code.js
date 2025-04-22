@@ -42,11 +42,11 @@ const CONFIG = {
 // Main function triggered on edit
 function onEdit(e) {
   try {
-    // Get the edited range and sheet
+  // Get the edited range and sheet
     const range = e.range;
     const sheet = range.getSheet();
-    
-    // Check if we're in the right sheet and if the status column was edited to "new"
+  
+  // Check if we're in the right sheet and if the status column was edited to "new"
     if (isStatusColumnEditedToNew(sheet, range)) {
       processRow(sheet, range.getRow());
     }
@@ -144,7 +144,7 @@ function processRow(sheet, rowIndex) {
         if (typeof rowData[i] === 'object' && rowData[i] !== null && typeof rowData[i].values === 'function') { 
           data[headers[i]] = Array.from(rowData[i]).join(', ');
         } else {
-          data[headers[i]] = rowData[i];
+      data[headers[i]] = rowData[i];
         }
       }
     }
@@ -152,10 +152,10 @@ function processRow(sheet, rowIndex) {
     // Ensure key fields are included
     data.content_id = contentId;
     data.timestamp = new Date().toISOString();
-
+    
     // Send data to AWS API Gateway
     const result = sendToAWS(data);
-
+    
     // Update status based on result
     if (result.success) {
       // Success response means it was either accepted (202) or processed (200)
@@ -221,7 +221,7 @@ function sendToAWS(data) {
       'timeout': CONFIG.REQUEST_TIMEOUT,
       'followRedirects': true
     };
-
+    
     // Send the request
     const response = UrlFetchApp.fetch(CONFIG.API_GATEWAY_URL, options);
     const responseCode = response.getResponseCode();
