@@ -66,6 +66,7 @@ def create_error_response(error_type, message, log_message=None):
 def validate_field_types(data):
     """
     Validates the types of fields in the request body.
+    Only validates fields that are present in the data.
     
     Args:
         data: Dictionary containing the request data
@@ -76,6 +77,7 @@ def validate_field_types(data):
     type_validations = {
         'content_id': str,
         'media_link': str,
+        'embed_link': str,
         'tags': (str, list),
         'generated_tags': (str, list)
     }
@@ -95,6 +97,7 @@ def prepare_data_for_dynamodb(item):
     """
     Prepares data for writing to DynamoDB.
     Converts string lists (comma-separated) to sets and handles other type conversions.
+    Safely handles missing fields like media_link or embed_link.
     
     Args:
         item: Dictionary containing the item data

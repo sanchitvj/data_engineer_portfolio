@@ -53,7 +53,7 @@ def lambda_handler(event, context):
             return {
                 'statusCode': 400,
                 'body': json.dumps({
-                    'error': 'Missing request body. Please provide a valid JSON payload with content_id and media_link.'
+                    'error': 'Missing request body. Please provide a valid JSON payload with content_id.'
                 }),
                 'headers': {'Content-Type': 'application/json'}
             }
@@ -64,7 +64,7 @@ def lambda_handler(event, context):
             return {
                 'statusCode': 200,
                 'body': json.dumps({
-                    'message': 'This is a test invocation. For real requests, please include content_id and media_link.'
+                    'message': 'This is a test invocation. For real requests, please include content_id.'
                 }),
                 'headers': {'Content-Type': 'application/json'}
             }
@@ -74,13 +74,13 @@ def lambda_handler(event, context):
             logger.error("Could not determine request body format")
             return create_error_response(
                 ErrorTypes.VALIDATION_ERROR, 
-                "Invalid request format. Please ensure you're sending a JSON object with content_id and media_link."
+                "Invalid request format. Please ensure you're sending a JSON object with content_id."
             )
         
         logger.info(f"Parsed request body: {json.dumps(body)}")
         
         # Validate required fields
-        required_fields = ['content_id', 'media_link']
+        required_fields = ['content_id']
         for field in required_fields:
             if field not in body or not body[field]:
                 logger.error(f"Missing required field: {field}")
