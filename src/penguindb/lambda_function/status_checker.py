@@ -44,12 +44,22 @@ def get_pending_items():
             return []
             
         # Parse response and filter pending items
-        data = response.json()
-        pending_items = [item for item in data if item.get('status') == 'PENDING']
-        return pending_items
+        try:
+            data = response.json()
+            if isinstance(data, list):
+                pending_items = [item for item in data if isinstance(item, dict) and item.get('status') == 'PENDING']
+            else:
+                logger.error(f"Unexpected response format from Google Sheet: {type(data)}")
+                return []
+            return pending_items
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON response from Google Sheet: {str(e)}")
+            logger.error(f"Response content: {response.text}")
+            return []
         
     except Exception as e:
         logger.error(f"Error getting pending items: {str(e)}")
+        logger.error(traceback.format_exc())
         return []
 
 def get_item_from_dynamodb(content_id):

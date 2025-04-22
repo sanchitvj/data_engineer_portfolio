@@ -200,124 +200,98 @@ function processRow(sheet, rowIndex) {
   }
 }
 
-// Send data to AWS API Gateway
+/**
+ * Sends data to the AWS API Gateway endpoint with retry logic.
+ * Updates the sheet status based on the outcome.
+ *
+ * @param {string} content_id The unique ID for the content.
+ * @param {object} data The data object to send.
+ * @param {Sheet} sheet The Google Sheet object.
+ * @param {Range} statusCell The cell where the status should be updated.
+ * @param {Range} errorCell The cell where error details should be updated.
+ */
 function sendToAWS(data) {
-  try {
-    if (!data.content_id) {
-      // Generate a content_id if not present
-      data.content_id = generateUUID();
-      Logger.log(`Generated content_id: ${data.content_id}`);
-    }
-    
-    // Log the data being sent
-    Logger.log(`Sending data to AWS with content_id: ${data.content_id}`);
+  const apiGatewayUrl = CONFIG.API_GATEWAY_URL; // Make sure API_GATEWAY_URL is defined globally or retrieved securely
+  if (!apiGatewayUrl) {
+    Logger.log("API Gateway URL is not set.");
+    statusCell.setValue("ERROR");
+    errorCell.setValue("API Gateway URL not configured in script.");
+    return;
+  }
 
-    // Prepare payload for API Gateway
-    const payload = {
-      content_id: data.content_id,
-      media_link: data.media_link || "",
-      tags: data.tags || "",
-      description: data.description || "",
-      content_type: data.content_type || "",
-      url: data.url || "",
-      embed_link: data.embed_link || "",
-      timestamp: data.timestamp
-    };
-    
-    // Log the actual JSON payload for debugging
-    Logger.log(`API payload: ${JSON.stringify(payload)}`);
+  const payload = JSON.stringify(data);
+  const options = {
+    method: "post",
+    contentType: "application/json",
+    payload: payload,
+    muteHttpExceptions: true // Prevent throwing exceptions on HTTP errors like 500
+  };
 
-    // HTTP options
-    const options = {
-      'method': 'post',
-      'contentType': 'application/json',
-      'payload': JSON.stringify(payload),
-      'muteHttpExceptions': true,
-      'timeout': CONFIG.REQUEST_TIMEOUT,
-      'followRedirects': true
-    };
-    
-    // Send the request
-    const response = UrlFetchApp.fetch(CONFIG.API_GATEWAY_URL, options);
-    const responseCode = response.getResponseCode();
-    const responseText = response.getContentText();
+  const MAX_RETRIES = 4; // Max number of retries (total 5 attempts)
+  const INITIAL_BACKOFF_MS = 1000; // Start with 1 second backoff
+  let response;
+  let success = false;
 
-    // Log the full response for debugging
-    Logger.log(`API Response (${responseCode}): ${responseText}`);
-
-    // Parse the response even if it's wrapped in API Gateway format
-    let parsedResponse;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
-      parsedResponse = JSON.parse(responseText);
-      
-      // If the response contains a nested body (API Gateway format), parse that too
-      if (parsedResponse.body && typeof parsedResponse.body === 'string') {
-        try {
-          const nestedBody = JSON.parse(parsedResponse.body);
-          Logger.log(`Nested response body: ${JSON.stringify(nestedBody)}`);
-          
-          // If the nested body has error information, extract it
-          if (nestedBody.error) {
-            Logger.log(`API returned error: ${nestedBody.error.type} - ${nestedBody.error.message}`);
-            return {
-              success: false,
-              error: `${nestedBody.error.type}: ${nestedBody.error.message}`
-            };
-          }
-          
-          // If there's content_id in the nested response, use it
-          if (nestedBody.content_id) {
-            Logger.log(`Request accepted for content_id: ${nestedBody.content_id}`);
-            return {
-              success: true,
-              data: nestedBody
-            };
-          }
-        } catch (e) {
-          // Not a JSON string inside body, continue with normal processing
-          Logger.log(`Non-JSON nested body: ${parsedResponse.body}`);
-        }
-      }
-      
-      // Accept both 200 OK and 202 Accepted as success
-      if (responseCode === 200 || responseCode === 202) {
-        // If we got a success message, log it
-        if (parsedResponse.message && parsedResponse.content_id) {
-          Logger.log(`Request accepted for content_id: ${parsedResponse.content_id}`);
-        }
-        
-        return {
-          success: true,
-          data: parsedResponse
-        };
-      } else {
-        // Handle errors (4xx, 5xx)
-        let errorMessage = `API Error ${responseCode}: `;
-        if (parsedResponse.error && parsedResponse.error.message) {
-          errorMessage += parsedResponse.error.message;
+      Logger.log(`Attempt ${attempt + 1} to send data for content_id: ${data.content_id} to ${apiGatewayUrl}`);
+      response = UrlFetchApp.fetch(apiGatewayUrl, options);
+      const responseCode = response.getResponseCode();
+      const responseBody = response.getContentText();
+
+      Logger.log(`Response Code: ${responseCode}`);
+      // Logger.log(`Response Body: ${responseBody}`); // Uncomment for detailed debugging if needed
+
+      if (responseCode === 202) {
+        Logger.log(`Request accepted by API Gateway for content_id: ${data.content_id}. Message ID: ${responseBody}`);
+        // Status remains PENDING - it's accepted, not fully processed yet.
+        // errorCell.setValue(""); // Clear any previous error
+        success = true;
+        break; // Exit loop on success
+      } else if (responseCode === 500 || responseCode === 429 || responseCode === 503 || responseCode === 504) {
+        // Retryable errors (Internal Server Error, Rate Limit, Service Unavailable)
+        Logger.log(`Received retryable error code: ${responseCode}. Retrying attempt ${attempt + 1}/${MAX_RETRIES + 1}...`);
+        if (attempt < MAX_RETRIES) {
+          // Calculate backoff with jitter
+          const backoffTime = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+          const jitter = Math.random() * 1000; // Add up to 1s jitter
+          const waitTime = backoffTime + jitter;
+          Logger.log(`Waiting for ${waitTime.toFixed(0)} ms before next retry.`);
+          Utilities.sleep(waitTime);
         } else {
-          errorMessage += JSON.stringify(parsedResponse);
+          Logger.log(`Max retries reached for content_id: ${data.content_id}. Final error code: ${responseCode}.`);
+          statusCell.setValue("ERROR");
+          errorCell.setValue(`API Error ${responseCode}: Failed after ${MAX_RETRIES + 1} attempts. Response: ${responseBody}`);
         }
-        Logger.log(`API error: ${errorMessage}`);
-        return {
-          success: false,
-          error: errorMessage
-        };
+      } else {
+        // Non-retryable error (e.g., 400 Bad Request, 403 Forbidden)
+        Logger.log(`Received non-retryable error code: ${responseCode} for content_id: ${data.content_id}.`);
+        statusCell.setValue("ERROR");
+        errorCell.setValue(`API Error ${responseCode}: ${responseBody}`);
+        break; // Exit loop on non-retryable error
       }
-    } catch (parseError) {
-      // Handle JSON parse errors
-      Logger.log(`Error parsing API response: ${parseError.toString()}`);
-      return {
-        success: responseCode >= 200 && responseCode < 300,  // Treat as success if HTTP status is 2xx
-        data: { message: responseText }
-      };
+    } catch (e) {
+      // Catch potential network errors from UrlFetchApp itself
+      Logger.log(`Network or fetch error during attempt ${attempt + 1}: ${e.message}`);
+      if (attempt < MAX_RETRIES) {
+         const backoffTime = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+         const jitter = Math.random() * 1000;
+         const waitTime = backoffTime + jitter;
+         Logger.log(`Waiting for ${waitTime.toFixed(0)} ms before retrying after fetch error.`);
+         Utilities.sleep(waitTime);
+      } else {
+         Logger.log(`Max retries reached after fetch error for content_id: ${data.content_id}. Final error: ${e.message}`);
+         statusCell.setValue("ERROR");
+         errorCell.setValue(`Network/Fetch Error: ${e.message} after ${MAX_RETRIES + 1} attempts.`);
+         break; // Exit loop after max retries on fetch error
+      }
     }
-  } catch (e) {
-    Logger.log(`Exception in sendToAWS for content_id ${data.content_id || 'unknown'}: ${e.toString()}`);
-    return {
-      success: false,
-      error: `Script exception: ${e.toString()}`
-    };
+  }
+
+  if (!success && attempt > MAX_RETRIES) {
+      // This case handles scenarios where the loop completed due to max retries on retryable errors
+      // Error status should have already been set inside the loop.
+      Logger.log(`sendToAWS failed for content_id: ${data.content_id} after all retries.`);
   }
 }
 
