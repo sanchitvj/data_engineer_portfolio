@@ -109,32 +109,29 @@ def prepare_data_for_dynamodb(item):
         # Skip null values
         if value is None:
             continue
+        
+        # Special handling for content_id (should be a plain string in the main item)
+        if key == 'content_id':
+            dynamodb_item[key] = value
+            continue
             
         # Handle comma-separated tags as StringSet
         if key in ['tags', 'generated_tags'] and isinstance(value, str):
             if value.strip():  # Only process non-empty strings
                 tag_list = [tag.strip() for tag in value.split(',') if tag.strip()]
                 if tag_list:
-                    dynamodb_item[key] = {'SS': tag_list}
+                    dynamodb_item[key] = tag_list  # Use plain list for boto3 client
+                    
         # Handle actual list as StringSet
         elif key in ['tags', 'generated_tags'] and isinstance(value, list):
             if value:  # Only process non-empty lists
                 tag_list = [str(tag).strip() for tag in value if str(tag).strip()]
                 if tag_list:
-                    dynamodb_item[key] = {'SS': tag_list}
-        # Handle standard types
-        elif isinstance(value, str):
-            dynamodb_item[key] = {'S': value}
-        elif isinstance(value, (int, float)):
-            dynamodb_item[key] = {'N': str(value)}
-        elif isinstance(value, bool):
-            dynamodb_item[key] = {'BOOL': value}
-        elif isinstance(value, dict):
-            # Convert dict to JSON string
-            dynamodb_item[key] = {'S': json.dumps(value)}
+                    dynamodb_item[key] = tag_list  # Use plain list for boto3 client
+                    
+        # Handle standard types - let boto3 handle the conversion
         else:
-            # Default to string representation
-            dynamodb_item[key] = {'S': str(value)}
+            dynamodb_item[key] = value
     
     return dynamodb_item
 

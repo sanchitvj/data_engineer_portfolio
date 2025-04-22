@@ -1,9 +1,10 @@
 import json
 import boto3
-from datetime import datetime
-import logging
-import traceback
 import os
+import logging
+import sys
+import traceback
+from datetime import datetime
 
 from penguindb.utils.content_processing_utils import (
     validate_field_types,
@@ -11,6 +12,7 @@ from penguindb.utils.content_processing_utils import (
     generate_content_with_llm
 )
 
+# Set up logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -21,100 +23,192 @@ DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME', 'content_data')
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(DYNAMODB_TABLE_NAME)
 
+# Debug import paths
+def debug_imports():
+    logger.info(f"Python version: {sys.version}")
+    logger.info(f"Python path: {sys.path}")
+    logger.info(f"Current directory: {os.getcwd()}")
+    logger.info(f"Directory contents: {os.listdir('.')}")
+    
+    # Try imports with try/except to see what's failing
+    try:
+        # Use importlib to check if module exists without triggering linter warnings
+        import importlib
+        spec = importlib.util.find_spec('penguindb.utils.content_processing_utils')
+        if spec is not None:
+            logger.info("penguindb.utils.content_processing_utils module found")
+        else:
+            logger.error("penguindb.utils.content_processing_utils module NOT found")
+    except ImportError as e:
+        logger.error(f"Failed to import from penguindb.utils: {str(e)}")
+        logger.error(traceback.format_exc())
+
 def lambda_handler(event, context):
     """
-    SQS triggered Lambda that processes content items asynchronously.
-    Handles LLM generation and DynamoDB storage.
+    Process messages from SQS queue.
     """
-    logger.info(f"SQS Worker - Received event with {len(event.get('Records', []))} records")
+    # Debug logging on every invocation
+    logger.info(f"SQS Worker received event: {json.dumps(event)}")
+    
+    # Run import diagnostics on cold start
+    debug_imports()
+    
+    try:
+        # Process SQS messages
+        if 'Records' not in event:
+            logger.error("Event does not contain Records. Not an SQS event?")
+            return {
+                'statusCode': 400,
+                'body': json.dumps({
+                    'error': 'Not a valid SQS event',
+                    'event_keys': list(event.keys())
+                })
+            }
+        
+        # Track failures for batch item failure reporting (if enabled)
+        failed_message_ids = []
 
-    # Track failures for batch item failure reporting (if enabled)
-    failed_message_ids = []
+        for record in event.get('Records', []):
+            message_id = record.get('messageId', 'N/A')
+            receipt_handle = record.get('receiptHandle', 'N/A')
+            content_id = 'UNKNOWN_ID'  # Default
 
-    for record in event.get('Records', []):
-        message_id = record.get('messageId', 'N/A')
-        receipt_handle = record.get('receiptHandle', 'N/A')
-        content_id = 'UNKNOWN_ID'  # Default
-
-        try:
-            # Parse the message body
-            body = json.loads(record['body'])
-            content_id = body.get('content_id', 'UNKNOWN_ID_FROM_BODY')
-            logger.info(f"SQS Worker - Processing message {message_id} for content_id: {content_id}")
-
-            # Validate field types
-            validation_errors = validate_field_types(body)
-            if validation_errors:
-                logger.error(f"SQS Worker - Validation error for {content_id}: {validation_errors}")
-                raise ValueError(f"Validation failed: {validation_errors}")  # Will trigger retry/DLQ
-
-            # Add processing metadata
-            body['sqs_message_id'] = message_id
-            body['sqs_receipt_handle'] = receipt_handle
-            body['worker_request_id'] = context.aws_request_id
-            # body['processed_by'] = context.function_name
-            body['processed_at'] = datetime.now().isoformat()
-
-            # Generate content with LLM
             try:
-                # Pass logger to the utility function
-                llm_result = generate_content_with_llm(
-                    content_type=body.get('content_type', ''),
-                    description=body.get('description', ''),
-                    tags=body.get('tags', ''),
-                    logger=logger,
-                    timeout=120  # 2 minute timeout
-                )
-
-                body['generated_title'] = llm_result.get('title', '')
-                body['generated_description'] = llm_result.get('description', '')
-                body['generated_tags'] = llm_result.get('tags', [])
-
-                logger.info(f"SQS Worker - Generated content for {content_id}")
-            except Exception as llm_error:
-                logger.error(f"SQS Worker - LLM error for {content_id}: {str(llm_error)}")
-                # Continue with empty content rather than failing
-                body['generated_title'] = ''
-                body['generated_description'] = ''
-                body['generated_tags'] = []
-
-            # Prepare and store data in DynamoDB
-            try:
-                # Prepare data
-                prepared_body = prepare_data_for_dynamodb(body)
-
-                # Check if record exists (for logging)
-                is_update = False
+                # Log the raw record first
+                logger.info(f"Processing SQS record: {json.dumps(record)}")
+                
+                # Extract and parse the message body
+                message_body = record.get('body')
+                if not message_body:
+                    logger.error("Missing message body in SQS record")
+                    continue
+                    
+                logger.info(f"Message body: {message_body}")
+                
+                # Parse JSON body
                 try:
-                    existing_item = table.get_item(Key={'content_id': content_id})
-                    is_update = 'Item' in existing_item
-                except Exception as check_error:
-                    logger.warning(f"SQS Worker - Error checking for existing item {content_id}: {str(check_error)}")
+                    body = json.loads(message_body)
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to parse message body as JSON: {str(e)}")
+                    continue
                 
-                # Write to DynamoDB
-                table.put_item(Item=prepared_body)
+                # Log parsed body
+                logger.info(f"Parsed body: {json.dumps(body)}")
                 
-                status = "updated" if is_update else "created"
-                logger.info(f"SQS Worker - Successfully {status} item {content_id} in DynamoDB")
+                # Validate the required fields are present
+                content_id = body.get('content_id')
+                if not content_id:
+                    logger.error("Missing content_id in message body")
+                    continue
                 
-            except Exception as db_error:
-                logger.error(f"SQS Worker - Database error for {content_id}: {str(db_error)}")
-                # Since this is a critical operation, we re-raise to trigger SQS retry/DLQ
-                raise db_error
+                # Validate field types
+                validation_errors = validate_field_types(body)
+                if validation_errors:
+                    logger.error(f"SQS Worker - Validation error for {content_id}: {validation_errors}")
+                    raise ValueError(f"Validation failed: {validation_errors}")  # Will trigger retry/DLQ
 
-        except Exception as e:
-            # Log the error
-            trace = traceback.format_exc()
-            logger.error(f"SQS Worker - Failed to process record {message_id} for {content_id}: {str(e)}\n{trace}")
-            
-            # Track the failure
-            failed_message_ids.append(message_id)
-            
-            # Re-raise for standard Lambda-SQS retry behavior
-            raise e
+                # Add processing metadata
+                body['sqs_message_id'] = message_id
+                body['sqs_receipt_handle'] = receipt_handle
+                body['worker_request_id'] = context.aws_request_id
+                # body['processed_by'] = context.function_name
+                body['processed_at'] = datetime.now().isoformat()
 
-    # If using batch item failures reporting
-    if failed_message_ids:
-        logger.warning(f"SQS Worker - Failed to process {len(failed_message_ids)} messages")
-        # Uncomment if you configure your Lambda trigger to use batch item failure reporting
-        # return {'batchItemFailures': [{'itemIdentifier': msg_id} for msg_id in failed_message_ids]} 
+                # Generate content with LLM
+                try:
+                    # Pass logger to the utility function
+                    llm_result = generate_content_with_llm(
+                        content_type=body.get('content_type', ''),
+                        description=body.get('description', ''),
+                        tags=body.get('tags', ''),
+                        logger=logger,
+                        timeout=120  # 2 minute timeout
+                    )
+
+                    body['generated_title'] = llm_result.get('title', '')
+                    body['generated_description'] = llm_result.get('description', '')
+                    body['generated_tags'] = llm_result.get('tags', [])
+
+                    logger.info(f"SQS Worker - Generated content for {content_id}")
+                except Exception as llm_error:
+                    logger.error(f"SQS Worker - LLM error for {content_id}: {str(llm_error)}")
+                    # Continue with empty content rather than failing
+                    body['generated_title'] = ''
+                    body['generated_description'] = ''
+                    body['generated_tags'] = []
+
+                # Prepare and store data in DynamoDB
+                try:
+                    # First make a regular item with content_id as plain string
+                    item_for_dynamodb = {
+                        'content_id': content_id,  # Keep this as a plain string
+                    }
+                    
+                    # Prepare the attribute data with proper DynamoDB types
+                    dynamodb_attributes = prepare_data_for_dynamodb(body)
+                    
+                    # Remove content_id from the attributes (it's already in the main item)
+                    if 'content_id' in dynamodb_attributes:
+                        del dynamodb_attributes['content_id']
+                    
+                    # Add all the properly formatted attributes
+                    for key, value in dynamodb_attributes.items():
+                        item_for_dynamodb[key] = value
+                    
+                    # Log the item being written for debugging
+                    logger.info(f"Writing to DynamoDB: {json.dumps(item_for_dynamodb, default=str)}")
+                    
+                    # Check if record exists (for logging)
+                    is_update = False
+                    try:
+                        existing_item = table.get_item(Key={'content_id': content_id})
+                        is_update = 'Item' in existing_item
+                    except Exception as check_error:
+                        logger.warning(f"SQS Worker - Error checking for existing item {content_id}: {str(check_error)}")
+                    
+                    # Write to DynamoDB
+                    table.put_item(Item=item_for_dynamodb)
+                    
+                    status = "updated" if is_update else "created"
+                    logger.info(f"SQS Worker - Successfully {status} item {content_id} in DynamoDB")
+                    
+                except Exception as db_error:
+                    logger.error(f"SQS Worker - Database error for {content_id}: {str(db_error)}")
+                    logger.error(traceback.format_exc())
+                    # Since this is a critical operation, we re-raise to trigger SQS retry/DLQ
+                    raise db_error
+
+            except Exception as e:
+                # Log the error
+                trace = traceback.format_exc()
+                logger.error(f"SQS Worker - Failed to process record {message_id} for {content_id}: {str(e)}\n{trace}")
+                
+                # Track the failure
+                failed_message_ids.append(message_id)
+                
+                # Re-raise for standard Lambda-SQS retry behavior
+                raise e
+
+        # If using batch item failures reporting
+        if failed_message_ids:
+            logger.warning(f"SQS Worker - Failed to process {len(failed_message_ids)} messages")
+            # Uncomment if you configure your Lambda trigger to use batch item failure reporting
+            # return {'batchItemFailures': [{'itemIdentifier': msg_id} for msg_id in failed_message_ids]} 
+
+        # Return success
+        return {
+            'statusCode': 200,
+            'body': json.dumps({
+                'message': f'Processed {len(event.get("Records", []))} messages'
+            })
+        }
+            
+    except Exception as e:
+        logger.error(f"Unexpected error in lambda_handler: {str(e)}")
+        logger.error(traceback.format_exc())
+        return {
+            'statusCode': 500,
+            'body': json.dumps({
+                'error': f'Unexpected error: {str(e)}'
+            })
+        } 
