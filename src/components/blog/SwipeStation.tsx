@@ -5,6 +5,9 @@ import { useSwipeable } from 'react-swipeable';
 import { BlogPost } from '../../types/blog';
 import dynamic from 'next/dynamic';
 
+// Prefetch limit defines how many posts ahead/behind to prefetch
+const PREFETCH_LIMIT = 3;
+
 interface SwipeStationProps {
   title: string;
   posts: BlogPost[];
@@ -34,10 +37,17 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
   const dragX = useMotionValue(0);
   const totalItems = posts.length;
   
+  // Track prefetched images to avoid duplicate prefetching
+  const [prefetchedImages, setPrefetchedImages] = useState<Set<string>>(new Set());
+  
   // Handle responsive behavior
   const [responsiveVisibleCards, setResponsiveVisibleCards] = useState(visibleCards);
   const [isMobile, setIsMobile] = useState(false);
   const [containerWidth, setContainerWidth] = useState(0);
+
+  // For touch events on mobile
+  const [isSwiping, setIsSwiping] = useState(false);
+  const [startX, setStartX] = useState(0);
 
   // Correct maxIndex calculation depends on responsiveVisibleCards and totalItems
   const [maxIndex, setMaxIndex] = useState(0);
@@ -141,6 +151,40 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
     }
   }, [isMobile]);
 
+  // Prefetch images of adjacent posts
+  useEffect(() => {
+    if (!posts || posts.length === 0) return;
+
+    const imagesToPrefetch: string[] = [];
+    
+    // Calculate range of posts to prefetch (current + next few + previous few)
+    const startIdx = Math.max(0, currentIndex - PREFETCH_LIMIT);
+    const endIdx = Math.min(posts.length - 1, currentIndex + PREFETCH_LIMIT);
+    
+    for (let i = startIdx; i <= endIdx; i++) {
+      const post = posts[i];
+      if (post.image && !prefetchedImages.has(post.image)) {
+        imagesToPrefetch.push(post.image);
+      }
+    }
+    
+    // Prefetch images that haven't been prefetched yet
+    imagesToPrefetch.forEach(imageUrl => {
+      if (!prefetchedImages.has(imageUrl)) {
+        const img = new Image();
+        img.src = imageUrl;
+        // Once the image is loaded, add to our prefetched set
+        img.onload = () => {
+          setPrefetchedImages(prev => {
+            const newSet = new Set(prev);
+            newSet.add(imageUrl);
+            return newSet;
+          });
+        };
+      }
+    });
+  }, [currentIndex, posts, prefetchedImages]);
+
   const handlePrev = () => {
     if (currentIndex > 0 && !animating) {
       setAnimating(true);
@@ -215,19 +259,55 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
       );
       
       if (info.offset.x > 0 && currentIndex > 0) {
-        // Dragged right -> go to previous cards
-        const newIndex = Math.max(0, currentIndex - cardsMoved);
-        setCurrentIndex(newIndex);
+        // Dragged right, go to previous
+        setCurrentIndex(prev => Math.max(0, prev - cardsMoved));
       } else if (info.offset.x < 0 && currentIndex < maxIndex) {
-        // Dragged left -> go to next cards
-        const newIndex = Math.min(maxIndex, currentIndex + cardsMoved);
-        setCurrentIndex(newIndex);
+        // Dragged left, go to next
+        setCurrentIndex(prev => Math.min(maxIndex, prev + cardsMoved));
       }
     }
     
     // Reset drag state
     setDragOffset(0);
     setDragCards(0);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsSwiping(true);
+    setStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isSwiping) return;
+    
+    const currentX = e.touches[0].clientX;
+    const diff = startX - currentX;
+    
+    // Implement drag effect if desired
+    // This is just a placeholder logic for visual feedback
+    if (containerRef.current) {
+      // Optional: Add visual feedback during swipe
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!isSwiping) return;
+    
+    const currentX = e.changedTouches[0].clientX;
+    const diff = startX - currentX;
+    
+    // Threshold for swipe detection
+    const threshold = 80;
+    
+    if (diff > threshold && currentIndex < maxIndex) {
+      // Swiped left - go to next post
+      handleNext();
+    } else if (diff < -threshold && currentIndex > 0) {
+      // Swiped right - go to previous post
+      handlePrev();
+    }
+    
+    setIsSwiping(false);
   };
 
   // Calculate drag constraints
@@ -313,6 +393,9 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
         className="relative"
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={() => setHovering(false)}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         {...swipeHandlers}
       >
         {/* Left Arrow */}

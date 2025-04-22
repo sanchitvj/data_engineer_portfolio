@@ -32,8 +32,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const page = pathname === '/' ? 'home' : 'resume';
   const showNavigator = pathname === '/' || pathname === '/resume';
   
-  // Don't show DataBackground on blog or projects pages because they have their own backgrounds
-  const skipDefaultBackground = pathname?.startsWith('/blog') || pathname?.startsWith('/projects');
+  // Don't show DataBackground on archive or projects pages because they have their own backgrounds
+  const skipDefaultBackground = pathname?.startsWith('/archive') || pathname?.startsWith('/projects');
 
   return (
     <div className="font-poppins flex flex-col min-h-screen">

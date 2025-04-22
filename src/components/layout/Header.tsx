@@ -67,8 +67,8 @@ const Header = () => {
             <Link href="/projects" className="text-dark-600 hover:text-data transition-colors">
               Projects
             </Link>
-            <Link href="/blog" className="text-dark-600 hover:text-data transition-colors">
-              Blog
+            <Link href="/archive" className="text-dark-600 hover:text-data transition-colors">
+              Archive
             </Link>
           </nav>
 
@@ -97,11 +97,11 @@ const Header = () => {
                     Projects
                   </Link>
                   <Link
-                    href="/blog"
+                    href="/archive"
                     className="text-white hover:text-data transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Blog
+                    Archive
                   </Link>
                 </div>
               </motion.nav>

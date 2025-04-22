@@ -147,7 +147,7 @@ function processRow(sheet, rowIndex) {
         if (typeof rowData[i] === 'object' && rowData[i] !== null && typeof rowData[i].values === 'function') { 
           data[headers[i]] = Array.from(rowData[i]).join(', ');
         } else {
-          data[headers[i]] = rowData[i];
+      data[headers[i]] = rowData[i];
         }
       }
     }
