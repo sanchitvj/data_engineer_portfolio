@@ -117,9 +117,12 @@ function processRow(sheet, rowIndex) {
     // Get or generate content_id
     const contentIdCell = sheet.getRange(rowIndex, COLUMNS.CONTENT_ID + 1);
     let contentId = contentIdCell.getValue();
-    if (!contentId) {
+    
+    // Always generate a new content_id if it's empty or invalid
+    if (!contentId || typeof contentId !== 'string' || contentId.trim() === '') {
       contentId = generateUUID();
       contentIdCell.setValue(contentId);
+      Logger.log(`Generated new content_id: ${contentId} for row ${rowIndex}`);
     }
 
     // Track attempt count
@@ -144,14 +147,18 @@ function processRow(sheet, rowIndex) {
         if (typeof rowData[i] === 'object' && rowData[i] !== null && typeof rowData[i].values === 'function') { 
           data[headers[i]] = Array.from(rowData[i]).join(', ');
         } else {
-      data[headers[i]] = rowData[i];
+          data[headers[i]] = rowData[i];
         }
       }
     }
     
-    // Ensure key fields are included
+    // Ensure key fields are included and properly formatted
     data.content_id = contentId;
     data.timestamp = new Date().toISOString();
+    
+    // Log the data being sent
+    Logger.log(`Processing row ${rowIndex} with content_id: ${contentId}`);
+    Logger.log(`Data being sent: ${JSON.stringify(data)}`);
     
     // Send data to AWS API Gateway
     const result = sendToAWS(data);

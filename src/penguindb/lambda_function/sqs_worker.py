@@ -185,22 +185,37 @@ def lambda_handler(event, context):
                         # Initialize Lambda client
                         lambda_client = boto3.client('lambda')
                         
+                        # Get the status checker Lambda name or ARN from environment variable
+                        # If not set, fall back to function name, which might need to be the full ARN in some cases
+                        status_checker_function = os.environ.get('STATUS_CHECKER_FUNCTION', 'status_checker')
+                        
                         # Prepare payload with just the content_id
                         checker_payload = {
                             'content_ids': [content_id]
                         }
                         
+                        # Log the function name being invoked
+                        logger.info(f"Invoking status checker function: {status_checker_function}")
+                        
                         # Invoke status checker Lambda asynchronously
-                        lambda_client.invoke(
-                            FunctionName='status_checker',
+                        response = lambda_client.invoke(
+                            FunctionName=status_checker_function,
                             InvocationType='Event',  # Asynchronous
                             Payload=json.dumps(checker_payload)
                         )
                         
-                        logger.info(f"Triggered status_checker Lambda for content_id: {content_id}")
+                        # Check if the invocation was successful
+                        status_code = response.get('StatusCode')
+                        if status_code == 202:  # 202 Accepted indicates successful async invocation
+                            logger.info(f"Successfully triggered status_checker Lambda for content_id: {content_id}")
+                        else:
+                            logger.error(f"Unexpected status code from Lambda invoke: {status_code}")
+                            logger.error(f"Response: {response}")
+                            
                     except Exception as trigger_error:
                         logger.error(f"Failed to trigger status_checker: {str(trigger_error)}")
-                        # Non-critical error, don't raise exception
+                        logger.error(traceback.format_exc())
+                        # Non-critical error, don't raise exception, but make sure it's visible in logs
 
                 except Exception as db_error:
                     logger.error(f"SQS Worker - Database error for {content_id}: {str(db_error)}")

@@ -2,8 +2,6 @@ import json
 import boto3
 import os
 import logging
-import urllib.request
-import urllib.parse
 import traceback
 from datetime import datetime
 from botocore.exceptions import ClientError
@@ -36,8 +34,16 @@ def lambda_handler(event, context):
     logger.info("Status Checker Lambda started")
     logger.info(f"Received event: {json.dumps(event)}")
     
+    # Validate GOOGLE_SHEET_URL is set
     if not GOOGLE_SHEET_URL:
         error_msg = "GOOGLE_SHEET_URL environment variable not set"
+        logger.error(error_msg)
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': error_msg})
+        }
+    elif not GOOGLE_SHEET_URL.startswith('https://script.google.com/'):
+        error_msg = f"Invalid GOOGLE_SHEET_URL: {GOOGLE_SHEET_URL}. Must be a Google Apps Script URL."
         logger.error(error_msg)
         return {
             'statusCode': 500,
@@ -47,6 +53,11 @@ def lambda_handler(event, context):
     logger.info(f"Using Google Sheet URL: {GOOGLE_SHEET_URL}")
     
     try:
+        # Check if we received an empty or invalid event
+        if not event or not isinstance(event, dict):
+            logger.warning(f"Received empty or invalid event: {event}")
+            event = {}  # Initialize as empty dict to prevent further errors
+            
         # Check if specific content_ids were provided
         content_ids = []
         if 'content_ids' in event and isinstance(event['content_ids'], list):
@@ -166,78 +177,106 @@ def update_sheet_status(content_id, status, processed_at, generated_title):
         Dictionary with success flag and any error message
     """
     if not GOOGLE_SHEET_URL:
+        logger.error("GOOGLE_SHEET_URL not configured")
         return {'success': False, 'error': 'Google Sheet URL not configured'}
     
-    try:
-        logger.info(f"Sending update to Google Sheet for {content_id}, status={status}")
-        
-        # Prepare payload for the Google Sheet Web App
-        payload = {
-            'action': 'updateStatus',
-            'content_id': content_id,
-            'status': status,
-            'processed_at': processed_at
-        }
-        
-        if generated_title:
-            payload['generated_title'] = generated_title
+    # Maximum number of retries
+    max_retries = 3
+    retry_count = 0
+    
+    while retry_count < max_retries:
+        try:
+            logger.info(f"Sending update to Google Sheet for {content_id}, status={status} (Attempt {retry_count+1})")
             
-        # Convert payload to JSON and encode for HTTP request
-        data = json.dumps(payload).encode('utf-8')
-        
-        # Set up the request
-        headers = {
-            'Content-Type': 'application/json'
-        }
-        
-        # Log the payload being sent
-        logger.info(f"Sending payload to Google Sheet: {json.dumps(payload)}")
-        
-        # Create request and add headers
-        req = urllib.request.Request(
-            url=GOOGLE_SHEET_URL,
-            data=data,
-            headers=headers,
-            method='POST'
-        )
-        
-        # Send the request and get response
-        with urllib.request.urlopen(req, timeout=10) as response:
-            response_data = response.read().decode('utf-8')
-            logger.info(f"Response from Google Sheet: {response_data}")
+            # Prepare payload for the Google Sheet Web App
+            payload = {
+                'action': 'updateStatus',
+                'content_id': content_id,
+                'status': status,
+                'processed_at': processed_at
+            }
             
-            # Parse response JSON
-            response_json = json.loads(response_data)
-            
-            # Check if the update was successful
-            if response_json.get('status') == 'success':
-                return {'success': True, 'data': response_json.get('data', {})}
-            else:
-                error_msg = response_json.get('message', 'Unknown error from Google Sheet')
-                logger.error(f"Google Sheet returned error: {error_msg}")
-                return {'success': False, 'error': error_msg}
+            if generated_title:
+                payload['generated_title'] = generated_title
                 
-    except urllib.error.HTTPError as http_err:
-        error_msg = f"HTTP error: {http_err.code} - {http_err.reason}"
-        logger.error(error_msg)
-        logger.error(f"Response: {http_err.read().decode('utf-8')}")
-        return {'success': False, 'error': error_msg}
-        
-    except urllib.error.URLError as url_err:
-        error_msg = f"URL error: {str(url_err.reason)}"
-        logger.error(error_msg)
-        return {'success': False, 'error': error_msg}
-        
-    except json.JSONDecodeError as json_err:
-        error_msg = f"JSON decode error: {str(json_err)}"
-        logger.error(error_msg)
-        return {'success': False, 'error': error_msg}
-        
-    except Exception as e:
-        error_msg = f"Unexpected error sending update to Google Sheet: {str(e)}"
-        logger.error(error_msg)
-        logger.error(traceback.format_exc())
-        return {'success': False, 'error': error_msg}
+            # Convert payload to JSON and encode for HTTP request
+            json.dumps(payload).encode('utf-8')
+            
+            # Set up the request
+            headers = {
+                'Content-Type': 'application/json'
+            }
+            
+            # Log the payload being sent
+            logger.info(f"Sending payload to Google Sheet: {json.dumps(payload)}")
+            
+            # Use requests library which has better error handling
+            try:
+                # Set a timeout to prevent hanging
+                timeout = 15  # seconds
+                
+                # Send the request
+                response = requests.post(
+                    GOOGLE_SHEET_URL,
+                    json=payload,
+                    headers=headers,
+                    timeout=timeout
+                )
+                
+                # Check if request was successful
+                if response.status_code == 200:
+                    try:
+                        response_data = response.json()
+                        logger.info(f"Response from Google Sheet: {response.text}")
+                        
+                        if response_data.get('status') == 'success':
+                            logger.info(f"Status update successful for {content_id}")
+                            return {'success': True, 'data': response_data.get('data', {})}
+                        else:
+                            error_msg = response_data.get('message', 'Unknown error from Google Sheet')
+                            logger.warning(f"Google Sheet returned error: {error_msg}")
+                            # This is a valid response but with an error message, 
+                            # don't retry as it's likely a data issue
+                            return {'success': False, 'error': error_msg}
+                    except json.JSONDecodeError:
+                        logger.error(f"Failed to parse response: {response.text}")
+                        # Increment retry count and try again
+                        retry_count += 1
+                        if retry_count < max_retries:
+                            logger.info(f"Retrying ({retry_count}/{max_retries})...")
+                            continue
+                        return {'success': False, 'error': 'Failed to parse response from Google Sheet'}
+                else:
+                    logger.error(f"HTTP error {response.status_code}: {response.text}")
+                    # For HTTP errors, we'll retry
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        logger.info(f"Retrying ({retry_count}/{max_retries})...")
+                        continue
+                    return {'success': False, 'error': f"HTTP error {response.status_code}"}
+                    
+            except requests.RequestException as req_error:
+                logger.error(f"Request error: {str(req_error)}")
+                # Network/timeout errors should be retried
+                retry_count += 1
+                if retry_count < max_retries:
+                    logger.info(f"Retrying ({retry_count}/{max_retries})...")
+                    continue
+                return {'success': False, 'error': f"Request error: {str(req_error)}"}
+                
+        except Exception as e:
+            logger.error(f"Unexpected error: {str(e)}")
+            logger.error(traceback.format_exc())
+            # For unexpected errors, we'll also retry
+            retry_count += 1
+            if retry_count < max_retries:
+                logger.info(f"Retrying ({retry_count}/{max_retries})...")
+                continue
+            return {'success': False, 'error': f"Unexpected error: {str(e)}"}
+            
+    # If we get here, all retries failed
+    logger.error(f"All {max_retries} attempts failed for content_id {content_id}")
+    return {'success': False, 'error': 'All retry attempts failed'}
 
 def get_pending_items_from_event(event):
     """Extract pending items from the event or query DynamoDB for recent items."""
