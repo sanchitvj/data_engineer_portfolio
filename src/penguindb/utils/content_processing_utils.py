@@ -192,7 +192,7 @@ def generate_content_with_llm(content_type, description, tags, logger, timeout=1
         try:
             response = call_claude(
                 prompt=prompt,
-                model_id="anthropic.claude-3-sonnet-20240229-v1:0",  # Use the specific Bedrock model ID
+                model_id="us.anthropic.claude-3-5-haiku-20241022-v1:0",
                 extract_json=True,
                 max_tokens=500
             )
