@@ -197,8 +197,13 @@ function processRow(sheet, rowIndex) {
 function sendToAWS(data) {
   try {
     if (!data.content_id) {
-      throw new Error("Missing content_id in the data");
+      // Generate a content_id if not present
+      data.content_id = generateUUID();
+      Logger.log(`Generated content_id: ${data.content_id}`);
     }
+    
+    // Log the data being sent
+    Logger.log(`Sending data to AWS with content_id: ${data.content_id}`);
 
     // Prepare payload for API Gateway
     const payload = {
@@ -211,6 +216,9 @@ function sendToAWS(data) {
       embed_link: data.embed_link || "",
       timestamp: data.timestamp
     };
+    
+    // Log the actual JSON payload for debugging
+    Logger.log(`API payload: ${JSON.stringify(payload)}`);
 
     // HTTP options
     const options = {
@@ -230,48 +238,75 @@ function sendToAWS(data) {
     // Log the full response for debugging
     Logger.log(`API Response (${responseCode}): ${responseText}`);
 
-    // Accept both 200 OK and 202 Accepted as success
-    if (responseCode === 200 || responseCode === 202) {
-      try {
-        // Parse response data
-        const responseData = JSON.parse(responseText);
-        
+    // Parse the response even if it's wrapped in API Gateway format
+    let parsedResponse;
+    try {
+      parsedResponse = JSON.parse(responseText);
+      
+      // If the response contains a nested body (API Gateway format), parse that too
+      if (parsedResponse.body && typeof parsedResponse.body === 'string') {
+        try {
+          const nestedBody = JSON.parse(parsedResponse.body);
+          Logger.log(`Nested response body: ${JSON.stringify(nestedBody)}`);
+          
+          // If the nested body has error information, extract it
+          if (nestedBody.error) {
+            Logger.log(`API returned error: ${nestedBody.error.type} - ${nestedBody.error.message}`);
+            return {
+              success: false,
+              error: `${nestedBody.error.type}: ${nestedBody.error.message}`
+            };
+          }
+          
+          // If there's content_id in the nested response, use it
+          if (nestedBody.content_id) {
+            Logger.log(`Request accepted for content_id: ${nestedBody.content_id}`);
+            return {
+              success: true,
+              data: nestedBody
+            };
+          }
+        } catch (e) {
+          // Not a JSON string inside body, continue with normal processing
+          Logger.log(`Non-JSON nested body: ${parsedResponse.body}`);
+        }
+      }
+      
+      // Accept both 200 OK and 202 Accepted as success
+      if (responseCode === 200 || responseCode === 202) {
         // If we got a success message, log it
-        if (responseData.message && responseData.content_id) {
-          Logger.log(`Request accepted for content_id: ${responseData.content_id}`);
+        if (parsedResponse.message && parsedResponse.content_id) {
+          Logger.log(`Request accepted for content_id: ${parsedResponse.content_id}`);
         }
         
         return {
           success: true,
-          data: responseData
+          data: parsedResponse
         };
-      } catch (parseError) {
-        // Handle JSON parse errors
-        console.error(`Error parsing API response: ${parseError.toString()}`);
+      } else {
+        // Handle errors (4xx, 5xx)
+        let errorMessage = `API Error ${responseCode}: `;
+        if (parsedResponse.error && parsedResponse.error.message) {
+          errorMessage += parsedResponse.error.message;
+        } else {
+          errorMessage += JSON.stringify(parsedResponse);
+        }
+        Logger.log(`API error: ${errorMessage}`);
         return {
-          success: true,  // Still treat as success even if parse fails
-          data: { message: responseText }
+          success: false,
+          error: errorMessage
         };
       }
-    } else {
-      // Handle errors (4xx, 5xx)
-      let errorMessage = `API Error ${responseCode}: `;
-      try {
-        const errorResponse = JSON.parse(responseText);
-        errorMessage += (errorResponse.error && errorResponse.error.message) 
-          ? errorResponse.error.message 
-          : JSON.stringify(errorResponse);
-      } catch (e) {
-        errorMessage += responseText || "Unknown error";
-      }
-      console.error(`API call failed for content_id ${data.content_id}: ${errorMessage}`);
+    } catch (parseError) {
+      // Handle JSON parse errors
+      Logger.log(`Error parsing API response: ${parseError.toString()}`);
       return {
-        success: false,
-        error: errorMessage
+        success: responseCode >= 200 && responseCode < 300,  // Treat as success if HTTP status is 2xx
+        data: { message: responseText }
       };
     }
   } catch (e) {
-    console.error(`Exception in sendToAWS for content_id ${data.content_id || 'unknown'}: ${e.toString()}`);
+    Logger.log(`Exception in sendToAWS for content_id ${data.content_id || 'unknown'}: ${e.toString()}`);
     return {
       success: false,
       error: `Script exception: ${e.toString()}`
