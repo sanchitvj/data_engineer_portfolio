@@ -9,6 +9,9 @@ on:
       - 'src/penguindb/utils/**'
       - 'docker_images/content_lambda_image.Dockerfile'
       - '.github/workflows/build_docker_image.yml'
+      - '.github/workflows/deploy_api_handler.yml'
+      - '.github/workflows/deploy_sqs_worker.yml'
+      - '.github/workflows/deploy_status_checker.yml'
 
 jobs:
   build-and-push:

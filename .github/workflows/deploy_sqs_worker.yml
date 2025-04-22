@@ -9,29 +9,8 @@ on:
       - completed
 
 jobs:
-  check-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      should_deploy: ${{ steps.filter.outputs.changes }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
-      - name: Check for changes
-        id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            changes:
-              - 'src/penguindb/lambda_function/sqs_worker.py'
-              - 'src/penguindb/utils/**'
-              - 'docker_images/content_lambda_image.Dockerfile'
-              - '.github/workflows/deploy_sqs_worker.yml'
-
   deploy:
-    needs: check-changes
-    if: ${{ needs.check-changes.outputs.should_deploy == 'true' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
