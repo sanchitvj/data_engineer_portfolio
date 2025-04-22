@@ -46,11 +46,29 @@ def get_pending_items():
         # Parse response and filter pending items
         try:
             data = response.json()
+            logger.info(f"Response data type: {type(data)}")
+            
+            # Handle different response formats
             if isinstance(data, list):
+                # Format: Array of items
                 pending_items = [item for item in data if isinstance(item, dict) and item.get('status') == 'PENDING']
+            elif isinstance(data, dict):
+                # Format: Object with items property or other structure
+                if 'items' in data and isinstance(data['items'], list):
+                    pending_items = [item for item in data['items'] if isinstance(item, dict) and item.get('status') == 'PENDING']
+                elif 'data' in data and isinstance(data['data'], list):
+                    pending_items = [item for item in data['data'] if isinstance(item, dict) and item.get('status') == 'PENDING']
+                elif 'rows' in data and isinstance(data['rows'], list):
+                    pending_items = [item for item in data['rows'] if isinstance(item, dict) and item.get('status') == 'PENDING']
+                else:
+                    # Log the structure to better understand it
+                    logger.error(f"Unknown dictionary structure: {list(data.keys())}")
+                    pending_items = []
             else:
                 logger.error(f"Unexpected response format from Google Sheet: {type(data)}")
-                return []
+                pending_items = []
+                
+            logger.info(f"Found {len(pending_items)} pending items")
             return pending_items
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON response from Google Sheet: {str(e)}")

@@ -211,12 +211,13 @@ function processRow(sheet, rowIndex) {
  * @param {Range} errorCell The cell where error details should be updated.
  */
 function sendToAWS(data) {
-  const apiGatewayUrl = CONFIG.API_GATEWAY_URL; // Make sure API_GATEWAY_URL is defined globally or retrieved securely
+  const apiGatewayUrl = CONFIG.API_GATEWAY_URL;
   if (!apiGatewayUrl) {
     Logger.log("API Gateway URL is not set.");
-    statusCell.setValue("ERROR");
-    errorCell.setValue("API Gateway URL not configured in script.");
-    return;
+    return {
+      success: false,
+      error: "API Gateway URL not configured in script."
+    };
   }
 
   const payload = JSON.stringify(data);
@@ -224,20 +225,25 @@ function sendToAWS(data) {
     method: "post",
     contentType: "application/json",
     payload: payload,
-    muteHttpExceptions: true // Prevent throwing exceptions on HTTP errors like 500
+    muteHttpExceptions: true, // Prevent throwing exceptions on HTTP errors like 500
+    timeout: CONFIG.REQUEST_TIMEOUT || 30000 // Default 30 seconds timeout
   };
 
   const MAX_RETRIES = 4; // Max number of retries (total 5 attempts)
   const INITIAL_BACKOFF_MS = 1000; // Start with 1 second backoff
   let response;
   let success = false;
+  let attempt = 0;
+  let responseBody = "";
+  let responseCode = 0;
+  let lastError = "";
 
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+  for (attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
       Logger.log(`Attempt ${attempt + 1} to send data for content_id: ${data.content_id} to ${apiGatewayUrl}`);
       response = UrlFetchApp.fetch(apiGatewayUrl, options);
-      const responseCode = response.getResponseCode();
-      const responseBody = response.getContentText();
+      responseCode = response.getResponseCode();
+      responseBody = response.getContentText();
 
       Logger.log(`Response Code: ${responseCode}`);
       // Logger.log(`Response Body: ${responseBody}`); // Uncomment for detailed debugging if needed
@@ -245,12 +251,13 @@ function sendToAWS(data) {
       if (responseCode === 202) {
         Logger.log(`Request accepted by API Gateway for content_id: ${data.content_id}. Message ID: ${responseBody}`);
         // Status remains PENDING - it's accepted, not fully processed yet.
-        // errorCell.setValue(""); // Clear any previous error
         success = true;
         break; // Exit loop on success
       } else if (responseCode === 500 || responseCode === 429 || responseCode === 503 || responseCode === 504) {
         // Retryable errors (Internal Server Error, Rate Limit, Service Unavailable)
         Logger.log(`Received retryable error code: ${responseCode}. Retrying attempt ${attempt + 1}/${MAX_RETRIES + 1}...`);
+        lastError = `API Error ${responseCode}: ${responseBody}`;
+        
         if (attempt < MAX_RETRIES) {
           // Calculate backoff with jitter
           const backoffTime = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
@@ -260,19 +267,18 @@ function sendToAWS(data) {
           Utilities.sleep(waitTime);
         } else {
           Logger.log(`Max retries reached for content_id: ${data.content_id}. Final error code: ${responseCode}.`);
-          statusCell.setValue("ERROR");
-          errorCell.setValue(`API Error ${responseCode}: Failed after ${MAX_RETRIES + 1} attempts. Response: ${responseBody}`);
         }
       } else {
         // Non-retryable error (e.g., 400 Bad Request, 403 Forbidden)
         Logger.log(`Received non-retryable error code: ${responseCode} for content_id: ${data.content_id}.`);
-        statusCell.setValue("ERROR");
-        errorCell.setValue(`API Error ${responseCode}: ${responseBody}`);
+        lastError = `API Error ${responseCode}: ${responseBody}`;
         break; // Exit loop on non-retryable error
       }
     } catch (e) {
       // Catch potential network errors from UrlFetchApp itself
       Logger.log(`Network or fetch error during attempt ${attempt + 1}: ${e.message}`);
+      lastError = `Network/Fetch Error: ${e.message}`;
+      
       if (attempt < MAX_RETRIES) {
          const backoffTime = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
          const jitter = Math.random() * 1000;
@@ -281,17 +287,33 @@ function sendToAWS(data) {
          Utilities.sleep(waitTime);
       } else {
          Logger.log(`Max retries reached after fetch error for content_id: ${data.content_id}. Final error: ${e.message}`);
-         statusCell.setValue("ERROR");
-         errorCell.setValue(`Network/Fetch Error: ${e.message} after ${MAX_RETRIES + 1} attempts.`);
-         break; // Exit loop after max retries on fetch error
       }
     }
   }
 
-  if (!success && attempt > MAX_RETRIES) {
-      // This case handles scenarios where the loop completed due to max retries on retryable errors
-      // Error status should have already been set inside the loop.
-      Logger.log(`sendToAWS failed for content_id: ${data.content_id} after all retries.`);
+  if (success) {
+    // Try to parse the response body for message_id and request_id
+    try {
+      const parsedResponse = JSON.parse(responseBody);
+      return {
+        success: true,
+        data: parsedResponse
+      };
+    } catch (e) {
+      // If parsing fails, just return the raw response
+      return {
+        success: true,
+        data: {
+          message: responseBody,
+          raw_response: responseBody
+        }
+      };
+    }
+  } else {
+    return {
+      success: false,
+      error: lastError || `Failed after ${attempt + 1} attempts. Last response code: ${responseCode}`
+    };
   }
 }
 
