@@ -2,7 +2,7 @@ name: Deploy SQS Worker Lambda
 
 on:
   workflow_run:
-    workflows: ["Build and Push Docker Image"]
+    workflows: ["Content Docker Image"]
     branches: 
       - content
     paths:
