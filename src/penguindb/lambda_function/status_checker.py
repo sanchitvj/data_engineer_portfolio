@@ -212,25 +212,13 @@ def lambda_handler(event, context):
                         logger.warning(f"Item not found in DynamoDB: {content_id}")
                         continue
                     
-                    # Set status to PROCESSED if not set and content was generated
-                    if ('status' not in dynamo_item or dynamo_item.get('status') != 'PROCESSED') and dynamo_item.get('generated_title'):
-                        logger.info(f"Setting status to PROCESSED for {content_id}")
-                        dynamo_item['status'] = 'PROCESSED'
-                        
-                        # Update DynamoDB with processed status
-                        try:
-                            table.update_item(
-                                Key={'content_id': content_id},
-                                UpdateExpression="SET #status = :status",
-                                ExpressionAttributeNames={"#status": "status"},
-                                ExpressionAttributeValues={":status": "PROCESSED"}
-                            )
-                            logger.info(f"Updated DynamoDB status to PROCESSED for {content_id}")
-                        except Exception as update_error:
-                            logger.error(f"Failed to update DynamoDB status: {str(update_error)}")
+                    # We won't update DynamoDB with status, just use the data to update Google Sheet
+                    # Determine the status based on whether content was generated
+                    sheet_status = 'PROCESSED' if dynamo_item.get('generated_title') else 'ERROR'
+                    logger.info(f"Using status '{sheet_status}' for Google Sheet update for {content_id}")
                     
                     # Update Google Sheet using POST request with action=updateStatus
-                    result = send_status_update(content_id, dynamo_item.get('status', 'PROCESSED'), dynamo_item)
+                    result = send_status_update(content_id, sheet_status, dynamo_item)
                     if result:
                         processed_items += 1
                         logger.info(f"Successfully updated status for {content_id}")

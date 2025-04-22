@@ -120,7 +120,8 @@ def prepare_data_for_dynamodb(item):
         'sheet_id',                   # Spreadsheet metadata
         'headers',                    # Spreadsheet metadata
         'error_details',              # Handle separately
-        'attempt_count'               # Handle separately
+        'attempt_count',              # Handle separately
+        'status'                      # Only track status in Google Sheet, not in DynamoDB
     ]
     
     # Process each field

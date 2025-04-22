@@ -291,21 +291,7 @@ def lambda_handler(event, context):
                 except Exception as invoke_error:
                     logger.error(f"Error invoking status checker: {str(invoke_error)}")
                     logger.error(traceback.format_exc())
-                    
-                    # Fallback: Update DynamoDB items with PROCESSED status directly
-                    logger.info("Attempting fallback: Updating DynamoDB items directly with PROCESSED status")
-                    for content_id in successful_content_ids:
-                        try:
-                            table.update_item(
-                                Key={'content_id': content_id},
-                                UpdateExpression="SET #status = :status",
-                                ExpressionAttributeNames={"#status": "status"},
-                                ExpressionAttributeValues={":status": "PROCESSED"}
-                            )
-                            logger.info(f"Set status=PROCESSED for {content_id} in DynamoDB")
-                        except Exception as db_update_error:
-                            logger.error(f"Failed to update status for {content_id}: {str(db_update_error)}")
-                    
+                    logger.warning("Unable to trigger status checker to update Google Sheet - status update will be delayed until next poll")
             except Exception as trigger_error:
                 logger.error(f"Failed to trigger status_checker batch: {str(trigger_error)}")
                 logger.error(traceback.format_exc())
