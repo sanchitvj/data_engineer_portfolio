@@ -414,31 +414,72 @@ function doPost(e) {
   try {
     // Parse the incoming request
     const requestData = JSON.parse(e.postData.contents);
-    Logger.log("Received request: " + JSON.stringify(requestData));
+    Logger.log("Received POST request: " + JSON.stringify(requestData));
     
     // Validate the request
-    if (!requestData.action || !requestData.content_id) {
-      return createErrorResponse("Missing required fields: action, content_id");
+    if (!requestData.action) {
+      Logger.log("Missing required field: action");
+      return createErrorResponse("Missing required field: action");
+    }
+    
+    if (!requestData.content_id) {
+      Logger.log("Missing required field: content_id");
+      return createErrorResponse("Missing required field: content_id");
     }
     
     // Handle different actions
-    switch (requestData.action) {
-      case "updateStatus":
-        const result = updateItemStatus(
-          requestData.content_id, 
-          requestData.status, 
-          requestData.processed_at,
-          requestData.generated_title
-        );
-        return createSuccessResponse(result);
+    switch (requestData.action.toLowerCase()) {
+      case "updatestatus":
+        Logger.log(`Processing status update for content_id: ${requestData.content_id}`);
+        
+        // Map status to proper format if needed (allow for case differences)
+        let newStatus;
+        if (requestData.status) {
+          const statusUpper = requestData.status.toUpperCase();
+          if (statusUpper === "PROCESSED") {
+            newStatus = STATUS.PROCESSED;
+          } else if (statusUpper === "ERROR") {
+            newStatus = STATUS.ERROR;
+          } else if (statusUpper === "PENDING") {
+            newStatus = STATUS.PENDING;
+          } else {
+            // Use raw status if not one of the expected values
+            newStatus = requestData.status;
+          }
+        } else {
+          // Default to PROCESSED if status not specified but we're getting an update
+          newStatus = STATUS.PROCESSED;
+        }
+        
+        // Log the status update
+        Logger.log(`Updating status for ${requestData.content_id} to ${newStatus}`);
+        
+        // Call helper function to update the status (includes better error handling)
+        try {
+          const result = updateItemStatus(
+            requestData.content_id, 
+            newStatus, 
+            requestData.processed_at,
+            requestData.generated_title,
+            requestData.generated_tags || requestData.generated_tag  // Handle both forms
+          );
+          
+          Logger.log(`Status update result: ${JSON.stringify(result)}`);
+          return createSuccessResponse(result);
+        } catch (updateError) {
+          Logger.log(`Error updating status: ${updateError.toString()}`);
+          return createErrorResponse(`Error updating status: ${updateError.toString()}`);
+        }
         
       default:
-        return createErrorResponse("Unknown action: " + requestData.action);
+        Logger.log(`Unknown action: ${requestData.action}`);
+        return createErrorResponse(`Unknown action: ${requestData.action}`);
     }
     
   } catch (error) {
-    Logger.log("Error processing request: " + error.toString());
-    return createErrorResponse("Error processing request: " + error.toString());
+    Logger.log(`Error processing request: ${error.toString()}`);
+    Logger.log(`Stack trace: ${error.stack}`);
+    return createErrorResponse(`Error processing request: ${error.toString()}`);
   }
 }
 
@@ -546,7 +587,7 @@ function getPendingItemsForStatusChecker() {
 }
 
 // Update the status of an item in the sheet based on content_id
-function updateItemStatus(contentId, status, processedAt, generatedTitle) {
+function updateItemStatus(contentId, status, processedAt, generatedTitle, generatedTags) {
   if (!contentId) {
     throw new Error("Content ID is required");
   }
@@ -559,39 +600,62 @@ function updateItemStatus(contentId, status, processedAt, generatedTitle) {
   // Find the row with the matching content_id
   const rowIndex = findRowByContentId(sheet, contentId);
   if (rowIndex === -1) {
-    throw new Error("Content ID not found: " + contentId);
+    throw new Error(`Content ID not found: ${contentId}`);
   }
   
-  // Map status from AWS format to sheet format
-  let newStatus;
-  if (status === "PROCESSED") {
-    newStatus = STATUS.PROCESSED;
-  } else if (status === "ERROR") {
-    newStatus = STATUS.ERROR;
-    } else {
-    newStatus = status; // Use as-is if it's a valid status
-  }
+  Logger.log(`Found content_id ${contentId} at row ${rowIndex}`);
   
   // Update the status and timestamp
-  sheet.getRange(rowIndex, COLUMNS.STATUS + 1).setValue(newStatus);
+  sheet.getRange(rowIndex, COLUMNS.STATUS + 1).setValue(status);
   sheet.getRange(rowIndex, COLUMNS.LAST_UPDATED + 1).setValue(new Date());
+  
+  // Clear error details if status is no longer ERROR
+  if (status !== STATUS.ERROR) {
+    sheet.getRange(rowIndex, COLUMNS.ERROR_DETAILS + 1).setValue("");
+  }
   
   // Add additional info as cell notes
   if (processedAt) {
     const cell = sheet.getRange(rowIndex, COLUMNS.LAST_UPDATED + 1);
-    cell.setNote("Processed at: " + processedAt);
+    cell.setNote(`Processed at: ${processedAt}`);
   }
+  
+  // Handle generated content (title, tags, etc.)
+  let notesUpdated = false;
   
   if (generatedTitle && generatedTitle.trim() !== "") {
     const statusCell = sheet.getRange(rowIndex, COLUMNS.STATUS + 1);
-    statusCell.setNote("Generated title: " + generatedTitle);
+    statusCell.setNote(`Generated title: ${generatedTitle}`);
+    notesUpdated = true;
+  }
+  
+  // Format tags for display if available
+  if (generatedTags) {
+    let tagsStr;
+    if (Array.isArray(generatedTags)) {
+      tagsStr = generatedTags.join(", ");
+    } else if (typeof generatedTags === 'string') {
+      tagsStr = generatedTags;
+    }
+    
+    if (tagsStr) {
+      // Add to the notes
+      try {
+        const tagsCell = sheet.getRange(rowIndex, COLUMNS.TAGS + 1);
+        tagsCell.setNote(`Generated tags: ${tagsStr}`);
+      } catch (tagsError) {
+        Logger.log(`Error setting tags note: ${tagsError.toString()}`);
+      }
+    }
   }
   
   return {
     message: "Status updated successfully",
     contentId: contentId,
     rowIndex: rowIndex,
-    status: newStatus
+    status: status,
+    updated: new Date().toISOString(),
+    notes_updated: notesUpdated
   };
 }
 

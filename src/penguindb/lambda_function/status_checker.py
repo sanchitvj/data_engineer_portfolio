@@ -161,6 +161,7 @@ def update_google_sheet(content_id, dynamo_item):
 def lambda_handler(event, context):
     try:
         logger.info("Starting status checker Lambda")
+        logger.info(f"Received event: {json.dumps(event)}")
         debug_imports()
         
         # Initialize variables
@@ -169,8 +170,14 @@ def lambda_handler(event, context):
         remaining_items = 0
         batch_size = 0
         
-        # Get pending items from Google Sheet
-        pending_items = get_pending_items()
+        # Get items to process - either from event's content_ids or by fetching pending items
+        pending_items = get_pending_items_from_event(event)
+        
+        # If no items found in event, try fetching from Google Sheets
+        if not pending_items:
+            logger.info("No items found in event, checking Google Sheet for pending items")
+            pending_items = get_pending_items()
+            
         if not pending_items:
             logger.info("No pending items found")
             return {
@@ -182,7 +189,7 @@ def lambda_handler(event, context):
             }
             
         total_items = len(pending_items)
-        logger.info(f"Found {total_items} pending items")
+        logger.info(f"Found {total_items} items to process")
         
         # Process items in batches
         batch_size = 10  # Process 10 items at a time
@@ -195,7 +202,8 @@ def lambda_handler(event, context):
             # Process each item in the batch
             for item in batch:
                 try:
-                    content_id = item['content_id']
+                    # Extract content_id from item (which might be a dict with just content_id or a full DynamoDB item)
+                    content_id = item.get('content_id') if isinstance(item, dict) else item
                     logger.info(f"Processing item with content_id: {content_id}")
                     
                     # Get item from DynamoDB
@@ -203,17 +211,39 @@ def lambda_handler(event, context):
                     if not dynamo_item:
                         logger.warning(f"Item not found in DynamoDB: {content_id}")
                         continue
+                    
+                    # Set status to PROCESSED if not set and content was generated
+                    if ('status' not in dynamo_item or dynamo_item.get('status') != 'PROCESSED') and dynamo_item.get('generated_title'):
+                        logger.info(f"Setting status to PROCESSED for {content_id}")
+                        dynamo_item['status'] = 'PROCESSED'
                         
-                    # Update Google Sheet
-                    update_google_sheet(content_id, dynamo_item)
-                    processed_items += 1
+                        # Update DynamoDB with processed status
+                        try:
+                            table.update_item(
+                                Key={'content_id': content_id},
+                                UpdateExpression="SET #status = :status",
+                                ExpressionAttributeNames={"#status": "status"},
+                                ExpressionAttributeValues={":status": "PROCESSED"}
+                            )
+                            logger.info(f"Updated DynamoDB status to PROCESSED for {content_id}")
+                        except Exception as update_error:
+                            logger.error(f"Failed to update DynamoDB status: {str(update_error)}")
+                    
+                    # Update Google Sheet using POST request with action=updateStatus
+                    result = send_status_update(content_id, dynamo_item.get('status', 'PROCESSED'), dynamo_item)
+                    if result:
+                        processed_items += 1
+                        logger.info(f"Successfully updated status for {content_id}")
+                    else:
+                        logger.warning(f"Failed to update Google Sheet for {content_id}")
                     
                 except Exception as e:
                     logger.error(f"Error processing item {content_id}: {str(e)}")
+                    logger.error(traceback.format_exc())
                     continue
                     
             # Check if we're running out of time
-            if context.get_remaining_time_in_millis() < 10000:  # Less than 10 seconds remaining
+            if hasattr(context, 'get_remaining_time_in_millis') and context.get_remaining_time_in_millis() < 10000:  # Less than 10 seconds remaining
                 logger.warning(f"Lambda timeout approaching. Processed {processed_items}/{total_items} items")
                 break
                 
@@ -230,6 +260,7 @@ def lambda_handler(event, context):
         
     except Exception as e:
         logger.error(f"Error in lambda_handler: {str(e)}")
+        logger.error(traceback.format_exc())
         return {
             'statusCode': 500,
             'body': json.dumps({

@@ -257,13 +257,13 @@ def lambda_handler(event, context):
             try:
                 # Wait a few seconds to allow DynamoDB to reach consistency
                 import time
-                time.sleep(5)  # 5 second delay
+                time.sleep(2)  # 2 second delay
                 
                 # Initialize Lambda client
                 lambda_client = boto3.client('lambda')
                 
                 # Get the status checker Lambda name or ARN from environment variable
-                status_checker_function = os.environ.get('STATUS_CHECKER_FUNCTION', 'status_checker')
+                status_checker_function = os.environ.get('STATUS_CHECKER_FUNCTION', 'status-checker')
                 
                 # Prepare batch payload with all content_ids
                 checker_payload = {
@@ -271,22 +271,40 @@ def lambda_handler(event, context):
                 }
                 
                 # Log the batch invocation
-                logger.info(f"Invoking status checker for batch of {len(successful_content_ids)} items: {successful_content_ids}")
+                logger.info(f"Invoking status checker for {len(successful_content_ids)} items: {successful_content_ids}")
                 
-                # Invoke status checker Lambda asynchronously
-                response = lambda_client.invoke(
-                    FunctionName=status_checker_function,
-                    InvocationType='Event',  # Asynchronous
-                    Payload=json.dumps(checker_payload)
-                )
-                
-                # Check if the invocation was successful
-                status_code = response.get('StatusCode')
-                if status_code == 202:  # 202 Accepted indicates successful async invocation
-                    logger.info(f"Successfully triggered status_checker Lambda for batch of {len(successful_content_ids)} items")
-                else:
-                    logger.error(f"Unexpected status code from Lambda invoke: {status_code}")
-                    logger.error(f"Response: {response}")
+                try:
+                    # Invoke status checker Lambda asynchronously
+                    response = lambda_client.invoke(
+                        FunctionName=status_checker_function,
+                        InvocationType='Event',  # Asynchronous
+                        Payload=json.dumps(checker_payload)
+                    )
+                    
+                    # Check if the invocation was successful
+                    status_code = response.get('StatusCode')
+                    if status_code == 202:  # 202 Accepted indicates successful async invocation
+                        logger.info(f"Successfully triggered status_checker Lambda for batch of {len(successful_content_ids)} items")
+                    else:
+                        logger.error(f"Unexpected status code from Lambda invoke: {status_code}")
+                        logger.error(f"Response: {response}")
+                except Exception as invoke_error:
+                    logger.error(f"Error invoking status checker: {str(invoke_error)}")
+                    logger.error(traceback.format_exc())
+                    
+                    # Fallback: Update DynamoDB items with PROCESSED status directly
+                    logger.info("Attempting fallback: Updating DynamoDB items directly with PROCESSED status")
+                    for content_id in successful_content_ids:
+                        try:
+                            table.update_item(
+                                Key={'content_id': content_id},
+                                UpdateExpression="SET #status = :status",
+                                ExpressionAttributeNames={"#status": "status"},
+                                ExpressionAttributeValues={":status": "PROCESSED"}
+                            )
+                            logger.info(f"Set status=PROCESSED for {content_id} in DynamoDB")
+                        except Exception as db_update_error:
+                            logger.error(f"Failed to update status for {content_id}: {str(db_update_error)}")
                     
             except Exception as trigger_error:
                 logger.error(f"Failed to trigger status_checker batch: {str(trigger_error)}")
