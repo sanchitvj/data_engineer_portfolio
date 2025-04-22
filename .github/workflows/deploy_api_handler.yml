@@ -1,12 +1,15 @@
 name: Deploy API Handler Lambda
 
 on:
-  workflow_run:
-    workflows: ["Content Docker Image"]
+  push:
     branches: 
       - content
-    types:
-      - completed
+    paths:
+      - 'src/penguindb/lambda_function/api_handler.py'
+      - 'src/penguindb/utils/**'
+      - 'docker_images/content_lambda_image.Dockerfile'
+      - '.github/workflows/deploy_api_handler.yml'
+
     
 jobs:
   deploy:
@@ -26,11 +29,21 @@ jobs:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.OIDC_ROLE }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # - name: Get latest image tag
-      #   id: get-image
-      #   run: |
-      #     aws ecr describe-images --repository-name penguindb-lambda --query 'sort_by(imageDetails, &imagePushedAt)[-1].imageTags[0]' --output text
-      #     echo "::set-output name=image_tag::$(aws ecr describe-images --repository-name content_lambda --query 'sort_by(imageDetails, &imagePushedAt)[-1].imageTags[0]' --output text)"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          ECR_REPOSITORY: content_lambda
+          IMAGE_TAG: latest
+        run: |
+          docker buildx build --platform linux/amd64 --provenance=false -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f docker_images/content_lambda_image.Dockerfile --push .
+          echo "::set-output name=image_uri::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
       - name: Deploy Lambda function
         env:
@@ -45,13 +58,3 @@ jobs:
           for i in {1..5}; do
             aws lambda update-function-configuration --function-name api_handler --environment "Variables={SQS_QUEUE_URL=${{ secrets.SQS_QUEUE_URL }}}" && break || sleep 15;
           done
-
-      # - name: Update Lambda function
-      #   run: |
-      #     aws lambda update-function-code \
-      #       --function-name api_handler \
-      #       --image-uri ${{ secrets.ECR_REGISTRY }}/content_lambda:${{ steps.get-image.outputs.image_tag }}
-
-      # - name: Wait for update to complete
-      #   run: |
-      #     aws lambda wait function-updated --function-name api_handler 

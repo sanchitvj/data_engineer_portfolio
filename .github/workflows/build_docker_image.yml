@@ -1,49 +1,49 @@
-name: Content Docker Image
+# name: Content Docker Image
 
-on:
-  push:
-    branches: 
-      - content
-    paths:
-      - 'src/penguindb/lambda_function/**'
-      - 'src/penguindb/utils/**'
-      - 'docker_images/content_lambda_image.Dockerfile'
-      - '.github/workflows/build_docker_image.yml'
-      - '.github/workflows/deploy_api_handler.yml'
-      - '.github/workflows/deploy_sqs_worker.yml'
-      - '.github/workflows/deploy_status_checker.yml'
+# on:
+#   push:
+#     branches: 
+#       - content
+#     paths:
+#       - 'src/penguindb/lambda_function/**'
+#       - 'src/penguindb/utils/**'
+#       - 'docker_images/content_lambda_image.Dockerfile'
+#       - '.github/workflows/build_docker_image.yml'
+#       - '.github/workflows/deploy_api_handler.yml'
+#       - '.github/workflows/deploy_sqs_worker.yml'
+#       - '.github/workflows/deploy_status_checker.yml'
 
-jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-      packages: write
+# jobs:
+#   build-and-push:
+#     runs-on: ubuntu-latest
+#     permissions:
+#       id-token: write
+#       contents: read
+#       packages: write
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+#       - name: Set up Docker Buildx
+#         uses: docker/setup-buildx-action@v3
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.OIDC_ROLE }}
-          aws-region: ${{ secrets.AWS_REGION }}
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.OIDC_ROLE }}
+#           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+#       - name: Login to Amazon ECR
+#         id: login-ecr
+#         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push image to Amazon ECR
-        env:
-          ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-          ECR_REPOSITORY: content_lambda
-          IMAGE_TAG: latest
-        run: |
-          docker buildx build --platform linux/amd64 --provenance=false -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f docker_images/content_lambda_image.Dockerfile --push .
-          echo "::set-output name=image_uri::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-          # echo "::set-output name=image_tag::$IMAGE_TAG" 
+#       - name: Build, tag, and push image to Amazon ECR
+#         env:
+#           ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+#           ECR_REPOSITORY: content_lambda
+#           IMAGE_TAG: latest
+#         run: |
+#           docker buildx build --platform linux/amd64 --provenance=false -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f docker_images/content_lambda_image.Dockerfile --push .
+#           echo "::set-output name=image_uri::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+#           # echo "::set-output name=image_tag::$IMAGE_TAG" 
