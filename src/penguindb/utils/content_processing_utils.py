@@ -51,7 +51,7 @@ def create_error_response(error_type, message, log_message=None):
         "error": {
             "type": error_type.value if isinstance(error_type, ErrorTypes) else str(error_type),
             "message": message,
-            "timestamp": datetime.datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat()
         }
     }
     
