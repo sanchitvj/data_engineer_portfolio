@@ -6,7 +6,6 @@ on:
       - content
     paths:
       - 'src/penguindb/lambda_function/status_checker.py'
-      - 'src/penguindb/utils/**'
       - 'docker_images/status_checker_lambda.Dockerfile'
       - '.github/workflows/deploy_status_checker.yml'
     

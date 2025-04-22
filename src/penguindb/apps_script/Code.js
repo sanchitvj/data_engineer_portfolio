@@ -722,7 +722,7 @@ function setup() {
 // For testing in the script editor
 function testFindRow() {
   // Replace with an actual content_id from your sheet
-  const testContentId = "12345-test-id"; 
+  const testContentId = "123456-test-id"; 
   
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEET_NAME);
