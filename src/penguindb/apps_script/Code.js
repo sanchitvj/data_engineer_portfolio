@@ -444,13 +444,105 @@ function doPost(e) {
 
 // Web App entry point - handles GET requests (for testing)
 function doGet(e) {
-  return ContentService.createTextOutput(
-    JSON.stringify({
-      status: "success",
-      message: "Content Manager is running. Use POST to update status.",
-      timestamp: new Date().toISOString()
-    })
-  ).setMimeType(ContentService.MimeType.JSON);
+  try {
+    // Check if there's an action parameter
+    if (e && e.parameter && e.parameter.action) {
+      const action = e.parameter.action;
+      
+      // Handle getPendingItems action
+      if (action === "getPendingItems") {
+        Logger.log("Received request for pending items");
+        const pendingItems = getPendingItemsForStatusChecker();
+        return ContentService.createTextOutput(
+          JSON.stringify({
+            status: "success",
+            data: pendingItems,
+            count: pendingItems.length,
+            timestamp: new Date().toISOString()
+          })
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    
+    // Default response if no action or unknown action
+    return ContentService.createTextOutput(
+      JSON.stringify({
+        status: "success",
+        message: "Content Manager is running. Use POST to update status.",
+        timestamp: new Date().toISOString()
+      })
+    ).setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    Logger.log("Error in doGet: " + error.toString());
+    return ContentService.createTextOutput(
+      JSON.stringify({
+        status: "error",
+        message: "Error processing request: " + error.toString(),
+        timestamp: new Date().toISOString()
+      })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// Helper function to get all pending items for the status checker
+function getPendingItemsForStatusChecker() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEET_NAME);
+    if (!sheet) {
+      Logger.log("Sheet not found: " + CONFIG.SHEET_NAME);
+      return [];
+    }
+    
+    const dataRange = sheet.getDataRange();
+    const values = dataRange.getValues();
+    const headers = values[0]; // First row is headers
+    
+    // Find indices of important columns
+    const contentIdIdx = headers.indexOf("content_id");
+    const statusIdx = headers.indexOf("status");
+    
+    // If we can't find the required columns, return empty array
+    if (contentIdIdx === -1 || statusIdx === -1) {
+      Logger.log("Required columns not found in sheet");
+      return [];
+    }
+    
+    // Collect all pending items
+    const pendingItems = [];
+    
+    // Start from row 1 (skip header row 0)
+    for (let i = 1; i < values.length; i++) {
+      const row = values[i];
+      const status = row[statusIdx];
+      
+      // Check if this row has PENDING status
+      if (status && status.toString().toLowerCase() === STATUS.PENDING) {
+        const contentId = row[contentIdIdx];
+        if (contentId) {
+          // Create object with all columns
+          const item = {
+            content_id: contentId,
+            status: status
+          };
+          
+          // Add other columns that exist
+          for (let j = 0; j < headers.length; j++) {
+            if (j !== contentIdIdx && j !== statusIdx && headers[j]) {
+              item[headers[j]] = row[j] || "";
+            }
+          }
+          
+          pendingItems.push(item);
+        }
+      }
+    }
+    
+    Logger.log(`Found ${pendingItems.length} pending items`);
+    return pendingItems;
+  } catch (error) {
+    Logger.log("Error getting pending items: " + error.toString());
+    return [];
+  }
 }
 
 // Update the status of an item in the sheet based on content_id
