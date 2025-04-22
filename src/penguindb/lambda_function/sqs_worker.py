@@ -263,7 +263,7 @@ def lambda_handler(event, context):
                 lambda_client = boto3.client('lambda')
                 
                 # Get the status checker Lambda name or ARN from environment variable
-                status_checker_function = os.environ.get('STATUS_CHECKER_FUNCTION', 'status-checker')
+                status_checker_function = os.environ.get('STATUS_CHECKER_FUNCTION', 'status_checker')
                 
                 # Prepare batch payload with all content_ids
                 checker_payload = {
