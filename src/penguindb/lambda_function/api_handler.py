@@ -4,7 +4,7 @@ import os
 import logging
 import datetime
 import uuid
-from src.penguindb.utils.content_processing_utils import ErrorTypes, create_error_response, validate_field_types
+from penguindb.utils.content_processing_utils import ErrorTypes, create_error_response, validate_field_types
 
 # Set up logging
 logger = logging.getLogger()
