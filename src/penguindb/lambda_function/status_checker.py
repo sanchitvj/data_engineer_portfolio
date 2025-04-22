@@ -6,6 +6,7 @@ import traceback
 from datetime import datetime
 from botocore.exceptions import ClientError
 import requests  # Added for HTTP requests
+import time
 
 
 
@@ -105,52 +106,66 @@ def lambda_handler(event, context):
                     'body': json.dumps({'error': f"Failed to scan DynamoDB: {str(scan_error)}"})
                 }
         
-        # Process and update each item's status
+        # Process and update each item's status, but in smaller batches with delays
+        total_items = len(items)
         updated_count = 0
         error_count = 0
         
-        for item in items:
-            content_id = item.get('content_id')
-            if not content_id:
-                logger.warning("Found item without content_id, skipping")
-                continue
-                
-            logger.info(f"Processing status for content_id: {content_id}")
+        # Process in batches of 5 to avoid overwhelming Apps Script quotas
+        batch_size = 5
+        
+        for i in range(0, total_items, batch_size):
+            batch = items[i:i+batch_size]
+            logger.info(f"Processing batch {i//batch_size + 1} of {(total_items + batch_size - 1)//batch_size} ({len(batch)} items)")
             
-            # Determine item status based on generated content
-            has_generated_title = item.get('generated_title', '') != ''
-            has_generated_tags = bool(item.get('generated_tags', []))
-            
-            # Set status based on what we found
-            status = "processed" if (has_generated_title or has_generated_tags) else "error"
-            
-            # Update Google Sheet
-            try:
-                update_result = update_sheet_status(
-                    content_id=content_id,
-                    status=status.upper(),  # Use uppercase for the API
-                    processed_at=item.get('processed_at', datetime.now().isoformat()),
-                    generated_title=item.get('generated_title', '')
-                )
-                
-                if update_result.get('success'):
-                    logger.info(f"Successfully updated sheet for {content_id} to {status}")
-                    updated_count += 1
-                else:
-                    logger.error(f"Failed to update sheet for {content_id}: {update_result.get('error')}")
-                    error_count += 1
+            for item in batch:
+                content_id = item.get('content_id')
+                if not content_id:
+                    logger.warning("Found item without content_id, skipping")
+                    continue
                     
-            except Exception as update_error:
-                logger.error(f"Error updating sheet for {content_id}: {str(update_error)}")
-                logger.error(traceback.format_exc())
-                error_count += 1
+                logger.info(f"Processing status for content_id: {content_id}")
+                
+                # Determine item status based on generated content
+                has_generated_title = item.get('generated_title', '') != ''
+                has_generated_tags = bool(item.get('generated_tags', []))
+                
+                # Set status based on what we found
+                status = "processed" if (has_generated_title or has_generated_tags) else "error"
+                
+                # Update Google Sheet
+                try:
+                    update_result = update_sheet_status(
+                        content_id=content_id,
+                        status=status.upper(),  # Use uppercase for the API
+                        processed_at=item.get('processed_at', datetime.now().isoformat()),
+                        generated_title=item.get('generated_title', '')
+                    )
+                    
+                    if update_result.get('success'):
+                        logger.info(f"Successfully updated sheet for {content_id} to {status}")
+                        updated_count += 1
+                    else:
+                        logger.error(f"Failed to update sheet for {content_id}: {update_result.get('error')}")
+                        error_count += 1
+                        
+                except Exception as update_error:
+                    logger.error(f"Error updating sheet for {content_id}: {str(update_error)}")
+                    logger.error(traceback.format_exc())
+                    error_count += 1
+            
+            # Add a delay between batches to avoid overwhelming Apps Script quotas
+            if i + batch_size < total_items:
+                logger.info("Waiting 3 seconds before processing next batch...")
+                time.sleep(3)  # 3 second delay between batches
         
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'message': f"Status check completed. Updated {updated_count} items, {error_count} errors",
+                'message': f"Status check completed. Updated {updated_count} of {total_items} items, {error_count} errors",
                 'updated_count': updated_count,
                 'error_count': error_count,
+                'total_items': total_items,
                 'content_ids_processed': content_ids if content_ids else "all recent items"
             })
         }

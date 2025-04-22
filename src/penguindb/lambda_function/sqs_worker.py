@@ -23,6 +23,37 @@ LLM_MODEL = os.environ.get('LLM_MODEL', 'us.anthropic.claude-3-5-haiku-20241022-
 # Initialize clients
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(DYNAMODB_TABLE_NAME)
+cloudwatch = boto3.client('cloudwatch')
+
+# Function to publish metrics to CloudWatch
+def publish_metric(metric_name, value, unit='Count', dimensions=None):
+    """
+    Publish a metric to CloudWatch.
+    
+    Args:
+        metric_name: Name of the metric
+        value: Value of the metric
+        unit: Unit of the metric (default: Count)
+        dimensions: Optional dimensions for the metric
+    """
+    try:
+        metric_data = {
+            'MetricName': metric_name,
+            'Value': value,
+            'Unit': unit
+        }
+        
+        if dimensions:
+            metric_data['Dimensions'] = dimensions
+            
+        cloudwatch.put_metric_data(
+            Namespace='PenguinDB/ContentProcessing',
+            MetricData=[metric_data]
+        )
+        logger.debug(f"Published metric {metric_name}: {value} {unit}")
+    except Exception as e:
+        logger.warning(f"Failed to publish metric {metric_name}: {str(e)}")
+        # Non-critical operation, don't raise exception
 
 # Debug import paths
 def debug_imports():
@@ -68,6 +99,18 @@ def lambda_handler(event, context):
         
         # Track failures for batch item failure reporting (if enabled)
         failed_message_ids = []
+        
+        # Collect content_ids for batch status checking
+        successful_content_ids = []
+
+        # Track metrics
+        record_count = len(event.get('Records', []))
+        success_count = 0
+        llm_error_count = 0
+        db_error_count = 0
+        
+        # Publish initial metrics
+        publish_metric('RecordsReceived', record_count)
 
         for record in event.get('Records', []):
             message_id = record.get('messageId', 'N/A')
@@ -132,12 +175,27 @@ def lambda_handler(event, context):
                     body['generated_tags'] = llm_result.get('tags', [])
 
                     logger.info(f"SQS Worker - Generated content for {content_id}")
+                    
+                    # Check if we got meaningful content from LLM
+                    has_content = bool(body['generated_title'] or body['generated_tags'])
+                    
+                    # Track LLM success/failure
+                    if has_content:
+                        publish_metric('LLMSuccess', 1)
+                    else:
+                        publish_metric('LLMEmptyResult', 1)
+                        llm_error_count += 1
+                        
                 except Exception as llm_error:
                     logger.error(f"SQS Worker - LLM error for {content_id}: {str(llm_error)}")
                     # Continue with empty content rather than failing
                     body['generated_title'] = ''
                     body['generated_description'] = ''
                     body['generated_tags'] = []
+                    
+                    # Track LLM errors
+                    publish_metric('LLMError', 1)
+                    llm_error_count += 1
 
                 # Prepare and store data in DynamoDB
                 try:
@@ -180,46 +238,21 @@ def lambda_handler(event, context):
                     status = "updated" if is_update else "created"
                     logger.info(f"SQS Worker - Successfully {status} item {content_id} in DynamoDB")
                     
-                    # Immediately trigger status checker Lambda
-                    try:
-                        # Initialize Lambda client
-                        lambda_client = boto3.client('lambda')
-                        
-                        # Get the status checker Lambda name or ARN from environment variable
-                        # If not set, fall back to function name, which might need to be the full ARN in some cases
-                        status_checker_function = os.environ.get('STATUS_CHECKER_FUNCTION', 'status_checker')
-                        
-                        # Prepare payload with just the content_id
-                        checker_payload = {
-                            'content_ids': [content_id]
-                        }
-                        
-                        # Log the function name being invoked
-                        logger.info(f"Invoking status checker function: {status_checker_function}")
-                        
-                        # Invoke status checker Lambda asynchronously
-                        response = lambda_client.invoke(
-                            FunctionName=status_checker_function,
-                            InvocationType='Event',  # Asynchronous
-                            Payload=json.dumps(checker_payload)
-                        )
-                        
-                        # Check if the invocation was successful
-                        status_code = response.get('StatusCode')
-                        if status_code == 202:  # 202 Accepted indicates successful async invocation
-                            logger.info(f"Successfully triggered status_checker Lambda for content_id: {content_id}")
-                        else:
-                            logger.error(f"Unexpected status code from Lambda invoke: {status_code}")
-                            logger.error(f"Response: {response}")
-                            
-                    except Exception as trigger_error:
-                        logger.error(f"Failed to trigger status_checker: {str(trigger_error)}")
-                        logger.error(traceback.format_exc())
-                        # Non-critical error, don't raise exception, but make sure it's visible in logs
+                    # Add to the list of successful content_ids for batch status checking
+                    successful_content_ids.append(content_id)
+                    success_count += 1
+                    
+                    # Track successful writes to DynamoDB
+                    publish_metric('DynamoDBSuccess', 1)
 
                 except Exception as db_error:
                     logger.error(f"SQS Worker - Database error for {content_id}: {str(db_error)}")
                     logger.error(traceback.format_exc())
+                    
+                    # Track DynamoDB errors
+                    publish_metric('DynamoDBError', 1)
+                    db_error_count += 1
+                    
                     # Since this is a critical operation, we re-raise to trigger SQS retry/DLQ
                     raise db_error
 
@@ -234,6 +267,68 @@ def lambda_handler(event, context):
                 # Re-raise for standard Lambda-SQS retry behavior
                 raise e
 
+        # Process all successful content_ids in a single batch if there are any
+        if successful_content_ids:
+            try:
+                # Wait a few seconds to allow DynamoDB to reach consistency
+                import time
+                time.sleep(5)  # 5 second delay
+                
+                # Initialize Lambda client
+                lambda_client = boto3.client('lambda')
+                
+                # Get the status checker Lambda name or ARN from environment variable
+                status_checker_function = os.environ.get('STATUS_CHECKER_FUNCTION', 'status_checker')
+                
+                # Prepare batch payload with all content_ids
+                checker_payload = {
+                    'content_ids': successful_content_ids
+                }
+                
+                # Log the batch invocation
+                logger.info(f"Invoking status checker for batch of {len(successful_content_ids)} items: {successful_content_ids}")
+                
+                # Invoke status checker Lambda asynchronously
+                response = lambda_client.invoke(
+                    FunctionName=status_checker_function,
+                    InvocationType='Event',  # Asynchronous
+                    Payload=json.dumps(checker_payload)
+                )
+                
+                # Check if the invocation was successful
+                status_code = response.get('StatusCode')
+                if status_code == 202:  # 202 Accepted indicates successful async invocation
+                    logger.info(f"Successfully triggered status_checker Lambda for batch of {len(successful_content_ids)} items")
+                    
+                    # Track successful status checker invocation
+                    publish_metric('StatusCheckerInvoked', 1)
+                    publish_metric('ItemsSubmittedForStatusCheck', len(successful_content_ids))
+                else:
+                    logger.error(f"Unexpected status code from Lambda invoke: {status_code}")
+                    logger.error(f"Response: {response}")
+                    
+                    # Track failed status checker invocation
+                    publish_metric('StatusCheckerError', 1)
+                    
+            except Exception as trigger_error:
+                logger.error(f"Failed to trigger status_checker batch: {str(trigger_error)}")
+                logger.error(traceback.format_exc())
+                
+                # Track error
+                publish_metric('StatusCheckerInvocationError', 1)
+        else:
+            logger.info("No successful items to update status for")
+
+        # Publish final summary metrics
+        publish_metric('ProcessingSuccessCount', success_count)
+        publish_metric('ProcessingErrorCount', len(failed_message_ids))
+        publish_metric('LLMErrorCount', llm_error_count)
+        publish_metric('DynamoDBErrorCount', db_error_count)
+        
+        if record_count > 0:
+            success_rate = (success_count / record_count) * 100
+            publish_metric('ProcessingSuccessRate', success_rate, 'Percent')
+
         # If using batch item failures reporting
         if failed_message_ids:
             logger.warning(f"SQS Worker - Failed to process {len(failed_message_ids)} messages")
@@ -244,7 +339,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'message': f'Processed {len(event.get("Records", []))} messages'
+                'message': f'Processed {len(event.get("Records", []))} messages, updated {len(successful_content_ids)} items'
             })
         }
             

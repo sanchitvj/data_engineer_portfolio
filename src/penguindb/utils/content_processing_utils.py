@@ -7,6 +7,7 @@ from datetime import datetime
 import logging
 import threading
 import enum
+import time
 
 # Import LLM client with fallback
 try:
@@ -138,9 +139,9 @@ def prepare_data_for_dynamodb(item):
     
     return dynamodb_item
 
-def generate_content_with_llm(content_type, model, description, tags, logger, timeout=120):
+def generate_content_with_llm(content_type, model, description, tags, logger, timeout=120, max_retries=3):
     """
-    Generate content using Claude LLM with timeout handling.
+    Generate content using Claude LLM with timeout handling and exponential backoff.
     
     Args:
         content_type: Type of content ('post', 'article', etc.)
@@ -148,6 +149,7 @@ def generate_content_with_llm(content_type, model, description, tags, logger, ti
         tags: Original tags (string or list)
         logger: Logger instance
         timeout: Timeout in seconds
+        max_retries: Maximum number of retries for API rate limiting
     
     Returns:
         Dictionary with generated title, description, and tags
@@ -186,47 +188,80 @@ def generate_content_with_llm(content_type, model, description, tags, logger, ti
     Return as JSON with keys: title, description, tags (array of 4 strings)
     """
 
-    # Run LLM call with timeout using threading
+    # Implement exponential backoff for API rate limiting
+    retry_count = 0
+    backoff_time = 2  # Start with 2 second backoff
     llm_result = {"title": "", "description": "", "tags": []}
-    llm_error = None
     
-    def _generate_llm_content_thread():
-        nonlocal llm_result, llm_error
-        try:
-            response = call_claude(
-                prompt=prompt,
-                model_id=model,
-                extract_json=True,
-                max_tokens=500
-            )
+    while retry_count <= max_retries:
+        if retry_count > 0:
+            logger.info(f"Retrying LLM call (attempt {retry_count}/{max_retries}) after {backoff_time}s delay")
+            time.sleep(backoff_time)
+            # Exponential backoff: double the wait time for next retry
+            backoff_time *= 2
             
-            if "error" in response:
-                logger.warning(f"LLM response contained an error: {response.get('error')}")
-                if "raw_response" in response:
-                    logger.info(f"Raw LLM response: {response.get('raw_response')}")
-                llm_error = response.get('error')
-                return
+        # Run LLM call with timeout using threading
+        llm_error = None
+        thread_completed = False
+        
+        def _generate_llm_content_thread():
+            nonlocal llm_result, llm_error, thread_completed
+            try:
+                response = call_claude(
+                    prompt=prompt,
+                    model_id=model,
+                    extract_json=True,
+                    max_tokens=500
+                )
                 
-            llm_result.update(response)
-        except Exception as e:
-            llm_error = str(e)
-            logger.error(f"Error in LLM thread: {llm_error}")
+                if "error" in response:
+                    error_msg = response.get('error', '')
+                    logger.warning(f"LLM response contained an error: {error_msg}")
+                    
+                    # Check if this is a rate limit error
+                    if 'rate' in error_msg.lower() or 'limit' in error_msg.lower() or 'too many' in error_msg.lower():
+                        logger.warning("Detected rate limiting error, will retry with backoff")
+                        llm_error = "RATE_LIMITED"
+                    else:
+                        # Other API error
+                        if "raw_response" in response:
+                            logger.info(f"Raw LLM response: {response.get('raw_response')}")
+                        llm_error = error_msg
+                    return
+                    
+                llm_result.update(response)
+                thread_completed = True
+            except Exception as e:
+                llm_error = str(e)
+                logger.error(f"Error in LLM thread: {llm_error}")
 
-    # Run in thread with timeout
-    llm_thread = threading.Thread(target=_generate_llm_content_thread)
-    llm_thread.start()
-    llm_thread.join(timeout=timeout)
+        # Run in thread with timeout
+        llm_thread = threading.Thread(target=_generate_llm_content_thread)
+        llm_thread.start()
+        llm_thread.join(timeout=timeout)
 
-    # Handle timeout and results
-    if llm_thread.is_alive():
-        logger.warning(f"LLM generation timed out after {timeout} seconds")
-        # Thread is still running but we're moving on
-        return {"title": "", "description": "", "tags": []}
-        
-    if llm_error:
-        logger.error(f"LLM generation error: {llm_error}")
-        return {"title": "", "description": "", "tags": []}
-        
+        # Handle timeout and results
+        if llm_thread.is_alive():
+            logger.warning(f"LLM generation timed out after {timeout} seconds")
+            # Thread is still running but we're moving on
+            break
+            
+        if thread_completed:
+            # Success! Break out of retry loop
+            break
+            
+        if llm_error == "RATE_LIMITED" and retry_count < max_retries:
+            # Special case for rate limiting - we'll retry
+            retry_count += 1
+            continue
+        elif llm_error:
+            logger.error(f"LLM generation error: {llm_error}")
+            # For non-rate-limiting errors, don't retry
+            break
+            
+        # If we got here without either success or a specific error, break the loop
+        break
+    
     # Ensure tags is a list
     if 'tags' in llm_result and not isinstance(llm_result['tags'], list):
         try:
