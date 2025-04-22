@@ -6,6 +6,8 @@ import json
 from datetime import datetime
 import logging
 import threading
+import enum
+import time
 
 # Import LLM client with fallback
 try:
@@ -17,117 +19,149 @@ except ImportError:
         logging.error("call_claude is not available.")
         return {"error": "LLM client not imported"}
 
-# Error type classes
-class ErrorTypes:
+# Set up logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+# Define error types
+class ErrorTypes(enum.Enum):
     VALIDATION_ERROR = "ValidationError"
-    DATABASE_ERROR = "DatabaseError"
+    SERVICE_ERROR = "ServiceError"
     INTERNAL_ERROR = "InternalError"
     QUEUE_ERROR = "QueueError"
-    AUTHENTICATION_ERROR = "AuthenticationError"
+    DATABASE_ERROR = "DatabaseError"
 
-def create_error_response(status_code, error_type, message, logger):
+def create_error_response(error_type, message, log_message=None):
     """
-    Create a standardized error response for API Gateway.
+    Create a standardized error response.
     
     Args:
-        status_code: HTTP status code
-        error_type: Error type from ErrorTypes class
-        message: Error message
-        logger: Logger instance
+        error_type: Type of error (from ErrorTypes enum)
+        message: Error message to be returned to the client
+        log_message: Optional message to log (if different from client message)
     
     Returns:
-        Dictionary with format expected by API Gateway
+        Dictionary with statusCode, headers, and body containing error details
     """
-    logger.error(f"Error: {error_type} - {message}")
+    if log_message:
+        logger.error(log_message)
+    else:
+        logger.error(message)
+        
+    error_body = {
+        "error": {
+            "type": error_type.value if isinstance(error_type, ErrorTypes) else str(error_type),
+            "message": message,
+            "timestamp": datetime.now().isoformat()
+        }
+    }
+    
     return {
-        'statusCode': status_code,
-        'body': json.dumps({
-            'error': {
-                'type': error_type,
-                'message': message,
-                'timestamp': datetime.now().isoformat()
-            }
-        }),
-        'headers': {'Content-Type': 'application/json'}
+        "statusCode": 400 if error_type == ErrorTypes.VALIDATION_ERROR else 500,
+        "body": json.dumps(error_body),
+        "headers": {
+            "Content-Type": "application/json"
+        }
     }
 
-def validate_field_types(body):
+def validate_field_types(data):
     """
-    Validate the types of fields in the request body.
+    Validates the types of fields in the request body.
+    Only validates fields that are present in the data.
     
     Args:
-        body: Request body dictionary
-    
+        data: Dictionary containing the request data
+        
     Returns:
-        String with error messages or None if validation passes
+        None if validation passes, error message string if validation fails
     """
-    errors = []
-    if 'content_type' in body and not isinstance(body['content_type'], str):
-        errors.append("content_type must be a string")
-    if 'description' in body and not isinstance(body['description'], str):
-        errors.append("description must be a string")
-    if 'url' in body and not isinstance(body['url'], str):
-        errors.append("url must be a string")
-    if 'tags' in body and body['tags'] and not isinstance(body['tags'], (str, list)):
-        errors.append("tags must be a comma-separated string or list")
-    if 'media_link' in body and body['media_link'] and not isinstance(body['media_link'], (str, list)):
-        errors.append("media_link must be a comma-separated string or list")
-    if 'generated_tags' in body and body['generated_tags'] and not isinstance(body['generated_tags'], list):
-        pass  # Handled during processing
-    return "; ".join(errors) if errors else None
+    type_validations = {
+        'content_id': str,
+        'media_link': str,
+        'embed_link': str,
+        'tags': (str, list),
+        'generated_tags': (str, list)
+    }
+    
+    for field, expected_type in type_validations.items():
+        if field in data and data[field] is not None:
+            if isinstance(expected_type, tuple):
+                if not any(isinstance(data[field], t) for t in expected_type):
+                    type_names = [t.__name__ for t in expected_type]
+                    return f"Field '{field}' must be one of types: {', '.join(type_names)}"
+            elif not isinstance(data[field], expected_type):
+                return f"Field '{field}' must be of type {expected_type.__name__}"
+    
+    return None
 
-def prepare_data_for_dynamodb(body):
+def prepare_data_for_dynamodb(item):
     """
-    Prepare data for DynamoDB, converting fields to Sets and cleaning data.
+    Prepares data for writing to DynamoDB.
+    Converts string lists (comma-separated) to sets and handles other type conversions.
+    Safely handles missing fields like media_link or embed_link.
     
     Args:
-        body: Request body dictionary to prepare
-    
+        item: Dictionary containing the item data
+        
     Returns:
-        Modified body ready for DynamoDB
+        Dictionary with data formatted for DynamoDB
     """
-    # Create a copy to avoid modifying the original
-    prepared_body = body.copy()
+    dynamodb_item = {}
     
-    # Convert comma-separated strings or lists to sets for tags fields
-    for field in ['tags', 'media_link', 'generated_tags']:
-        if field in prepared_body and prepared_body[field]:
-            value = prepared_body[field]
-            processed_set = set()
-            
-            if isinstance(value, str):
-                # Split comma-separated string and clean values
-                processed_set = set(item.strip() for item in value.split(',') if item.strip())
-            elif isinstance(value, list):
-                # Convert list to set with string conversion
-                processed_set = set(str(item).strip() for item in value if str(item).strip())
-
-            # Only keep the field if the set has values
-            if processed_set:
-                prepared_body[field] = processed_set
-            else:
-                # Remove empty sets
-                if field in prepared_body:
-                    del prepared_body[field]
-
-    # Remove transient fields not meant for persistent storage
-    transient_fields = [
-        'sqs_message_id', 'sqs_receipt_handle', 'api_request_id', 
-        'received_at', 'rowIndex'
+    # Fields to exclude from DynamoDB (often from spreadsheet metadata)
+    excluded_fields = [
+        'Column 1',                   # Spreadsheet metadata
+        'Column 2',                   # Spreadsheet metadata
+        'Column 3',                   # Spreadsheet metadata
+        'Row',                        # Spreadsheet metadata
+        'Row Number',                 # Spreadsheet metadata
+        'INDEX',                      # Spreadsheet metadata
+        'ID',                         # Use content_id instead
+        'sheet_id',                   # Spreadsheet metadata
+        'headers',                    # Spreadsheet metadata
+        'error_details',              # Handle separately
+        'attempt_count',              # Handle separately
+        'status'                      # Only track status in Google Sheet, not in DynamoDB
     ]
-    for field in transient_fields:
-        prepared_body.pop(field, None)
+    
+    # Process each field
+    for key, value in item.items():
+        # Skip excluded fields
+        if key in excluded_fields:
+            continue
+            
+        # Skip null values
+        if value is None:
+            continue
+        
+        # Special handling for content_id (should be a plain string in the main item)
+        if key == 'content_id':
+            dynamodb_item[key] = value
+            continue
+            
+        # Handle comma-separated tags as StringSet
+        if key in ['tags', 'generated_tags'] and isinstance(value, str):
+            if value.strip():  # Only process non-empty strings
+                tag_list = [tag.strip() for tag in value.split(',') if tag.strip()]
+                if tag_list:
+                    dynamodb_item[key] = tag_list  # Use plain list for boto3 client
+                    
+        # Handle actual list as StringSet
+        elif key in ['tags', 'generated_tags'] and isinstance(value, list):
+            if value:  # Only process non-empty lists
+                tag_list = [str(tag).strip() for tag in value if str(tag).strip()]
+                if tag_list:
+                    dynamodb_item[key] = tag_list  # Use plain list for boto3 client
+                    
+        # Handle standard types - let boto3 handle the conversion
+        else:
+            dynamodb_item[key] = value
+    
+    return dynamodb_item
 
-    # Remove empty strings (DynamoDB doesn't allow them by default)
-    keys_to_delete = [k for k, v in prepared_body.items() if v == ""]
-    for k in keys_to_delete:
-        del prepared_body[k]
-
-    return prepared_body
-
-def generate_content_with_llm(content_type, description, tags, logger, timeout=120):
+def generate_content_with_llm(content_type, model, description, tags, logger, timeout=120, max_retries=3):
     """
-    Generate content using Claude LLM with timeout handling.
+    Generate content using Claude LLM with timeout handling and exponential backoff.
     
     Args:
         content_type: Type of content ('post', 'article', etc.)
@@ -135,6 +169,7 @@ def generate_content_with_llm(content_type, description, tags, logger, timeout=1
         tags: Original tags (string or list)
         logger: Logger instance
         timeout: Timeout in seconds
+        max_retries: Maximum number of retries for API rate limiting
     
     Returns:
         Dictionary with generated title, description, and tags
@@ -156,56 +191,97 @@ def generate_content_with_llm(content_type, description, tags, logger, timeout=1
 
     Hey, help me refine this {content_type} I'm working on. I need:
 
-    1. An attention-grabbing title (3-6 words) - something that would make YOU want to click. Be intriguing but not clickbaity.
+    1. An attention-grabbing title (3-6 words) - something that would make YOU want to click. Be intriguing but not clickbaity and not daramatic.
+
     2. A punchy description (around {word_count} words) that sounds like a real person wrote it - conversational, occasionally using "I" statements, and avoiding perfectionist language or overly formal structure.
-    3. Exactly 3 tags that would help this content reach the right audience - be specific rather than generic.
 
-    My writing style is straightforward with occasional humor. I prefer active voice and concrete examples over abstract concepts. I sometimes use short sentences for emphasis.
+    3. Exactly 4 tags that would help this content reach the right audience - focus on data engineering concepts, cloud technologies, or specific tools mentioned in the content. Avoid generic tech terms like "software-dev" or irrelevant fields like "machine-learning" unless directly addressed.
 
-    Return as JSON with keys: title, description, tags (array of 3 strings)
+    Style guidelines:
+    - For content tagged with "humor" or where humor is explicitly requested: Use my conversational style with witty elements and occasional wordplay.
+    - For all other content (especially technical/educational): Maintain a professional tone with clarity and technical precision. My professional content should convey expertise in data engineering while remaining accessible.
+
+    I work specifically in data engineering with expertise in data infrastructure, ML, cloud services, analytics, generative AI, and agentic AI. My content should reflect this specialization rather than general tech topics.
+
+    My writing style is straightforward with clear technical explanations. I prefer active voice and concrete examples over abstract concepts. I sometimes use short sentences for emphasis.
+
+    Return as JSON with keys: title, description, tags (array of 4 strings)
     """
 
-    # Run LLM call with timeout using threading
+    # Implement exponential backoff for API rate limiting
+    retry_count = 0
+    backoff_time = 2  # Start with 2 second backoff
     llm_result = {"title": "", "description": "", "tags": []}
-    llm_error = None
     
-    def _generate_llm_content_thread():
-        nonlocal llm_result, llm_error
-        try:
-            response = call_claude(
-                prompt=prompt,
-                model_id="anthropic.claude-3-sonnet-20240229-v1:0",  # Use the specific Bedrock model ID
-                extract_json=True,
-                max_tokens=500
-            )
+    while retry_count <= max_retries:
+        if retry_count > 0:
+            logger.info(f"Retrying LLM call (attempt {retry_count}/{max_retries}) after {backoff_time}s delay")
+            time.sleep(backoff_time)
+            # Exponential backoff: double the wait time for next retry
+            backoff_time *= 2
             
-            if "error" in response:
-                logger.warning(f"LLM response contained an error: {response.get('error')}")
-                if "raw_response" in response:
-                    logger.info(f"Raw LLM response: {response.get('raw_response')}")
-                llm_error = response.get('error')
-                return
+        # Run LLM call with timeout using threading
+        llm_error = None
+        thread_completed = False
+        
+        def _generate_llm_content_thread():
+            nonlocal llm_result, llm_error, thread_completed
+            try:
+                response = call_claude(
+                    prompt=prompt,
+                    model_id=model,
+                    extract_json=True,
+                    max_tokens=500
+                )
                 
-            llm_result.update(response)
-        except Exception as e:
-            llm_error = str(e)
-            logger.error(f"Error in LLM thread: {llm_error}")
+                if "error" in response:
+                    error_msg = response.get('error', '')
+                    logger.warning(f"LLM response contained an error: {error_msg}")
+                    
+                    # Check if this is a rate limit error
+                    if 'rate' in error_msg.lower() or 'limit' in error_msg.lower() or 'too many' in error_msg.lower():
+                        logger.warning("Detected rate limiting error, will retry with backoff")
+                        llm_error = "RATE_LIMITED"
+                    else:
+                        # Other API error
+                        if "raw_response" in response:
+                            logger.info(f"Raw LLM response: {response.get('raw_response')}")
+                        llm_error = error_msg
+                    return
+                    
+                llm_result.update(response)
+                thread_completed = True
+            except Exception as e:
+                llm_error = str(e)
+                logger.error(f"Error in LLM thread: {llm_error}")
 
-    # Run in thread with timeout
-    llm_thread = threading.Thread(target=_generate_llm_content_thread)
-    llm_thread.start()
-    llm_thread.join(timeout=timeout)
+        # Run in thread with timeout
+        llm_thread = threading.Thread(target=_generate_llm_content_thread)
+        llm_thread.start()
+        llm_thread.join(timeout=timeout)
 
-    # Handle timeout and results
-    if llm_thread.is_alive():
-        logger.warning(f"LLM generation timed out after {timeout} seconds")
-        # Thread is still running but we're moving on
-        return {"title": "", "description": "", "tags": []}
-        
-    if llm_error:
-        logger.error(f"LLM generation error: {llm_error}")
-        return {"title": "", "description": "", "tags": []}
-        
+        # Handle timeout and results
+        if llm_thread.is_alive():
+            logger.warning(f"LLM generation timed out after {timeout} seconds")
+            # Thread is still running but we're moving on
+            break
+            
+        if thread_completed:
+            # Success! Break out of retry loop
+            break
+            
+        if llm_error == "RATE_LIMITED" and retry_count < max_retries:
+            # Special case for rate limiting - we'll retry
+            retry_count += 1
+            continue
+        elif llm_error:
+            logger.error(f"LLM generation error: {llm_error}")
+            # For non-rate-limiting errors, don't retry
+            break
+            
+        # If we got here without either success or a specific error, break the loop
+        break
+    
     # Ensure tags is a list
     if 'tags' in llm_result and not isinstance(llm_result['tags'], list):
         try:
