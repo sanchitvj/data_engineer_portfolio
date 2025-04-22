@@ -60,14 +60,21 @@ def lambda_handler(event, context):
             # Get specific items by content_id
             for content_id in content_ids:
                 try:
-                    item = table.get_item(Key={'content_id': content_id})
-                    if 'Item' in item:
-                        items.append(item['Item'])
+                    # Use scan instead of getItem to avoid schema mismatches
+                    scan_response = table.scan(
+                        FilterExpression=boto3.dynamodb.conditions.Key('content_id').eq(content_id),
+                        Limit=1
+                    )
+                    items_found = scan_response.get('Items', [])
+                    
+                    if items_found:
+                        items.append(items_found[0])
                         logger.info(f"Retrieved item for content_id: {content_id}")
                     else:
                         logger.warning(f"Item not found for content_id: {content_id}")
                 except Exception as get_error:
                     logger.error(f"Error getting item for {content_id}: {str(get_error)}")
+                    logger.error(traceback.format_exc())
         else:
             # Scan for all recent items if no specific IDs
             logger.info("No specific content_ids provided, scanning for recent items")
@@ -280,12 +287,21 @@ def get_pending_items_from_event(event):
         return []
 
 def get_item_from_dynamodb(content_id):
-    """Fetch an item from DynamoDB."""
+    """Fetch an item from DynamoDB using scan with filter."""
     try:
-        response = table.get_item(Key={'content_id': content_id})
-        return response.get('Item')
+        # Use scan with filter instead of getItem
+        response = table.scan(
+            FilterExpression=boto3.dynamodb.conditions.Key('content_id').eq(content_id),
+            Limit=1
+        )
+        
+        items = response.get('Items', [])
+        if items:
+            return items[0]  # Return the first matching item
+        return None
     except ClientError as e:
         logger.error(f"Error getting item {content_id} from DynamoDB: {str(e)}")
+        logger.error(traceback.format_exc())
         return None
 
 def send_status_update(content_id, status, db_item=None):
