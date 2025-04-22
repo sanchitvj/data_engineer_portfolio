@@ -158,13 +158,19 @@ def lambda_handler(event, context):
                     # Log the item being written for debugging
                     logger.info(f"Writing to DynamoDB: {json.dumps(item_for_dynamodb, default=str)}")
                     
-                    # Check if record exists (for logging)
+                    # Simplified existing record check that avoids errors
                     is_update = False
                     try:
-                        existing_item = table.get_item(Key={'content_id': content_id})
-                        is_update = 'Item' in existing_item
+                        # Just check if we can scan for this content_id
+                        response = table.scan(
+                            FilterExpression=boto3.dynamodb.conditions.Key('content_id').eq(content_id),
+                            Limit=1
+                        )
+                        is_update = len(response.get('Items', [])) > 0
+                        logger.info(f"Found existing record for {content_id}: {is_update}")
                     except Exception as check_error:
                         logger.warning(f"SQS Worker - Error checking for existing item {content_id}: {str(check_error)}")
+                        logger.warning(traceback.format_exc())
                     
                     # Write to DynamoDB
                     table.put_item(Item=item_for_dynamodb)

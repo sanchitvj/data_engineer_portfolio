@@ -2,14 +2,14 @@ import json
 import boto3
 import os
 import logging
+import urllib.request
+import urllib.parse
 import traceback
 from datetime import datetime
 from botocore.exceptions import ClientError
 import requests  # Added for HTTP requests
 
-from penguindb.utils.content_processing_utils import (
-    ErrorTypes,
-)
+
 
 # Setup logging
 logger = logging.getLogger()
@@ -17,7 +17,7 @@ logger.setLevel(logging.INFO)
 
 # Environment Variables
 DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME', 'content_data')
-GOOGLE_SHEET_URL = os.environ.get('GOOGLE_SHEET_URL', 'https://docs.google.com/spreadsheets/d/1TIIfrEKqb58ljctZorOqJmO3EZtCS0VkfqRkBTt2ULY/edit?gid=0#gid=0')  # Apps Script Web App URL
+GOOGLE_SHEET_URL = os.environ.get('GOOGLE_SHEET_URL')
 
 # WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzjDaqitE6g7wSCImSDgcujtCvyW0H_gIJuekQXAy3C9eKao0zf12d00o0FvNAbFmijxg/exec"
 
@@ -27,80 +27,187 @@ table = dynamodb.Table(DYNAMODB_TABLE_NAME)
 
 def lambda_handler(event, context):
     """
-    Scheduled Lambda that checks DynamoDB for processed items
-    and updates their status in Google Sheets.
+    Check DynamoDB for items with pending status and update the Google Sheet.
+    This can be triggered on a schedule or manually.
     """
-    try:
-        # Start with a response assuming success
-        response = {
-            'statusCode': 200,
-            'body': {
-                'message': 'Status checker completed successfully',
-                'items_checked': 0,
-                'updates_sent': 0,
-                'errors': []
-            }
-        }
-        
-        # Get pending items from DynamoDB
-        pending_items = get_pending_items_from_event(event)
-        
-        if not pending_items:
-            logger.info("No pending items to check")
-            response['body']['message'] = 'No pending items to process'
-            return finalize_response(response)
-        
-        logger.info(f"Processing {len(pending_items)} pending items")
-        response['body']['items_checked'] = len(pending_items)
-        
-        # Process each pending item
-        for item in pending_items:
-            try:
-                content_id = item.get('content_id')
-                if not content_id:
-                    continue
-                    
-                # Check item status in DynamoDB
-                db_item = get_item_from_dynamodb(content_id)
-                
-                if not db_item:
-                    logger.warning(f"Item {content_id} not found in DynamoDB")
-                    continue
-                
-                # The item exists in DynamoDB, meaning it was processed
-                # Send status update to Google Sheets
-                if GOOGLE_SHEET_URL:
-                    success = send_status_update(content_id, "PROCESSED", db_item)
-                    if success:
-                        response['body']['updates_sent'] += 1
-                        logger.info(f"Sent status update for {content_id}")
-                    else:
-                        error_msg = f"Failed to update status for {content_id}"
-                        logger.error(error_msg)
-                        response['body']['errors'].append(error_msg)
-                else:
-                    logger.warning("No Google Sheet URL configured, skipping update")
-                
-            except Exception as item_error:
-                error_msg = f"Error processing item {content_id}: {str(item_error)}"
-                logger.error(error_msg)
-                response['body']['errors'].append(error_msg)
-        
-        return finalize_response(response)
-        
-    except Exception as e:
-        trace = traceback.format_exc()
-        logger.error(f"Unexpected error: {str(e)}\n{trace}")
+    logger.info("Status Checker Lambda started")
+    
+    if not GOOGLE_SHEET_URL:
+        error_msg = "GOOGLE_SHEET_URL environment variable not set"
+        logger.error(error_msg)
         return {
             'statusCode': 500,
+            'body': json.dumps({'error': error_msg})
+        }
+    
+    logger.info(f"Using Google Sheet URL: {GOOGLE_SHEET_URL}")
+    
+    try:
+        # Get pending items from DynamoDB (scan for recently added items)
+        hours_ago = 24  # Look back period
+        scan_filter = {
+            'TableName': DYNAMODB_TABLE_NAME,
+            'Limit': 50,  # Limit items per batch for efficiency
+        }
+        
+        logger.info(f"Scanning DynamoDB for items from the last {hours_ago} hours")
+        items = []
+        
+        try:
+            scan_response = table.scan(**scan_filter)
+            items = scan_response.get('Items', [])
+            logger.info(f"Found {len(items)} items in initial scan")
+        except Exception as scan_error:
+            logger.error(f"Error scanning DynamoDB: {str(scan_error)}")
+            logger.error(traceback.format_exc())
+            return {
+                'statusCode': 500,
+                'body': json.dumps({'error': f"Failed to scan DynamoDB: {str(scan_error)}"})
+            }
+        
+        # Process and update each item's status
+        updated_count = 0
+        error_count = 0
+        
+        for item in items:
+            content_id = item.get('content_id')
+            if not content_id:
+                logger.warning("Found item without content_id, skipping")
+                continue
+                
+            logger.info(f"Processing status for content_id: {content_id}")
+            
+            # Determine item status based on generated content
+            has_generated_title = item.get('generated_title', '') != ''
+            has_generated_tags = bool(item.get('generated_tags', []))
+            
+            # Set status based on what we found
+            status = "processed" if (has_generated_title or has_generated_tags) else "error"
+            
+            # Update Google Sheet
+            try:
+                update_result = update_sheet_status(
+                    content_id=content_id,
+                    status=status.upper(),  # Use uppercase for the API
+                    processed_at=item.get('processed_at', datetime.now().isoformat()),
+                    generated_title=item.get('generated_title', '')
+                )
+                
+                if update_result.get('success'):
+                    logger.info(f"Successfully updated sheet for {content_id} to {status}")
+                    updated_count += 1
+                else:
+                    logger.error(f"Failed to update sheet for {content_id}: {update_result.get('error')}")
+                    error_count += 1
+                    
+            except Exception as update_error:
+                logger.error(f"Error updating sheet for {content_id}: {str(update_error)}")
+                logger.error(traceback.format_exc())
+                error_count += 1
+        
+        return {
+            'statusCode': 200,
             'body': json.dumps({
-                'error': {
-                    'type': ErrorTypes.INTERNAL_ERROR,
-                    'message': f"Internal server error: {str(e)}",
-                    'timestamp': datetime.now().isoformat()
-                }
+                'message': f"Status check completed. Updated {updated_count} items, {error_count} errors",
+                'updated_count': updated_count,
+                'error_count': error_count
             })
         }
+        
+    except Exception as e:
+        logger.error(f"Unexpected error in Status Checker Lambda: {str(e)}")
+        logger.error(traceback.format_exc())
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': f"Unexpected error: {str(e)}"})
+        }
+
+def update_sheet_status(content_id, status, processed_at, generated_title):
+    """
+    Update the status of an item in the Google Sheet via the Web App.
+    
+    Args:
+        content_id: The unique ID of the content
+        status: The new status (PROCESSED or ERROR)
+        processed_at: Timestamp when the item was processed
+        generated_title: The generated title if available
+        
+    Returns:
+        Dictionary with success flag and any error message
+    """
+    if not GOOGLE_SHEET_URL:
+        return {'success': False, 'error': 'Google Sheet URL not configured'}
+    
+    try:
+        logger.info(f"Sending update to Google Sheet for {content_id}, status={status}")
+        
+        # Prepare payload for the Google Sheet Web App
+        payload = {
+            'action': 'updateStatus',
+            'content_id': content_id,
+            'status': status,
+            'processed_at': processed_at
+        }
+        
+        if generated_title:
+            payload['generated_title'] = generated_title
+            
+        # Convert payload to JSON and encode for HTTP request
+        data = json.dumps(payload).encode('utf-8')
+        
+        # Set up the request
+        headers = {
+            'Content-Type': 'application/json'
+        }
+        
+        # Log the payload being sent
+        logger.info(f"Sending payload to Google Sheet: {json.dumps(payload)}")
+        
+        # Create request and add headers
+        req = urllib.request.Request(
+            url=GOOGLE_SHEET_URL,
+            data=data,
+            headers=headers,
+            method='POST'
+        )
+        
+        # Send the request and get response
+        with urllib.request.urlopen(req, timeout=10) as response:
+            response_data = response.read().decode('utf-8')
+            logger.info(f"Response from Google Sheet: {response_data}")
+            
+            # Parse response JSON
+            response_json = json.loads(response_data)
+            
+            # Check if the update was successful
+            if response_json.get('status') == 'success':
+                return {'success': True, 'data': response_json.get('data', {})}
+            else:
+                error_msg = response_json.get('message', 'Unknown error from Google Sheet')
+                logger.error(f"Google Sheet returned error: {error_msg}")
+                return {'success': False, 'error': error_msg}
+                
+    except urllib.error.HTTPError as http_err:
+        error_msg = f"HTTP error: {http_err.code} - {http_err.reason}"
+        logger.error(error_msg)
+        logger.error(f"Response: {http_err.read().decode('utf-8')}")
+        return {'success': False, 'error': error_msg}
+        
+    except urllib.error.URLError as url_err:
+        error_msg = f"URL error: {str(url_err.reason)}"
+        logger.error(error_msg)
+        return {'success': False, 'error': error_msg}
+        
+    except json.JSONDecodeError as json_err:
+        error_msg = f"JSON decode error: {str(json_err)}"
+        logger.error(error_msg)
+        return {'success': False, 'error': error_msg}
+        
+    except Exception as e:
+        error_msg = f"Unexpected error sending update to Google Sheet: {str(e)}"
+        logger.error(error_msg)
+        logger.error(traceback.format_exc())
+        return {'success': False, 'error': error_msg}
 
 def get_pending_items_from_event(event):
     """Extract pending items from the event or query DynamoDB for recent items."""
