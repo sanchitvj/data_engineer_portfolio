@@ -1,7 +1,8 @@
 # Use an official Python runtime as a parent image
 FROM public.ecr.aws/lambda/python:3.12
 
-RUN yum install -y git
+RUN apt-get update
+RUN apt-get install -y git
 
 # ARG GITHUB_TOKEN
 
