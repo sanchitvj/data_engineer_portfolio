@@ -10,8 +10,6 @@ on:
       - 'src/penguindb/utils/**'
       - 'docker_images/content_lambda_image.Dockerfile'
       - '.github/workflows/deploy_sqs_worker.yml'
-    types:
-      - completed
 
 jobs:
   deploy:
