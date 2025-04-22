@@ -135,7 +135,7 @@ def prepare_data_for_dynamodb(item):
     
     return dynamodb_item
 
-def generate_content_with_llm(content_type, description, tags, logger, timeout=120):
+def generate_content_with_llm(content_type, model, description, tags, logger, timeout=120):
     """
     Generate content using Claude LLM with timeout handling.
     
@@ -166,7 +166,7 @@ def generate_content_with_llm(content_type, description, tags, logger, timeout=1
 
     Hey, help me refine this {content_type} I'm working on. I need:
 
-    1. An attention-grabbing title (3-6 words) - something that would make YOU want to click. Be intriguing but not clickbaity.
+    1. An attention-grabbing title (3-6 words) - something that would make YOU want to click. Be intriguing but not clickbaity and not daramatic.
 
     2. A punchy description (around {word_count} words) that sounds like a real person wrote it - conversational, occasionally using "I" statements, and avoiding perfectionist language or overly formal structure.
 
@@ -192,7 +192,7 @@ def generate_content_with_llm(content_type, description, tags, logger, timeout=1
         try:
             response = call_claude(
                 prompt=prompt,
-                model_id="us.anthropic.claude-3-5-haiku-20241022-v1:0",
+                model_id=model,
                 extract_json=True,
                 max_tokens=500
             )

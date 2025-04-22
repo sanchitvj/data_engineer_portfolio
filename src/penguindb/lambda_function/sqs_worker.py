@@ -18,6 +18,7 @@ logger.setLevel(logging.INFO)
 
 # Environment Variables
 DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME', 'content_data')
+LLM_MODEL = os.environ.get('LLM_MODEL', 'us.anthropic.claude-3-5-haiku-20241022-v1:0')
 
 # Initialize clients
 dynamodb = boto3.resource('dynamodb')
@@ -119,6 +120,7 @@ def lambda_handler(event, context):
                     # Pass logger to the utility function
                     llm_result = generate_content_with_llm(
                         content_type=body.get('content_type', ''),
+                        model=LLM_MODEL,
                         description=body.get('description', ''),
                         tags=body.get('tags', ''),
                         logger=logger,
@@ -178,6 +180,28 @@ def lambda_handler(event, context):
                     status = "updated" if is_update else "created"
                     logger.info(f"SQS Worker - Successfully {status} item {content_id} in DynamoDB")
                     
+                    # Immediately trigger status checker Lambda
+                    try:
+                        # Initialize Lambda client
+                        lambda_client = boto3.client('lambda')
+                        
+                        # Prepare payload with just the content_id
+                        checker_payload = {
+                            'content_ids': [content_id]
+                        }
+                        
+                        # Invoke status checker Lambda asynchronously
+                        lambda_client.invoke(
+                            FunctionName='status_checker',
+                            InvocationType='Event',  # Asynchronous
+                            Payload=json.dumps(checker_payload)
+                        )
+                        
+                        logger.info(f"Triggered status_checker Lambda for content_id: {content_id}")
+                    except Exception as trigger_error:
+                        logger.error(f"Failed to trigger status_checker: {str(trigger_error)}")
+                        # Non-critical error, don't raise exception
+
                 except Exception as db_error:
                     logger.error(f"SQS Worker - Database error for {content_id}: {str(db_error)}")
                     logger.error(traceback.format_exc())

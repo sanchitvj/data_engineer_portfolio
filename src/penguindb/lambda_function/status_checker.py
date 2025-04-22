@@ -29,8 +29,12 @@ def lambda_handler(event, context):
     """
     Check DynamoDB for items with pending status and update the Google Sheet.
     This can be triggered on a schedule or manually.
+    
+    If content_ids are provided in the event, only those will be processed.
+    Otherwise, it scans for all recent items.
     """
     logger.info("Status Checker Lambda started")
+    logger.info(f"Received event: {json.dumps(event)}")
     
     if not GOOGLE_SHEET_URL:
         error_msg = "GOOGLE_SHEET_URL environment variable not set"
@@ -43,27 +47,45 @@ def lambda_handler(event, context):
     logger.info(f"Using Google Sheet URL: {GOOGLE_SHEET_URL}")
     
     try:
-        # Get pending items from DynamoDB (scan for recently added items)
-        hours_ago = 24  # Look back period
-        scan_filter = {
-            'TableName': DYNAMODB_TABLE_NAME,
-            'Limit': 50,  # Limit items per batch for efficiency
-        }
+        # Check if specific content_ids were provided
+        content_ids = []
+        if 'content_ids' in event and isinstance(event['content_ids'], list):
+            content_ids = event['content_ids']
+            logger.info(f"Processing specific content_ids: {content_ids}")
         
-        logger.info(f"Scanning DynamoDB for items from the last {hours_ago} hours")
+        # Get items to process
         items = []
         
-        try:
-            scan_response = table.scan(**scan_filter)
-            items = scan_response.get('Items', [])
-            logger.info(f"Found {len(items)} items in initial scan")
-        except Exception as scan_error:
-            logger.error(f"Error scanning DynamoDB: {str(scan_error)}")
-            logger.error(traceback.format_exc())
-            return {
-                'statusCode': 500,
-                'body': json.dumps({'error': f"Failed to scan DynamoDB: {str(scan_error)}"})
-            }
+        if content_ids:
+            # Get specific items by content_id
+            for content_id in content_ids:
+                try:
+                    item = table.get_item(Key={'content_id': content_id})
+                    if 'Item' in item:
+                        items.append(item['Item'])
+                        logger.info(f"Retrieved item for content_id: {content_id}")
+                    else:
+                        logger.warning(f"Item not found for content_id: {content_id}")
+                except Exception as get_error:
+                    logger.error(f"Error getting item for {content_id}: {str(get_error)}")
+        else:
+            # Scan for all recent items if no specific IDs
+            logger.info("No specific content_ids provided, scanning for recent items")
+            try:
+                scan_filter = {
+                    'Limit': 50,  # Limit items per batch for efficiency
+                }
+                
+                scan_response = table.scan(**scan_filter)
+                items = scan_response.get('Items', [])
+                logger.info(f"Found {len(items)} items in scan")
+            except Exception as scan_error:
+                logger.error(f"Error scanning DynamoDB: {str(scan_error)}")
+                logger.error(traceback.format_exc())
+                return {
+                    'statusCode': 500,
+                    'body': json.dumps({'error': f"Failed to scan DynamoDB: {str(scan_error)}"})
+                }
         
         # Process and update each item's status
         updated_count = 0
@@ -110,7 +132,8 @@ def lambda_handler(event, context):
             'body': json.dumps({
                 'message': f"Status check completed. Updated {updated_count} items, {error_count} errors",
                 'updated_count': updated_count,
-                'error_count': error_count
+                'error_count': error_count,
+                'content_ids_processed': content_ids if content_ids else "all recent items"
             })
         }
         
