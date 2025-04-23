@@ -69,7 +69,7 @@ export default async function ArchivePage() {
       }
       
       // Set type based on content_type
-      let type: 'linkedin-post' | 'quick-note' | 'research-report' | 'comprehensive-study' | 'linkedin-iframe' = 'research-report';
+      let type: BlogPost['type'] = 'research-report';
       if (item.content_type === 'post') {
         // Check if it has humor tag
         const hasHumorTag = tags.includes('humor');
@@ -91,6 +91,7 @@ export default async function ArchivePage() {
         category: generatedTags.length > 0 ? generatedTags : tags.length > 0 ? tags : [item.content_type || 'article'],
         type,
         link: item.url || item.embed_link || '',
+        url: item.url || '',
         image: mediaLink || '/images/blog/placeholder.jpg',
         author: {
           name: 'Sanchit Vijay',

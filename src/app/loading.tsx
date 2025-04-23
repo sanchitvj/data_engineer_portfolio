@@ -3,17 +3,18 @@ import Image from 'next/image';
 
 export default function Loading() {
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-black/90">
       <div className="absolute inset-0 bg-gradient-to-b from-dark-100 to-dark-200" />
-      <div className="absolute inset-0 flex items-center justify-center">
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
         <Image 
           src="/images/loading_penguin.png" 
           alt="Loading..." 
-          width={100} 
-          height={100}
-          className="animate-pulse"
+          width={220} 
+          height={220}
+          className="animate-pulse mb-4"
+          priority
         />
-        <span className="text-xs text-gray-400">Loading...</span>
+        <div className="text-sm text-data/80 animate-pulse">Loading...</div>
       </div>
     </div>
   );

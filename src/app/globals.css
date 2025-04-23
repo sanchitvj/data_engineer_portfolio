@@ -91,6 +91,15 @@ body {
   }
 }
 
+@keyframes menu-float {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-12px) scale(1.05);
+  }
+}
+
 @keyframes snowfall {
   0% {
     transform: translateY(-10vh) translateX(-5px);
@@ -115,4 +124,8 @@ body {
 
 .animate-float {
   animation: float 4s ease-in-out infinite;
+}
+
+.animate-menu-float {
+  animation: menu-float 3s ease-in-out infinite;
 }

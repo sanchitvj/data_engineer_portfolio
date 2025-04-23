@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { FaSearch, FaFilter, FaStar, FaTimes, FaExternalLinkAlt, FaChevronLeft, FaChevronRight, FaChevronDown, FaMicroscope, FaNewspaper } from 'react-icons/fa';
+import { FaSearch, FaFilter, FaStar, FaTimes, FaExternalLinkAlt, FaChevronLeft, FaChevronRight, FaChevronDown, FaMicroscope, FaNewspaper, FaPlay } from 'react-icons/fa';
 import { X } from 'lucide-react';
 import { BlogPost } from '@/types/blog'; // Keep BlogPost type
 import LazyComponent from '@/components/blog/LazyComponent';
@@ -102,6 +102,7 @@ interface BlogClientContentProps {
 const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts, initialBlogCategories }) => {
   // All the state, effects, refs, handlers, and JSX from the original BlogPage go here
   const [isLoaded, setIsLoaded] = useState(false);
+  const [showContent, setShowContent] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [activeSearchTerms, setActiveSearchTerms] = useState<string[]>([]);
@@ -171,25 +172,25 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
     // Extract words only once from all titles and memoize the result
     const currentActiveTermsLower = activeSearchTerms.map(t => t.toLowerCase());
     
-    // Data engineering related keywords for context-relevant suggestions
-    const dataEngineeringKeywords = [
-      'processing', 'pipeline', 'etl', 'data', 'lake', 'warehouse', 'snowflake', 
-      'databricks', 'spark', 'hadoop', 'bigquery', 'analytics', 'streaming', 
-      'batch', 'real-time', 'database', 'sql', 'nosql', 'architecture', 
-      'framework', 'cloud', 'aws', 'azure', 'gcp', 'airflow', 'dbt', 'kafka', 
-      'flink', 'python', 'scala', 'java', 'optimization', 'performance', 'storage',
-      'quality', 'governance', 'metadata', 'security', 'integration', 'migration',
-      'transform', 'extract', 'load', 'elt', 'api', 'orchestration', 'monitoring'
+    // Fixed keyword list for the archive page
+    const fixedKeywords = [
+      'humor', 'data_engineering', 'open_source', 'ai', 'learning', 'achievement'
     ];
     
-    // Limit the number of posts to search through for performance
-    const postsToSearch = blogPosts.slice(0, 15); // Only search through most recent posts
+    // Map display names for special cases
+    const keywordDisplayMap: { [key: string]: string } = {
+      'data_engineering': 'Data Engineering',
+    };
     
     // Filter keywords by prefix (very efficient operation)
-    const prefixSuggestions = dataEngineeringKeywords
+    const prefixSuggestions = fixedKeywords
       .filter(keyword => keyword.toLowerCase().startsWith(query))
       .filter(keyword => !currentActiveTermsLower.includes(keyword.toLowerCase()))
-      .map(keyword => ({ value: keyword, display: keyword, type: 'keyword' as const }))
+      .map(keyword => ({ 
+        value: keyword, 
+        display: keywordDisplayMap[keyword] || keyword, 
+        type: 'keyword' as const 
+      }))
       .slice(0, 3); // Limit to top 3 matching keywords
     
     // If we already have enough prefix suggestions, we can skip the more expensive content search
@@ -201,8 +202,8 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
     // Optimize title word extraction with Set for uniqueness
     const uniqueTitleWords = new Set<string>();
     
-    // Process in batches if needed for longer queries
-    postsToSearch.forEach(post => {
+    // Process all posts - no post limit
+    blogPosts.forEach(post => {
       // Extract individual words (more efficient with RegExp compiled once)
       const wordSplitter = /\s+/;
       const wordCleaner = /[^\w]/g;
@@ -256,7 +257,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
 
     // Combine all suggestions with priority
     const allSuggestions = [
-      ...prefixSuggestions, // Data engineering keywords first
+      ...prefixSuggestions, // Fixed keywords first
       ...contentWords,      // Content-specific words second
       ...filteredMatchingCategories // Categories last
     ];
@@ -280,9 +281,14 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
     }
   }, [searchSuggestions, isMobileDevice]);
 
-  // Set loaded state after initial render
+  // Set loaded state after initial render with minimum delay
   useEffect(() => {
-    setIsLoaded(true);
+    const timer = setTimeout(() => {
+      setIsLoaded(true);
+      setShowContent(true);
+    }, 2000); // 2 second delay
+
+    return () => clearTimeout(timer);
   }, []);
   
   // Update searchStateKey whenever search parameters change (for SwipeStation reset)
@@ -362,25 +368,29 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
       );
     }
     
-    // Apply search terms filtering (all terms must match)
+    // Apply search terms filtering
     if (activeSearchTerms.length > 0) {
       // Create a single normalized array of search terms for faster lookups
       const normalizedTerms = activeSearchTerms.map(term => term.toLowerCase());
       
       tempFiltered = tempFiltered.filter(post => {
-        // Pre-compute the lowercase values once per post
+        // Search in title and excerpt
         const titleLower = post.title.toLowerCase();
-        const excerptLower = post.excerpt?.toLowerCase() ?? ''; // Handle undefined excerpt
+        const excerptLower = post.excerpt?.toLowerCase() ?? '';
+        
+        // Check categories for matches
         const categoriesLower = Array.isArray(post.category)
           ? post.category.map(cat => cat.toLowerCase())
-          : post.category ? [post.category.toLowerCase()] : [];
+          : typeof post.category === 'string' ? [post.category.toLowerCase()] : [];
         
-        // Check if all search terms match
-        return normalizedTerms.every(term => (
+        // A post matches if ANY term is found in its data
+        return normalizedTerms.some(term => 
+          // Check title and excerpt
           titleLower.includes(term) ||
           excerptLower.includes(term) ||
+          // Check categories
           categoriesLower.some(cat => cat.includes(term))
-        ));
+        );
       });
     }
     
@@ -393,10 +403,15 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
   }, [filteredPostsResult]);
 
   // Memoize the featured post
-  const featuredPost = useMemo(() => 
-    filteredPosts.find(post => post.featured),
-    [filteredPosts]
-  );
+  const featuredPost = useMemo(() => {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    return filteredPosts.find(post => 
+      post.type === 'comprehensive-study' && 
+      new Date(post.date) > sevenDaysAgo
+    );
+  }, [filteredPosts]);
   
   // Memoize escapeRegExp to avoid recreation on every render
   const escapeRegExp = useCallback((string: string) => 
@@ -533,44 +548,46 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
       <BlogIcebergBackground />
       <div className="container mx-auto px-4 pt-20 pb-16 z-10 relative">
         {/* Header Section */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: isLoaded ? 1 : 0, y: isLoaded ? 0 : -20 }}
-          transition={{ duration: 0.5 }}
-          className="max-w-6xl mx-auto mb-8 text-center"
-        >
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Research <span className="text-data">Station</span>
-            <Image 
-              src="/images/right_mac_penguin.png" 
-              alt="Penguin" 
-              width={50} 
-              height={50}
-              className="inline-block ml-4 animate-float"
-              priority // Keep priority as it might be ATF
-            />
-          </h1>
-          <p className="text-gray-300 max-w-2xl mx-auto">
-            Welcome to my Antarctic Research Station, where I document insights and discoveries from my data engineering expeditions.
-          </p>
-        </motion.div>
+        {showContent && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: isLoaded ? 1 : 0, y: isLoaded ? 0 : -20 }}
+            transition={{ duration: 0.5 }}
+            className="max-w-6xl mx-auto mb-8 text-center"
+          >
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              Research <span className="text-data">Station</span>
+              <Image 
+                src="/images/right_mac_penguin.png" 
+                alt="Penguin" 
+                width={50} 
+                height={50}
+                className="inline-block ml-4 animate-float"
+                priority // Keep priority as it might be ATF
+              />
+            </h1>
+            <p className="text-gray-300 max-w-2xl mx-auto">
+              Welcome to my Antarctic Research Station, where I document insights and discoveries from my data engineering expeditions.
+            </p>
+          </motion.div>
+        )}
 
         {/* Search Trigger Button & Active Filters Display */}
-        <div className="max-w-6xl mx-auto mb-8 flex justify-end items-center gap-2">
+        <div className="max-w-6xl mx-auto mb-8 flex justify-center items-center gap-2">
           <motion.div
-            className="bg-dark-200/70 backdrop-blur-sm rounded-lg border border-data/20 px-3 py-2 text-white flex items-center hover:bg-dark-200/90 hover:border-data/40 transition-all flex-wrap gap-1 max-w-xl"
+            onClick={() => setShowSearchModal(true)}
+            className="bg-dark-200/70 backdrop-blur-sm rounded-lg border border-data/20 px-3 py-3 text-white flex items-center hover:bg-dark-200/90 hover:border-data/40 transition-all flex-wrap gap-1 w-full max-w-md cursor-pointer"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
             {/* Button to open modal */}
-            <button
-              onClick={() => setShowSearchModal(true)}
+            <div
               className="flex items-center mr-2 shrink-0" // Prevent shrinking
               aria-label="Open search and filter options"
             >
               <FaSearch className="text-data mr-2" />
-              <span>Search</span>
-            </button>
+              <span>Explore Antarctic Archives</span>
+            </div>
             
             {/* Display active category filter */}
             {activeFilter !== 'all' && (
@@ -602,6 +619,16 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                 </button>
               </div>
             ))}
+
+            <div className="ml-auto">
+              <Image 
+                src="/images/blog/search_penguin.png" 
+                alt="Search Penguin" 
+                width={24} 
+                height={24}
+                className="opacity-80 hover:opacity-100 transition-opacity"
+              />
+            </div>
           </motion.div>
           
           {/* Clear all button */}
@@ -702,13 +729,78 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
           </motion.div>
         )}
 
-        {/* Swipe Stations Section */}
-        {filteredPosts.length > 0 && ( // Only render stations if there are posts
+        {/* Swipe Stations Section - Remove "Research Stations" heading */}
+        {filteredPosts.length > 0 && (
            <div className="max-w-6xl mx-auto mb-8"> 
-             <h2 className="text-2xl font-bold mb-6 text-white">Research Stations</h2> 
              
              {/* Lazy-load all SwipeStation components with IntersectionObserver for deferred loading */}
              <Suspense fallback={null}>
+             
+               {/* YouTube Station - Now positioned above LinkedIn Posts Station */}
+               {shouldShowStation('youtube') && (
+                 <LazyComponent 
+                   placeholder={
+                     <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-12 flex items-center justify-center">
+                       <div className="text-gray-500">Loading YouTube Videos...</div>
+                     </div>
+                   }
+                 >
+                   <div className="mb-12">
+                     <SwipeStation 
+                       key={`youtube-${searchStateKey}-${filteredPosts.filter(post => post.type === 'youtube').length}`} 
+                       title="YouTube Videos" 
+                       posts={filteredPosts.filter(post => post.type === 'youtube')} 
+                       visibleCards={3} 
+                       renderCard={(post, index) => ( 
+                         <motion.div 
+                           initial={{ opacity: 0, y: 20 }} 
+                           animate={{ opacity: 1, y: 0 }} 
+                           transition={{ duration: 0.5, delay: index * 0.1 }} 
+                           className="bg-dark-300 overflow-hidden h-full rounded-xl flex flex-col"
+                           onClick={(e) => {
+                             // Only redirect if not clicking a specific button or link
+                             if (!(e.target as HTMLElement).closest('button')) {
+                               window.open(post.youtubeUrl, '_blank', 'noopener,noreferrer');
+                             }
+                           }}
+                           style={{ cursor: 'pointer' }}
+                         > 
+                           <div className="relative aspect-video overflow-hidden"> 
+                             <Image 
+                               src={post.thumbnail || '/images/placeholder.jpg'} 
+                               alt={post.title} 
+                               width={640} 
+                               height={360} 
+                               className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" 
+                             /> 
+                             <div className="absolute inset-0 bg-gradient-to-t from-dark-300/80 to-transparent" /> 
+                             <div className="absolute bottom-4 left-4 flex items-center justify-center w-10 h-10 rounded-full bg-data/90 text-white"> 
+                               <FaPlay size={14} className="ml-0.5" /> 
+                             </div> 
+                           </div> 
+                           <div className="px-4 py-4 flex flex-col flex-grow"> 
+                             <h3 className="font-bold mb-2 text-white">{post.title}</h3> 
+                             <p className="text-gray-300 text-sm line-clamp-2 mb-3">{post.excerpt}</p> 
+                             <div className="mt-auto flex justify-between items-center"> 
+                               <a 
+                                 href={post.youtubeUrl || "#"} 
+                                 target="_blank" 
+                                 rel="noopener noreferrer" 
+                                 className="text-data hover:text-data-light text-sm inline-flex items-center" 
+                               > 
+                                 Watch Video <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70" /> 
+                               </a> 
+                               <span className="text-gray-400 text-xs"> 
+                                 {formatDate(post.date)} 
+                               </span> 
+                             </div> 
+                           </div> 
+                         </motion.div> 
+                       )} 
+                     />
+                   </div>
+                 </LazyComponent>
+               )}
               
                {/* LinkedIn Posts Station (Original) */}
                {shouldShowStation('linkedin-post') && (
@@ -946,11 +1038,11 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                        posts={filteredPosts.filter(post => post.type === 'comprehensive-study')} 
                        visibleCards={1} 
                        renderCard={(post, index) => ( 
-                         <motion.div 
-                           key={post.id} 
-                           initial={{ opacity: 0, y: 20 }} 
-                           animate={{ opacity: 1, y: 0 }} 
-                           transition={{ duration: 0.3, delay: index * 0.05 }}
+                                 <motion.div 
+                                   key={post.id} 
+                                   initial={{ opacity: 0, y: 20 }} 
+                                   animate={{ opacity: 1, y: 0 }} 
+                                   transition={{ duration: 0.3, delay: index * 0.05 }} 
                            className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-4 h-[480px] flex flex-col"
                          >
                            <div className="h-60 mb-4 overflow-hidden rounded-lg bg-dark-300/60 relative">
@@ -965,9 +1057,9 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                              ) : (
                                <div className="h-full w-full flex items-center justify-center bg-gradient-to-b from-dark-300 to-dark-200">
                                  <FaNewspaper className="text-4xl text-gray-400" />
-                               </div>
+                                   </div>
                              )}
-                           </div>
+                                   </div>
                            <h4 className="font-semibold text-xl mb-2 text-white">{highlightText(post.title, activeSearchTerms)}</h4>
                            <p className="text-gray-300 text-sm mb-4 flex-grow overflow-hidden line-clamp-4">
                              {highlightText(truncateToWords(post.excerpt || '', 50), activeSearchTerms)}
@@ -976,18 +1068,18 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                              <div className="flex justify-between text-xs text-gray-400 mb-3">
                                <span>{formatDate(post.date)}</span>
                                <span>{post.readTime}</span>
-                             </div>
-                             <a 
+                                     </div>
+                                     <a 
                                href={post.link || post.url || '#'}
-                               target="_blank"
-                               rel="noopener noreferrer"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
                                className="py-2 px-5 bg-data/20 hover:bg-data/30 text-data rounded-md inline-flex items-center justify-center transition-colors"
-                             >
+                                     >
                                Read on Substack <FaExternalLinkAlt className="ml-2 w-3 h-3" />
-                             </a>
-                           </div>
-                         </motion.div> 
-                       )} 
+                                     </a>
+                                   </div>
+                         </motion.div>
+                       )}
                      /> 
                    </div>
                  </LazyComponent>

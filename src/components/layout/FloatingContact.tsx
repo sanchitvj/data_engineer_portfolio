@@ -5,10 +5,46 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaEnvelope, FaPhone, FaGoogle, FaLinkedin } from 'react-icons/fa';
 import Image from 'next/image';
 
-const FloatingContact: React.FC = () => {
+interface FloatingContactProps {
+  hideWhenMenuOpen?: boolean;
+}
+
+const FloatingContact: React.FC<FloatingContactProps> = ({ hideWhenMenuOpen = false }) => {
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
   const contactButtonRef = useRef<HTMLDivElement>(null);
+  const [menuIsOpen, setMenuIsOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check for mobile devices
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint in Tailwind
+    };
+    
+    // Check on initial load
+    checkMobile();
+    
+    // Listen for resize events
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
+
+  // Listen for mobile menu open/close
+  useEffect(() => {
+    const handleMenuOpenStateChange = (event: CustomEvent) => {
+      setMenuIsOpen(event.detail.isOpen);
+    };
+
+    window.addEventListener('mobileMenuStateChange' as any, handleMenuOpenStateChange);
+    
+    return () => {
+      window.removeEventListener('mobileMenuStateChange' as any, handleMenuOpenStateChange);
+    };
+  }, []);
 
   // Handle clicks outside of the contact menu
   useEffect(() => {
@@ -38,10 +74,15 @@ const FloatingContact: React.FC = () => {
     setIsContactOpen(prev => !prev);
   };
 
+  // Hide on mobile or when menu is open
+  if (isMobile || (hideWhenMenuOpen && menuIsOpen)) {
+    return null;
+  }
+
   return (
     <motion.div
       ref={contactButtonRef}
-      className="fixed bottom-8 right-8 z-50"
+      className={`fixed bottom-8 right-8 ${menuIsOpen ? 'z-30' : 'z-50'}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}

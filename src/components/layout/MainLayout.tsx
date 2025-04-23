@@ -7,6 +7,7 @@ import Footer from './Footer';
 import DataBackground from '../DataBackground';
 import VerticalNavigator from './VerticalNavigator';
 import FloatingContact from './FloatingContact';
+import LoadingWrapper from '@/app/loading-wrapper';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -42,10 +43,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       <Header />
       {showNavigator && <VerticalNavigator sections={sections} page={page} />}
       <main className="flex-grow container mx-auto px-4 py-8 relative z-10">
-        {children}
+        <LoadingWrapper>
+          {children}
+        </LoadingWrapper>
       </main>
       <Footer />
-      <FloatingContact />
+      <FloatingContact hideWhenMenuOpen={true} />
     </div>
   );
 };
