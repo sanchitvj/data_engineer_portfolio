@@ -70,7 +70,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-[10vh] sm:pt-[8vh] bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-[15vh] sm:pt-[12vh] bg-black/80 backdrop-blur-sm"
           onClick={() => setShowSearchModal(false)}
         >
           <motion.div
@@ -85,7 +85,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
             <div className="flex justify-between items-center p-4 border-b border-data/10 sticky top-0 bg-dark-200/95 z-10">
               <h2 className="text-xl font-bold text-white flex items-center">
                 <FaSearch className="text-data mr-3" />
-                Research Terminal
+                Search Terminal
               </h2>
               <button
                 className="p-1 rounded-full hover:bg-dark-300 text-gray-400 hover:text-white transition-colors"
@@ -103,7 +103,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
                 <div className="w-full">
                   <div className="flex items-center mb-3">
                     <FaFilter className="text-data mr-3" />
-                    <h3 className="text-lg font-semibold text-white">Filter by Department</h3>
+                    <h3 className="text-lg font-semibold text-white">Filter by Tags</h3>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {/* Add "All" Button */}
@@ -118,19 +118,23 @@ const SearchModal: React.FC<SearchModalProps> = ({
                     >
                       All
                     </button>
-                    {blogCategories.map((category) => (
-                      <button
-                        key={category.id}
-                        onClick={() => handleFilterButtonClick(category.id)}
-                        className={`px-3 py-1.5 rounded-full text-sm transition-colors duration-300 font-poppins ${
-                          activeFilter === category.id
-                            ? 'bg-data text-dark-300 font-medium'
-                            : 'bg-dark-300/50 text-gray-300 hover:bg-dark-300'
-                        }`}
-                      >
-                        {category.label}
-                      </button>
-                    ))}
+                    {['humor', 'data_engineering', 'open_source', 'ai', 'learning', 'achievement'].map((id) => {
+                      const category = blogCategories.find(cat => cat.id === id) || 
+                                     { id, label: id.charAt(0).toUpperCase() + id.slice(1).replace('_', ' ') };
+                      return (
+                        <button
+                          key={category.id}
+                          onClick={() => handleFilterButtonClick(category.id)}
+                          className={`px-3 py-1.5 rounded-full text-sm transition-colors duration-300 font-poppins ${
+                            activeFilter === category.id
+                              ? 'bg-data text-dark-300 font-medium'
+                              : 'bg-dark-300/50 text-gray-300 hover:bg-dark-300'
+                          }`}
+                        >
+                          {category.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -140,7 +144,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
                 <div className="w-full">
                   <div className="flex items-center mb-3">
                     <FaSearch className="text-data mr-3" />
-                    <h3 className="text-lg font-semibold text-white">Search by Keyword</h3>
+                    <h3 className="text-lg font-semibold text-white">Search in Tags</h3>
                   </div>
                   <div className="relative">
                     {/* Input Area */}
@@ -148,7 +152,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
                       <input
                         ref={searchInputRef}
                         type="text"
-                        placeholder={isMobileDevice ? "Add up to 3 keywords..." : "Add up to 3 keywords (e.g., Spark, Data, AI)..."}
+                        placeholder={isMobileDevice ? "Add up to 3 keywords..." : "Add up to 3 keywords (e.g., humor, learning, ai)..."}
                         className="bg-transparent border-none focus:outline-none text-white w-full font-poppins px-3 py-2 sm:py-3 text-sm sm:text-base"
                         value={searchQuery}
                         onChange={handleSearchInputChange}

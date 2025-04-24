@@ -10,23 +10,19 @@
   --background-end-rgb: 0, 0, 0;
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
-  font-family: 'Poppins', sans-serif;
-}
-
 @layer base {
   html {
     font-family: 'Poppins', sans-serif;
   }
   
   body {
+    color: rgb(var(--foreground-rgb));
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
     @apply bg-dark text-dark-600;
     font-family: 'Poppins', sans-serif;
   }
@@ -91,6 +87,15 @@ body {
   }
 }
 
+@keyframes menu-float {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-12px) scale(1.05);
+  }
+}
+
 @keyframes snowfall {
   0% {
     transform: translateY(-10vh) translateX(-5px);
@@ -115,4 +120,8 @@ body {
 
 .animate-float {
   animation: float 4s ease-in-out infinite;
+}
+
+.animate-menu-float {
+  animation: menu-float 3s ease-in-out infinite;
 }

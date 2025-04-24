@@ -181,9 +181,10 @@ const ResumeSection = () => {
             Resume
             <a 
               href="/Sanchit_Vijay_Resume.pdf" 
-              download
+              target="_blank"
+              rel="noopener noreferrer"
               className="p-2 bg-data/10 text-data rounded-lg hover:bg-data/20 transition-colors"
-              title="Download Resume"
+              title="View Resume"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -252,7 +253,7 @@ const ResumeSection = () => {
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
                         className="overflow-hidden"
                       >
                         <div className="p-6 border-t border-data/20 detail-description">
@@ -285,6 +286,13 @@ const ResumeSection = () => {
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: 10 }}
+                                        // transition={{ 
+                                        //   duration: 0.3, 
+                                        //   ease: "easeInOut",
+                                        //   type: "spring",
+                                        //   stiffness: 100,
+                                        //   damping: 10
+                                        // }}
                                         className="list-disc list-inside space-y-2 text-gray-300 text-sm"
                                       >
                                         {exp.detail_description.data_engineering.map((item, i) => (
@@ -325,6 +333,13 @@ const ResumeSection = () => {
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: 10 }}
+                                        // transition={{ 
+                                        //   duration: 0.3, 
+                                        //   ease: "easeInOut",
+                                        //   type: "spring",
+                                        //   stiffness: 100,
+                                        //   damping: 10
+                                        // }}
                                         className="list-disc list-inside space-y-2 text-gray-300 text-sm"
                                       >
                                         {exp.detail_description.machine_learning.map((item, i) => (
@@ -343,7 +358,7 @@ const ResumeSection = () => {
                             {exp.technologies.map((tech, i) => (
                               <span
                                 key={i}
-                                className="px-3 py-1 bg-data/10 text-data rounded-full text-sm"
+                                className="px-3 py-1 bg-data/10 text-data rounded-full text-sm cursor-pointer hover:bg-data/20 transition-colors"
                               >
                                 {tech}
                               </span>

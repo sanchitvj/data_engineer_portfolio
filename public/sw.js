@@ -79,6 +79,33 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // For archive pages and related assets - use stale-while-revalidate strategy
+  if (url.pathname.startsWith('/archive') ||
+      url.pathname.includes('data/blog') ||
+      url.pathname.includes('components/blog')) {
+    event.respondWith(
+      caches.open(CACHE_NAME).then((cache) => {
+        return cache.match(event.request).then((cachedResponse) => {
+          // Return cached response immediately if available
+          const fetchPromise = fetch(event.request)
+            .then((networkResponse) => {
+              // Update cache with new response for future use
+              cache.put(event.request, networkResponse.clone());
+              return networkResponse;
+            })
+            .catch(() => {
+              // Network failed, return cached or fallback
+              return cachedResponse || caches.match('/offline.html');
+            });
+            
+          // Prioritize cached response, fall back to network
+          return cachedResponse || fetchPromise;
+        });
+      })
+    );
+    return;
+  }
+
   // For images and static assets - use cache-first strategy
   if (event.request.url.match(/\.(jpe?g|png|gif|svg|webp|ico|ttf|woff2?|eot|mp4|webm|pdf|css|js)$/i)) {
     event.respondWith(

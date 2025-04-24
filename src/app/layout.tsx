@@ -7,6 +7,28 @@ import ServiceWorkerHandler from '@/components/ServiceWorkerHandler';
 export const metadata: Metadata = {
   title: 'Sanchit Vijay - Data Engineer',
   description: 'Portfolio website showcasing data engineering projects and expertise',
+  icons: {
+    icon: [
+      {
+        url: '/images/penguindb_main_logo.png',
+        sizes: '32x32',
+      },
+      {
+        url: '/images/penguindb_main_logo.png',
+        sizes: '48x48',
+      },
+      {
+        url: '/images/penguindb_main_logo.png',
+        sizes: '96x96',
+      }
+    ],
+    apple: [
+      {
+        url: '/images/penguindb_main_logo.png',
+        sizes: '180x180',
+      }
+    ],
+  },
 };
 
 export default function RootLayout({

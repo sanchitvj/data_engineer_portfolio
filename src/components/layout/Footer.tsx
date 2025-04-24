@@ -7,8 +7,8 @@ import { usePathname } from 'next/navigation';
 export default function Footer() {
   const pathname = usePathname();
   
-  // Pages with custom backgrounds (blog and projects)
-  const hasCustomBackground = pathname?.startsWith('/blog') || pathname?.startsWith('/projects');
+  // Pages with custom backgrounds (archive and projects)
+  const hasCustomBackground = pathname?.startsWith('/archive') || pathname?.startsWith('/projects');
   
   // For pages with custom backgrounds, add special styling to make the footer more visible
   const footerClass = hasCustomBackground 
