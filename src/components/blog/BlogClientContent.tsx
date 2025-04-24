@@ -88,6 +88,9 @@ const SearchModal = dynamic<{
   showSearchModal: boolean;
   setShowSearchModal: React.Dispatch<React.SetStateAction<boolean>>;
   handleSearchInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  searchDisabled?: boolean;
+  showSearchDisabledMessage?: boolean;
+  setShowSearchDisabledMessage?: React.Dispatch<React.SetStateAction<boolean>>;
 }>(() => import('@/components/blog/SearchModal'), {
   loading: () => null,
   ssr: false,
@@ -128,6 +131,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
     link?: string; 
     date?: string; 
   } | null>(null);
+  const [showSearchDisabledMessage, setShowSearchDisabledMessage] = useState(false);
 
   // --- Start of useEffects and Handlers ---
 
@@ -354,22 +358,21 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
      return () => document.removeEventListener('mousedown', handleClickOutside);
    }, []); // Empty dependency array means this runs once on mount
 
-  // Memoize filtered posts calculation
+  // Memoize filtered posts calculation - update to make filters mutually exclusive
   const filteredPostsResult = useMemo(() => {
     console.log("Recalculating filtered posts");
     let tempFiltered = [...blogPosts]; // Start with original posts
 
-    // Apply category filter
+    // Either apply category filter OR search terms filtering, but not both
     if (activeFilter !== 'all') {
+      // If category filter is active, use it
       tempFiltered = tempFiltered.filter(post => 
         Array.isArray(post.category) 
           ? post.category.includes(activeFilter) 
           : post.category === activeFilter
       );
-    }
-    
-    // Apply search terms filtering
-    if (activeSearchTerms.length > 0) {
+    } else if (activeSearchTerms.length > 0) {
+      // Only apply search terms if category filter is not active
       // Create a single normalized array of search terms for faster lookups
       const normalizedTerms = activeSearchTerms.map(term => term.toLowerCase());
       
@@ -490,7 +493,13 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
   const handleSuggestionClick = useCallback((suggestion: {value: string, display: string, type: string}) => {
     if (suggestion.type === 'category') {
       setActiveFilter(suggestion.value);
+      // Clear search terms when selecting a category
+      setActiveSearchTerms([]);
     } else if (suggestion.type === 'keyword') {
+      // Clear category filter when adding a search term
+      if (activeFilter !== 'all') {
+        setActiveFilter('all');
+      }
       if (activeSearchTerms.length < 3 && !activeSearchTerms.find(term => term.toLowerCase() === suggestion.value.toLowerCase())) {
         setActiveSearchTerms(prevTerms => [...prevTerms, suggestion.value]);
       }
@@ -498,7 +507,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
     setSearchQuery(''); // Clear input after selection
     setShowSuggestions(false);
     setFocusedSuggestionIndex(-1);
-  }, [activeSearchTerms, setActiveFilter, setActiveSearchTerms, setSearchQuery, setShowSuggestions]);
+  }, [activeSearchTerms, setActiveFilter, setActiveSearchTerms, setSearchQuery, setShowSuggestions, activeFilter]);
 
   const removeSearchTerm = useCallback((termToRemove: string) => {
     setActiveSearchTerms(prevTerms => prevTerms.filter(t => t.toLowerCase() !== termToRemove.toLowerCase()));
@@ -508,6 +517,10 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
     if (e.key === 'Enter' && searchQuery.trim()) {
       e.preventDefault();
       const newTerm = searchQuery.trim();
+      // Clear category filter when adding a search term
+      if (activeFilter !== 'all') {
+        setActiveFilter('all');
+      }
       if (activeSearchTerms.length < 3 && !activeSearchTerms.find(term => term.toLowerCase() === newTerm.toLowerCase())) {
          setActiveSearchTerms(prevTerms => [...prevTerms, newTerm]);
       }
@@ -515,11 +528,15 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
       setShowSuggestions(false);
       setFocusedSuggestionIndex(-1);
     }
-  }, [activeSearchTerms, searchQuery]);
+  }, [activeSearchTerms, searchQuery, activeFilter, setActiveFilter]);
 
   const handleFilterButtonClick = useCallback((categoryId: string) => {
-     setActiveFilter(categoryId);
-  }, []);
+    setActiveFilter(categoryId);
+    // Clear any active search terms when selecting a category
+    if (activeSearchTerms.length > 0) {
+      setActiveSearchTerms([]);
+    }
+  }, [activeSearchTerms.length]);
 
   const resetAllFilters = useCallback(() => {
     setSearchQuery('');
@@ -586,9 +603,12 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
               aria-label="Open search and filter options"
             >
               <FaSearch className="text-data/80 mr-2" />
-              {activeSearchTerms.length === 0 && (
+              {activeSearchTerms.length === 0 && activeFilter === 'all' && (
                 <span className="opacity-50">Explore Antarctic Archives</span>
               )}
+              {/* {activeFilter !== 'all' && activeSearchTerms.length === 0 && (
+                <span className="text-xs text-data/70">Clear category to use search</span>
+              )} */}
             </div>
             {/* Display active category filter */}
             {activeFilter !== 'all' && (
@@ -673,6 +693,9 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
               showSearchModal={showSearchModal}
               setShowSearchModal={setShowSearchModal}
               handleSearchInputChange={handleSearchInputChange}
+              searchDisabled={activeFilter !== 'all'}
+              showSearchDisabledMessage={showSearchDisabledMessage}
+              setShowSearchDisabledMessage={setShowSearchDisabledMessage}
             />
           </Suspense>
         )}
@@ -1101,7 +1124,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
              transition={{ delay: 0.2 }}
              className="max-w-6xl mx-auto py-16 text-center"
            >
-              <div className="mb-6"> <Image src="/images/penguin_confused.png" alt="No results" width={100} height={100} className="mx-auto" /> </div> 
+              <div className="mb-6"> <Image src="/images/oops_penguin.png" alt="No results" width={150} height={150} className="mx-auto" /> </div> 
               <h3 className="text-xl font-bold text-white mb-2">No Content Found</h3> 
               <p className="text-gray-400"> No posts match your current search criteria. Try adjusting your filters or search query. </p> 
               <button onClick={resetAllFilters} className="mt-4 px-4 py-2 bg-data hover:bg-data-dark text-dark-300 font-medium rounded-lg transition-colors" > 

@@ -26,6 +26,9 @@ interface SearchModalProps {
   showSearchModal: boolean;
   setShowSearchModal: Dispatch<SetStateAction<boolean>>;
   handleSearchInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  searchDisabled?: boolean;
+  showSearchDisabledMessage?: boolean;
+  setShowSearchDisabledMessage?: Dispatch<SetStateAction<boolean>>;
 }
 
 const SearchModal: React.FC<SearchModalProps> = ({
@@ -48,8 +51,12 @@ const SearchModal: React.FC<SearchModalProps> = ({
   showSearchModal,
   setShowSearchModal,
   handleSearchInputChange,
+  searchDisabled = false,
+  showSearchDisabledMessage = false,
+  setShowSearchDisabledMessage = () => {},
 }) => {
   const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [showCategoryDisabledMessage, setShowCategoryDisabledMessage] = useState(false);
 
   // Check for mobile device
   useEffect(() => {
@@ -70,7 +77,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-[15vh] sm:pt-[12vh] bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-[10vh] bg-black/80 backdrop-blur-sm"
           onClick={() => setShowSearchModal(false)}
         >
           <motion.div
@@ -78,7 +85,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: -20, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="relative w-full max-w-3xl max-h-[80vh] sm:max-h-[85vh] overflow-auto bg-dark-200/95 rounded-xl border border-data/30 shadow-lg flex flex-col"
+            className="relative w-full max-w-3xl max-h-[90vh] overflow-auto bg-dark-200/95 rounded-xl border border-data/30 shadow-lg flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -124,7 +131,15 @@ const SearchModal: React.FC<SearchModalProps> = ({
                       return (
                         <button
                           key={category.id}
-                          onClick={() => handleFilterButtonClick(category.id)}
+                          onClick={() => {
+                            setShowSearchDisabledMessage(false);
+                            if (activeSearchTerms.length > 0) {
+                              setShowCategoryDisabledMessage(true);
+                            } else {
+                              setShowCategoryDisabledMessage(false);
+                              handleFilterButtonClick(category.id);
+                            }
+                          }}
                           className={`px-3 py-1.5 rounded-full text-sm transition-colors duration-300 font-poppins ${
                             activeFilter === category.id
                               ? 'bg-data text-dark-300 font-medium'
@@ -148,22 +163,44 @@ const SearchModal: React.FC<SearchModalProps> = ({
                   </div>
                   <div className="relative">
                     {/* Input Area */}
-                    <div className="flex items-center bg-dark-300/50 rounded-lg border border-data/30 pr-2 focus-within:border-data/50 focus-within:ring-1 focus-within:ring-data/30 transition-all">
+                    <div className={`flex items-center bg-dark-300/50 rounded-lg border ${
+                      searchDisabled 
+                        ? 'border-gray-500/30 opacity-60' 
+                        : 'border-data/30 focus-within:border-data/50 focus-within:ring-1 focus-within:ring-data/30'
+                      } pr-2 transition-all relative`}>
+                      
+                      {/* Add disabled overlay when search is disabled */}
+                      {searchDisabled && (
+                        <div 
+                          className="absolute inset-0 bg-dark-300/20 backdrop-blur-[1px] rounded-lg cursor-not-allowed z-10"
+                          onClick={() => setShowSearchDisabledMessage(true)}
+                        />
+                      )}
+                      
                       <input
                         ref={searchInputRef}
                         type="text"
                         placeholder={isMobileDevice ? "Add up to 3 keywords..." : "Add up to 3 keywords (e.g., humor, learning, ai)..."}
-                        className="bg-transparent border-none focus:outline-none text-white w-full font-poppins px-3 py-2 sm:py-3 text-sm sm:text-base"
+                        className={`bg-transparent border-none focus:outline-none ${
+                          searchDisabled ? 'text-gray-500 cursor-not-allowed' : 'text-white'
+                        } w-full font-poppins px-3 py-2 sm:py-3 text-sm sm:text-base`}
                         value={searchQuery}
                         onChange={handleSearchInputChange}
-                        onFocus={() => !isMobileDevice && setShowSuggestions(true)}
+                        onFocus={() => {
+                          setShowCategoryDisabledMessage(false);
+                          if (searchDisabled) {
+                            setShowSearchDisabledMessage(true);
+                          } else if (!isMobileDevice) {
+                            setShowSuggestions(true);
+                          }
+                        }}
                         onKeyDown={handleSearchEnter}
-                        disabled={activeSearchTerms.length >= 3}
+                        disabled={activeSearchTerms.length >= 3 || searchDisabled}
                         aria-label="Search keywords"
                         autoComplete="off"
                       />
                       {/* Clear Input Button */}
-                      {searchQuery && (
+                      {searchQuery && !searchDisabled && (
                         <button
                           onClick={() => setSearchQuery('')}
                           className="text-gray-400 hover:text-white p-1"
@@ -173,19 +210,41 @@ const SearchModal: React.FC<SearchModalProps> = ({
                         </button>
                       )}
                       {/* Penguin Icon */}
-                      <div className="bg-dark-300/70 rounded-full p-1 ml-1">
+                      <div className={`${searchDisabled ? 'bg-gray-500/30' : 'bg-dark-300/70'} rounded-full p-1 ml-1`}>
                         <Image
                           src="/images/blog/search_penguin.png"
                           alt=""
                           width={24}
                           height={24}
-                          className="animate-wave"
+                          className={searchDisabled ? 'opacity-50' : 'animate-wave'}
                         />
                       </div>
                     </div>
 
+                    {/* Search disabled message */}
+                    {showSearchDisabledMessage && searchDisabled && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute z-50 w-full mt-1 bg-dark-300/95 backdrop-blur-md rounded-lg border border-data/20 shadow-lg p-3 text-center"
+                      >
+                        <p className="text-data font-medium text-sm">Search is disabled while category filter is active</p>
+                        <p className="text-gray-300 text-xs mt-1">Please clear the category filter first to use search</p>
+                        <button 
+                          onClick={() => {
+                            handleFilterButtonClick('all');
+                            setShowSearchDisabledMessage(false);
+                          }}
+                          className="mt-2 px-3 py-1 bg-data/20 hover:bg-data/30 text-data text-xs rounded-full"
+                        >
+                          Clear Category Filter
+                        </button>
+                      </motion.div>
+                    )}
+
                     {/* Mobile search helper text */}
-                    {isMobileDevice && searchQuery && (
+                    {isMobileDevice && searchQuery && !searchDisabled && (
                       <p className="text-xs text-data/80 mt-2 italic">
                         Type your keyword and press Enter to add it to your search.
                       </p>
@@ -269,6 +328,28 @@ const SearchModal: React.FC<SearchModalProps> = ({
                 Apply & Close
               </button>
             </div>
+
+            {/* Category disabled message */}
+            {showCategoryDisabledMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className="mt-3 bg-dark-300/95 backdrop-blur-md rounded-lg border border-yellow-500/40 shadow-lg p-3 text-center"
+              >
+                <p className="text-yellow-400 font-medium text-sm">Filtering is disabled while keywords are active</p>
+                <p className="text-gray-300 text-xs mt-1">Please clear keywords first to use category filters</p>
+                <button 
+                  onClick={() => {
+                    resetAllFilters();
+                    setShowCategoryDisabledMessage(false);
+                  }}
+                  className="mt-2 px-3 py-1 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 text-xs rounded-full"
+                >
+                  Clear Keywords
+                </button>
+              </motion.div>
+            )}
           </motion.div>
         </motion.div>
       )}
