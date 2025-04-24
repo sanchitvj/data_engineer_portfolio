@@ -85,7 +85,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
             <div className="flex justify-between items-center p-4 border-b border-data/10 sticky top-0 bg-dark-200/95 z-10">
               <h2 className="text-xl font-bold text-white flex items-center">
                 <FaSearch className="text-data mr-3" />
-                Research Terminal
+                Search Terminal
               </h2>
               <button
                 className="p-1 rounded-full hover:bg-dark-300 text-gray-400 hover:text-white transition-colors"

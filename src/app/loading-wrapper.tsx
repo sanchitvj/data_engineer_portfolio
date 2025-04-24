@@ -11,20 +11,34 @@ export default function LoadingWrapper({
 }) {
   const [isLoading, setIsLoading] = useState(true);
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  // Reset loading state when navigation occurs
+  
+  // This approach avoids the direct dependency on useSearchParams
+  // during the initial render, fixing the hydration error
+  const [navigationKey, setNavigationKey] = useState<string>('');
+  
+  // Handle navigation changes safely
   useEffect(() => {
-    setIsLoading(true);
+    // Get current search params safely inside useEffect
+    const searchParams = new URLSearchParams(window.location.search);
+    const currentNav = pathname + searchParams.toString();
     
+    // Only trigger loading on actual navigation changes
+    if (navigationKey && navigationKey !== currentNav) {
+      setIsLoading(true);
+    }
+    
+    // Update navigation key
+    setNavigationKey(currentNav);
+    
+    // Initial load or navigation change - show loader for fixed time
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 2000); // 2 second delay
+    }, 3000); // 3 second delay
     
     return () => clearTimeout(timer);
-  }, [pathname, searchParams]);
+  }, [pathname, navigationKey]);
 
-  // Show loading component for at least 2 seconds
+  // Show loading component for 3 seconds
   if (isLoading) {
     return <Loading />;
   }

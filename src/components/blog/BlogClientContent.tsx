@@ -284,7 +284,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
   // Set loaded state after initial render with minimum delay
   useEffect(() => {
     const timer = setTimeout(() => {
-      setIsLoaded(true);
+    setIsLoaded(true);
       setShowContent(true);
     }, 2000); // 2 second delay
 
@@ -549,27 +549,27 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
       <div className="container mx-auto px-4 pt-20 pb-16 z-10 relative">
         {/* Header Section */}
         {showContent && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: isLoaded ? 1 : 0, y: isLoaded ? 0 : -20 }}
-            transition={{ duration: 0.5 }}
-            className="max-w-6xl mx-auto mb-8 text-center"
-          >
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              Research <span className="text-data">Station</span>
-              <Image 
-                src="/images/right_mac_penguin.png" 
-                alt="Penguin" 
-                width={50} 
-                height={50}
-                className="inline-block ml-4 animate-float"
-                priority // Keep priority as it might be ATF
-              />
-            </h1>
-            <p className="text-gray-300 max-w-2xl mx-auto">
-              Welcome to my Antarctic Research Station, where I document insights and discoveries from my data engineering expeditions.
-            </p>
-          </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: isLoaded ? 1 : 0, y: isLoaded ? 0 : -20 }}
+          transition={{ duration: 0.5 }}
+          className="max-w-6xl mx-auto mb-8 text-center"
+        >
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+            Content <span className="text-data">Archives</span>
+            <Image 
+              src="/images/right_mac_penguin.png" 
+              alt="Penguin" 
+              width={50} 
+              height={50}
+              className="inline-block ml-4 animate-float"
+              priority // Keep priority as it might be ATF
+            />
+          </h1>
+          <p className="text-gray-300 max-w-2xl mx-auto">
+            Welcome to my content archives, where I share insights and discoveries from various platforms.
+          </p>
+        </motion.div>
         )}
 
         {/* Search Trigger Button & Active Filters Display */}
@@ -586,7 +586,9 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
               aria-label="Open search and filter options"
             >
               <FaSearch className="text-data mr-2" />
-              <span>Explore Antarctic Archives</span>
+              {activeSearchTerms.length === 0 && (
+                <span>Explore Antarctic Archives</span>
+              )}
             </div>
             
             {/* Display active category filter */}
@@ -745,7 +747,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                      </div>
                    }
                  >
-                   <div className="mb-12">
+                   <div className="mb-12" id="youtube-videos">
                      <SwipeStation 
                        key={`youtube-${searchStateKey}-${filteredPosts.filter(post => post.type === 'youtube').length}`} 
                        title="YouTube Videos" 
@@ -811,10 +813,10 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                      </div>
                    }
                  >
-                   <div className="mb-12">
+                   <div className="mb-12" id="linkedin-posts">
                      <SwipeStation 
                        key={`linkedin-${searchStateKey}-${filteredPosts.filter(post => post.type === 'linkedin-post').length}`} 
-                       title="LinkedIn Posts Station" 
+                       title="LinkedIn Posts" 
                        posts={filteredPosts.filter(post => post.type === 'linkedin-post')} 
                        visibleCards={3} 
                        renderCard={(post, index) => ( 
@@ -882,14 +884,14 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                  <LazyComponent 
                    placeholder={
                      <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-12 flex items-center justify-center">
-                       <div className="text-gray-500">Loading Humorous Data Insights...</div>
+                       <div className="text-gray-500">Loading LOL Hub...</div>
                      </div>
                    }
                  >
-                   <div className="mb-12">
+                   <div className="mb-12" id="lol-hub">
                      <SwipeStation 
                        key={`quick-note-${searchStateKey}-${filteredPosts.filter(post => post.type === 'quick-note').length}`} 
-                       title="Humorous Data Insights" 
+                       title="LOL Hub" 
                        posts={filteredPosts.filter(post => post.type === 'quick-note')} 
                        visibleCards={3} 
                        renderCard={(post, index) => ( 
@@ -964,14 +966,14 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                  <LazyComponent 
                    placeholder={
                      <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-12 flex items-center justify-center">
-                       <div className="text-gray-500">Loading Technical Articles...</div>
+                       <div className="text-gray-500">Loading LinkedIn Articles...</div>
                      </div>
                    }
                  >
-                   <div className="mb-12">
+                   <div className="mb-12" id="linkedin-articles">
                      <SwipeStation 
                        key={`research-report-${searchStateKey}-${filteredPosts.filter(post => post.type === 'research-report' && !post.featured).length}`} 
-                       title="Technical Articles" 
+                       title="LinkedIn Articles" 
                        posts={filteredPosts.filter(post => post.type === 'research-report' && !post.featured)} 
                        visibleCards={2} 
                        renderCard={(post, index) => ( 
@@ -1027,14 +1029,14 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                  <LazyComponent 
                    placeholder={
                      <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-12 flex items-center justify-center">
-                       <div className="text-gray-500">Loading Substack Publications...</div>
+                       <div className="text-gray-500">Loading Substack Unpacked...</div>
                      </div>
                    }
                  >
-                   <div className="mb-12">
+                   <div className="mb-12" id="substack-unpacked">
                      <SwipeStation 
                        key={`comprehensive-study-${searchStateKey}-${filteredPosts.filter(post => post.type === 'comprehensive-study').length}`} 
-                       title="Substack Publications" 
+                       title="Substack Unpacked" 
                        posts={filteredPosts.filter(post => post.type === 'comprehensive-study')} 
                        visibleCards={1} 
                        renderCard={(post, index) => ( 
@@ -1100,8 +1102,12 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
              transition={{ delay: 0.2 }}
              className="max-w-6xl mx-auto py-16 text-center"
            >
-             {/* ... Empty state JSX ... */}
-              <div className="mb-6"> <Image src="/images/penguin_confused.png" alt="No results" width={100} height={100} className="mx-auto" /> </div> <h3 className="text-xl font-bold text-white mb-2">No Research Logs Found</h3> <p className="text-gray-400"> No posts match your current search criteria. Try adjusting your filters or search query. </p> <button onClick={resetAllFilters} className="mt-4 px-4 py-2 bg-data hover:bg-data-dark text-dark-300 font-medium rounded-lg transition-colors" > Reset Filters </button>
+              <div className="mb-6"> <Image src="/images/penguin_confused.png" alt="No results" width={100} height={100} className="mx-auto" /> </div> 
+              <h3 className="text-xl font-bold text-white mb-2">No Content Found</h3> 
+              <p className="text-gray-400"> No posts match your current search criteria. Try adjusting your filters or search query. </p> 
+              <button onClick={resetAllFilters} className="mt-4 px-4 py-2 bg-data hover:bg-data-dark text-dark-300 font-medium rounded-lg transition-colors" > 
+                Reset Filters 
+              </button>
          </motion.div>
         )}
       </div>
