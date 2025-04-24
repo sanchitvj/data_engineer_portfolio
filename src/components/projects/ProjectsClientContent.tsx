@@ -18,13 +18,13 @@ const ProjectsClientContent: React.FC<ProjectsClientContentProps> = ({
   initialProjects, 
   initialProjectCategories 
 }) => {
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [activeFilter, setActiveFilter] = useState('All');
   const [filteredProjects, setFilteredProjects] = useState(initialProjects);
   const [isLoaded, setIsLoaded] = useState(false);
   
   // Filter projects based on active filter
   useEffect(() => {
-    if (activeFilter === 'all') {
+    if (activeFilter === 'All') {
       setFilteredProjects(initialProjects);
     } else {
       setFilteredProjects(

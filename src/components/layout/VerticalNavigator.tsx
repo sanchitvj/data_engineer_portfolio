@@ -10,19 +10,17 @@ interface Section {
 
 interface VerticalNavigatorProps {
   sections: Section[];
-  page: 'home' | 'resume' | 'archive' | 'projects';
+  page: 'home' | 'resume' | 'archive';
 }
 
 const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page }) => {
-  const [activeSection, setActiveSection] = useState<string>(sections[0].id);
+  const [activeSection, setActiveSection] = useState<string>(sections[0]?.id || '');
   const [isVisible, setIsVisible] = useState(true);
   const [isScrolling, setIsScrolling] = useState(false);
   const [indicatorPosition, setIndicatorPosition] = useState(0);
 
-  // Filter out specific sections if needed
-  const filteredSections = page === 'resume' 
-    ? sections.filter(section => section.id !== 'resume-section')
-    : sections;
+  // Each page now has its correct sections from MainLayout
+  const filteredSections = sections;
 
   // Calculate dynamic spacing based on number of sections
   const calculateSpacing = () => {
@@ -31,7 +29,6 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
     const baseSpacing = 
       page === 'home' ? 20 : 
       page === 'archive' ? 12 : 
-      page === 'projects' ? 14 :
       15;
     const adjustedSpacing = Math.max(baseSpacing, 30 / numSections);
     return adjustedSpacing;
@@ -119,7 +116,7 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       className={`fixed left-[50px] ${
-        page === 'archive' || page === 'projects' 
+        page === 'archive'
           ? 'top-1/4 -translate-y-1/2' 
           : 'top-[25vh]'
       } z-50 hidden lg:block`}

@@ -158,7 +158,11 @@ const Header = () => {
           
           {/* Mobile Menu Button */}
           <motion.button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            onClick={() => {
+              // Whenever opening the menu, reset to main menu
+              if (!isMenuOpen) setIsContactSubmenuOpen(false);
+              setIsMenuOpen(prev => !prev);
+            }}
             className="md:hidden flex items-center justify-center w-10 h-10 relative z-[100]"
             animate={isMenuOpen ? "open" : "closed"}
             initial="closed"

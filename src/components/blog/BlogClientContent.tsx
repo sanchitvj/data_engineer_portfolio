@@ -286,7 +286,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
     const timer = setTimeout(() => {
     setIsLoaded(true);
       setShowContent(true);
-    }, 2000); // 2 second delay
+    }, 200); // 2 second delay
 
     return () => clearTimeout(timer);
   }, []);
@@ -556,7 +556,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
           className="max-w-6xl mx-auto mb-8 text-center"
         >
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Content <span className="text-data">Archives</span>
+            Research <span className="text-data">Station</span>
             <Image 
               src="/images/right_mac_penguin.png" 
               alt="Penguin" 
@@ -567,7 +567,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
             />
           </h1>
           <p className="text-gray-300 max-w-2xl mx-auto">
-            Welcome to my content archives, where I share insights and discoveries from various platforms.
+            Welcome to my Antarctic Research Station, where I document insights and discoveries from my data engineering expeditions.
           </p>
         </motion.div>
         )}
@@ -585,12 +585,11 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
               className="flex items-center mr-2 shrink-0" // Prevent shrinking
               aria-label="Open search and filter options"
             >
-              <FaSearch className="text-data mr-2" />
+              <FaSearch className="text-data/80 mr-2" />
               {activeSearchTerms.length === 0 && (
-                <span>Explore Antarctic Archives</span>
+                <span className="opacity-50">Explore Antarctic Archives</span>
               )}
             </div>
-            
             {/* Display active category filter */}
             {activeFilter !== 'all' && (
               <div className="group bg-data/20 text-data text-xs px-2 py-1 rounded-full flex items-center relative shrink-0">
@@ -758,7 +757,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                            initial={{ opacity: 0, y: 20 }} 
                            animate={{ opacity: 1, y: 0 }} 
                            transition={{ duration: 0.5, delay: index * 0.1 }} 
-                           className="bg-dark-300 overflow-hidden h-full rounded-xl flex flex-col"
+                           className="bg-dark-300 overflow-hidden h-[360px] rounded-xl flex flex-col"
                            onClick={(e) => {
                              // Only redirect if not clicking a specific button or link
                              if (!(e.target as HTMLElement).closest('button')) {
@@ -767,7 +766,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                            }}
                            style={{ cursor: 'pointer' }}
                          > 
-                           <div className="relative aspect-video overflow-hidden"> 
+                           <div className="relative h-[180px] overflow-hidden"> 
                              <Image 
                                src={post.thumbnail || '/images/placeholder.jpg'} 
                                alt={post.title} 
@@ -780,9 +779,9 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                                <FaPlay size={14} className="ml-0.5" /> 
                              </div> 
                            </div> 
-                           <div className="px-4 py-4 flex flex-col flex-grow"> 
-                             <h3 className="font-bold mb-2 text-white">{post.title}</h3> 
-                             <p className="text-gray-300 text-sm line-clamp-2 mb-3">{post.excerpt}</p> 
+                           <div className="px-4 py-4 flex flex-col flex-grow h-[180px]"> 
+                             <h3 className="font-bold mb-3 text-white line-clamp-2 h-[52px]">{post.title}</h3> 
+                             <p className="text-gray-300 text-sm line-clamp-3 mb-4 h-[72px]">{post.excerpt}</p> 
                              <div className="mt-auto flex justify-between items-center"> 
                                <a 
                                  href={post.youtubeUrl || "#"} 
@@ -982,7 +981,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                            initial={{ opacity: 0, y: 20 }} 
                            animate={{ opacity: 1, y: 0 }} 
                            transition={{ duration: 0.3, delay: index * 0.05 }}
-                           className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-4 h-[400px] flex flex-col"
+                           className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-4 h-[410px] flex flex-col"
                          >
                            <div className="h-48 mb-4 overflow-hidden rounded-lg bg-dark-300/60 relative">
                              {post.image ? (
@@ -1000,8 +999,8 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                              )}
                            </div>
                            <h4 className="font-semibold text-lg mb-2 text-white line-clamp-2">{highlightText(post.title, activeSearchTerms)}</h4>
-                           <p className="text-gray-300 text-sm mb-4 flex-grow overflow-hidden line-clamp-3">
-                             {highlightText(truncateToWords(post.excerpt || '', 24), activeSearchTerms)}
+                           <p className="text-gray-300 text-sm mb-4 flex-grow overflow-auto">
+                             {highlightText(post.excerpt || '', activeSearchTerms)}
                            </p>
                            <div className="mt-auto">
                              <div className="flex justify-between text-xs text-gray-400 mb-2">
@@ -1045,7 +1044,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                                    initial={{ opacity: 0, y: 20 }} 
                                    animate={{ opacity: 1, y: 0 }} 
                                    transition={{ duration: 0.3, delay: index * 0.05 }} 
-                           className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-4 h-[480px] flex flex-col"
+                           className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-4 h-[520px] flex flex-col"
                          >
                            <div className="h-60 mb-4 overflow-hidden rounded-lg bg-dark-300/60 relative">
                              {post.image ? (
@@ -1063,8 +1062,8 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                              )}
                                    </div>
                            <h4 className="font-semibold text-xl mb-2 text-white">{highlightText(post.title, activeSearchTerms)}</h4>
-                           <p className="text-gray-300 text-sm mb-4 flex-grow overflow-hidden line-clamp-4">
-                             {highlightText(truncateToWords(post.excerpt || '', 50), activeSearchTerms)}
+                           <p className="text-gray-300 text-sm mb-4 flex-grow overflow-auto">
+                             {highlightText(post.excerpt || '', activeSearchTerms)}
                            </p>
                            <div className="mt-auto">
                              <div className="flex justify-between text-xs text-gray-400 mb-3">
@@ -1080,8 +1079,8 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                                Read on Substack <FaExternalLinkAlt className="ml-2 w-3 h-3" />
                                      </a>
                                    </div>
-                         </motion.div>
-                       )}
+                         </motion.div> 
+                       )} 
                      /> 
                    </div>
                  </LazyComponent>
@@ -1091,12 +1090,12 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                {/* Temporarily removed LinkedIn Iframe Posts Station */}
 
              </Suspense>
-           </div>
+                     </div>
          )}
 
         {/* Empty State */}
         {filteredPosts.length === 0 && (
-           <motion.div 
+                         <motion.div 
              initial={{ opacity: 0 }}
              animate={{ opacity: 1 }}
              transition={{ delay: 0.2 }}
@@ -1108,9 +1107,9 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
               <button onClick={resetAllFilters} className="mt-4 px-4 py-2 bg-data hover:bg-data-dark text-dark-300 font-medium rounded-lg transition-colors" > 
                 Reset Filters 
               </button>
-         </motion.div>
+                         </motion.div>
         )}
-      </div>
+                     </div>
 
       {/* Modal for content display */}
       {showModal && (
@@ -1137,7 +1136,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
               >
                 <X size={24} />
               </button>
-            </div>
+                                   </div>
             
             <div className="flex-grow overflow-y-auto p-4">
               {modalContent?.type === 'embed' && modalContent.content && (
@@ -1148,14 +1147,14 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                   <div className="flex justify-center mt-2">
                     <a 
                       href={modalContent.link} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
                       className="py-2 px-4 bg-data/20 hover:bg-data/30 text-data rounded transition-colors inline-flex items-center"
-                    >
+                                     >
                       View on LinkedIn <FaExternalLinkAlt className="ml-2 h-3 w-3" />
-                    </a>
-                  </div>
-                </div>
+                                     </a>
+                                   </div>
+                                       </div>
               )}
               
               {modalContent?.type === 'article' && (
@@ -1171,18 +1170,18 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
                       {modalContent.link && (
                         <a 
                           href={modalContent.link} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
                           className="mt-4 py-2 px-4 bg-data/20 hover:bg-data/30 text-data rounded inline-flex items-center"
                         >
                           View on LinkedIn <FaExternalLinkAlt className="ml-2 h-3 w-3" />
                         </a>
                       )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                   </div>
+               )}
+           </div>
+        )}
+      </div>
           </div>
         </div>
       )}

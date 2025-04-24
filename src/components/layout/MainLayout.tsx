@@ -23,44 +23,33 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const is404Page = pathname === '/404';
   
   // Determine which page we're on for section navigation
-  let page: 'home' | 'resume' | 'archive' | 'projects' = 'home';
+  let page: 'home' | 'resume' | 'archive' = 'home';
   if (isResumePage) page = 'resume';
   if (isBlogPage) page = 'archive';
-  if (isProjectPage) page = 'projects';
   
   // Skip rendering default background on certain pages that have their own
   const skipDefaultBackground = isBlogPage || isProjectPage;
   
   // Show navigator only on specific pages
-  const showNavigator = isHomePage || isResumePage || isBlogPage || isProjectPage;
+  const showNavigator = isHomePage || isResumePage || isBlogPage;
   
   // Define sections for the navigator
   const sections = showNavigator ? (
     isHomePage ? [
-      { id: 'hero', label: 'Home' },
-      { id: 'about', label: 'About' },
-      { id: 'skills', label: 'Skills' },
-      { id: 'experience', label: 'Experience' },
-      { id: 'contact', label: 'Contact' },
+      { id: 'hero', label: 'Introduction' },
+      { id: 'about', label: 'About Me' },
+      { id: 'journey', label: 'My Data Journey' },
     ] : isResumePage ? [
-      { id: 'resume-top', label: 'Resume' },
-      { id: 'skills-section', label: 'Skills' },
       { id: 'experience-section', label: 'Experience' },
       { id: 'education-section', label: 'Education' },
-      { id: 'awards-section', label: 'Awards' }
+      { id: 'skills-section', label: 'Technical Skills' }
     ] : isBlogPage ? [
       { id: 'youtube-videos', label: 'YouTube Videos' },
       { id: 'linkedin-posts', label: 'LinkedIn Posts' },
       { id: 'lol-hub', label: 'LOL Hub' },
       { id: 'linkedin-articles', label: 'LinkedIn Articles' },
       { id: 'substack-unpacked', label: 'Substack Unpacked' },
-    ] : [
-      { id: 'projects-top', label: 'Projects' },
-      { id: 'penguindb', label: 'PenguinDB' },
-      { id: 'antarctic-etl', label: 'Antarctic ETL' },
-      { id: 'glacier-api', label: 'Glacier API' },
-      { id: 'iceberg-ml', label: 'Iceberg ML' }
-    ]
+    ] : []
   ) : [];
 
   return (
