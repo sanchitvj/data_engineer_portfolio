@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform } from 'framer-motion';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-import { useSwipeable } from 'react-swipeable';
 import { BlogPost } from '../../types/blog';
 import dynamic from 'next/dynamic';
 
@@ -31,8 +30,6 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
   const [animating, setAnimating] = useState(false);
   const [hovering, setHovering] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState(0);
-  const [dragCards, setDragCards] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const dragX = useMotionValue(0);
   const totalItems = posts.length;
@@ -44,10 +41,6 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
   const [responsiveVisibleCards, setResponsiveVisibleCards] = useState(visibleCards);
   const [isMobile, setIsMobile] = useState(false);
   const [containerWidth, setContainerWidth] = useState(0);
-
-  // For touch events on mobile
-  const [isSwiping, setIsSwiping] = useState(false);
-  const [startX, setStartX] = useState(0);
 
   // Correct maxIndex calculation depends on responsiveVisibleCards and totalItems
   const [maxIndex, setMaxIndex] = useState(0);
@@ -103,20 +96,21 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, [visibleCards]);
 
-  // Autoplay functionality
+  // Simplified Autoplay Effect
   useEffect(() => {
-    if (!autoplay || hovering || isDragging || currentIndex >= maxIndex) return;
+    // Pause autoplay if hovering or dragging
+    if (!autoplay || hovering || isDragging) return;
     
     const interval = setInterval(() => {
-      if (currentIndex < maxIndex) {
-        handleNext();
-      } else {
-        setCurrentIndex(0); // Loop back to start
-      }
+      setCurrentIndex(prev => {
+        const nextIndex = prev + 1;
+        // Loop back to start if we exceed maxIndex based on visible cards
+        return nextIndex > maxIndex ? 0 : nextIndex;
+      });
     }, autoplayInterval);
     
     return () => clearInterval(interval);
-  }, [autoplay, currentIndex, hovering, isDragging, maxIndex, autoplayInterval]);
+  }, [autoplay, currentIndex, hovering, isDragging, maxIndex, autoplayInterval]); // Added isDragging dependency
 
   // Reset index and update width when posts change
   useEffect(() => {
@@ -185,19 +179,16 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
     });
   }, [currentIndex, posts, prefetchedImages]);
 
+  // Simplified handlePrev/handleNext - directly set index
   const handlePrev = () => {
-    if (currentIndex > 0 && !animating) {
-      setAnimating(true);
+    if (currentIndex > 0) {
       setCurrentIndex(prev => prev - 1);
-      setTimeout(() => setAnimating(false), 500); // Match animation duration
     }
   };
 
   const handleNext = () => {
-    if (currentIndex < maxIndex && !animating) {
-      setAnimating(true);
+    if (currentIndex < maxIndex) {
       setCurrentIndex(prev => prev + 1);
-      setTimeout(() => setAnimating(false), 500); // Match animation duration
     }
   };
 
@@ -213,153 +204,64 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
   // Calculate the total width of all cards + gaps
   const totalContentWidth = (singleCardWidth * totalItems) + (gapSize * (totalItems - 1));
   
-  // Calculate the exact position to translate to, keeping cards centered
+  // Calculate the exact position to translate to
   const translateX = singleCardWidth 
     ? (currentIndex * (singleCardWidth + gapSize)) 
     : 0;
     
-  // Handle drag updates to provide live feedback
-  const handleDrag = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const cardAndGapWidth = singleCardWidth + gapSize;
-    const dragDistance = Math.abs(info.offset.x);
-    
-    // Calculate how many cards would be moved
-    const potentialCardsMoved = Math.min(
-      Math.max(1, Math.floor(dragDistance / cardAndGapWidth)),
-      responsiveVisibleCards * 2
-    );
-    
-    setDragOffset(info.offset.x);
-    setDragCards(potentialCardsMoved);
-  };
-
-  // Drag handler functions
+  // Drag handler functions - Simplified
   const handleDragStart = () => {
     setIsDragging(true);
-    setDragOffset(0);
-    setDragCards(0);
   };
 
+  // Unified Drag End Handler
   const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     setIsDragging(false);
-    
-    // Calculate the card + gap width
+
     const cardAndGapWidth = singleCardWidth + gapSize;
-    
-    // Calculate how many cards to move based on drag distance
-    const dragDistance = Math.abs(info.offset.x);
-    const velocity = Math.abs(info.velocity.x);
-    
-    // Determine if we should change the index at all
-    if (dragDistance > cardAndGapWidth / 3 || velocity > 500) {
-      // Calculate how many cards to move
-      const cardsMoved = Math.min(
-        Math.max(1, Math.floor(dragDistance / cardAndGapWidth)),
-        responsiveVisibleCards * 2 // Limit to prevent excessive jumps
-      );
-      
-      if (info.offset.x > 0 && currentIndex > 0) {
-        // Dragged right, go to previous
-        setCurrentIndex(prev => Math.max(0, prev - cardsMoved));
-      } else if (info.offset.x < 0 && currentIndex < maxIndex) {
-        // Dragged left, go to next
-        setCurrentIndex(prev => Math.min(maxIndex, prev + cardsMoved));
-      }
-    }
-    
-    // Reset drag state
-    setDragOffset(0);
-    setDragCards(0);
-  };
+    if (!cardAndGapWidth) return; // Avoid division by zero
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setIsSwiping(true);
-    setStartX(e.touches[0].clientX);
-  };
+    // Current position when drag ended (relative to the start of the drag)
+    const offset = info.offset.x;
+    // Estimate velocity influence - adjust target slightly based on flick
+    const velocity = info.velocity.x;
+    const velocityFactor = 0.1; // Adjust sensitivity to velocity
+    const projectedOffset = offset + velocity * velocityFactor;
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isSwiping) return;
-    
-    const currentX = e.touches[0].clientX;
-    const diff = startX - currentX;
-    
-    // Implement drag effect if desired
-    // This is just a placeholder logic for visual feedback
-    if (containerRef.current) {
-      // Optional: Add visual feedback during swipe
-    }
-  };
+    // Calculate the fractional index based on the projected final position
+    // targetX = -currentTranslateX + projectedOffset 
+    // targetFractionalIndex = -targetX / cardAndGapWidth 
+    // targetFractionalIndex = (currentTranslateX - projectedOffset) / cardAndGapWidth
+    // targetFractionalIndex = (currentIndex * cardAndGapWidth - projectedOffset) / cardAndGapWidth
+    const targetFractionalIndex = currentIndex - (projectedOffset / cardAndGapWidth);
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!isSwiping) return;
-    
-    const currentX = e.changedTouches[0].clientX;
-    const diff = startX - currentX;
-    
-    // Threshold for swipe detection
-    const threshold = 80;
-    
-    if (diff > threshold && currentIndex < maxIndex) {
-      // Swiped left - go to next post
-      handleNext();
-    } else if (diff < -threshold && currentIndex > 0) {
-      // Swiped right - go to previous post
-      handlePrev();
-    }
-    
-    setIsSwiping(false);
+    // Round to the nearest whole index
+    const nearestIndex = Math.round(targetFractionalIndex);
+
+    // Clamp the index within valid bounds [0, maxIndex]
+    const finalIndex = Math.max(0, Math.min(nearestIndex, maxIndex));
+
+    // Set the state to trigger the animation to the final index
+    setCurrentIndex(finalIndex);
   };
 
   // Calculate drag constraints
   const dragConstraints = {
-    left: -totalContentWidth,
-    right: 0
+    // Prevent dragging beyond the last card
+    left: currentIndex >= maxIndex ? -translateX : -totalContentWidth,
+    right: currentIndex <= 0 ? 0 : totalContentWidth
   };
-
-  // Touch swipe handlers (for devices that don't support drag properly)
-  const swipeHandlers = useSwipeable({
-    onSwipedLeft: () => {
-      if (!isDragging && currentIndex < maxIndex) handleNext();
-    },
-    onSwipedRight: () => {
-      if (!isDragging && currentIndex > 0) handlePrev();
-    },
-    preventScrollOnSwipe: true,
-    trackMouse: true,
-    trackTouch: true
-  });
 
   // Calculate which cards should be visible based on dragging
   const getCardVisibility = (index: number) => {
-    // Default visibility based on current index
-    const isVisible = index >= currentIndex && index < currentIndex + responsiveVisibleCards;
-    
-    // Always make at least one card visible if no cards would be visible
     if (posts.length > 0 && posts.length <= responsiveVisibleCards) {
       return index < responsiveVisibleCards;
     }
-    
-    // If dragging, adjust visibility based on drag direction and distance
-    if (isDragging && dragCards > 0) {
-      if (dragOffset > 0) { // Dragging right (showing previous)
-        return index >= currentIndex - dragCards && index < currentIndex + responsiveVisibleCards - dragCards;
-      } else if (dragOffset < 0) { // Dragging left (showing next)
-        return index >= currentIndex + dragCards && index < currentIndex + responsiveVisibleCards + dragCards;
-      }
-    }
-    
-    return isVisible;
+    return index >= currentIndex && index < currentIndex + responsiveVisibleCards;
   };
 
   // Calculate the rightmost visible card for pagination display
   const getRightmostVisibleCard = () => {
-    if (isDragging && dragCards > 0) {
-      if (dragOffset > 0) { // Dragging right (showing previous)
-        return Math.max(1, Math.min(currentIndex + responsiveVisibleCards - dragCards, totalItems));
-      } else if (dragOffset < 0) { // Dragging left (showing next)
-        return Math.min(currentIndex + responsiveVisibleCards + dragCards, totalItems);
-      }
-    }
     return Math.min(currentIndex + responsiveVisibleCards, totalItems);
   };
 
@@ -393,10 +295,6 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
         className="relative"
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={() => setHovering(false)}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        {...swipeHandlers}
       >
         {/* Left Arrow */}
         <AnimatePresence>
@@ -425,40 +323,40 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
         >
           <motion.div 
             className="flex gap-4 pb-4 cursor-grab active:cursor-grabbing"
-            drag={!animating ? "x" : false}
-            dragConstraints={dragConstraints}
-            dragElastic={0.1}
-            dragTransition={{ bounceStiffness: 600, bounceDamping: 20 }}
+            drag="x" // Always allow dragging on x-axis
+            dragConstraints={{ left: -totalContentWidth + availableWidth, right: 0 }} // Set stricter constraints
+            dragElastic={0.15} // Adjust elasticity
+            dragTransition={{ bounceStiffness: 400, bounceDamping: 40 }} // Adjust bounce
             onDragStart={handleDragStart}
-            onDrag={handleDrag}
             onDragEnd={handleDragEnd}
             initial={false}
-            animate={{ 
-              x: -translateX 
-            }}
+            animate={{ x: -translateX }}
             transition={{ 
               type: "spring",
-              stiffness: 300,
-              damping: 30,
-              duration: 0.5
+              stiffness: 350, // Slightly adjusted stiffness/damping
+              damping: 35,
             }}
+            style={{ width: totalContentWidth }} // Explicitly set width for constraints
           >
             {posts.map((post, index) => {
-              const isVisibleWithDrag = getCardVisibility(index);
+              const isVisible = getCardVisibility(index);
               
               return (
                 <div
                   key={post.id}
-                  className="relative flex-none transition-all duration-300"
+                  className="relative flex-none transition-opacity duration-300" // Use opacity transition
                   style={{
                     width: singleCardWidth > 0 ? `${singleCardWidth}px` : '100%',
-                    opacity: isVisibleWithDrag ? 1 : 0.3,
-                    pointerEvents: isVisibleWithDrag ? 'auto' : 'none',
-                    transform: isDragging ? `scale(${isVisibleWithDrag ? 1 : 0.95})` : 'scale(1)',
+                    opacity: isVisible ? 1 : 0.4, // Adjust non-visible opacity
+                    pointerEvents: 'none', // Let drag happen on parent
+                    userSelect: 'none', // Prevent text selection
                     ...getCardInnerStyles()
                   }}
                 >
-                  {renderCard(post, index)}
+                  {/* Ensure content inside is interactive if needed */} 
+                  <div style={{ pointerEvents: 'auto' }}>
+                     {renderCard(post, index)}
+                  </div>
                 </div>
               );
             })}

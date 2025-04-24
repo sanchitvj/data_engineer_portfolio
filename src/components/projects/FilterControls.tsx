@@ -21,10 +21,10 @@ const FilterControls: React.FC<FilterControlsProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.5 }}
     >
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <h3 className="text-[#25B7D3] font-bold text-sm">Project Filter:</h3>
-          <button
+      <div className="flex justify-center items-center flex-wrap gap-2">
+        {/* <div className="flex items-center gap-2"> */}
+          {/* <h3 className="text-[#25B7D3] font-bold text-sm">Project Filter:</h3> */}
+          {/* <button
             className={`px-5 py-1.5 text-xs rounded-full transition-all duration-200 ${
               activeFilter === 'all' 
                 ? 'bg-[#25B7D3] text-white shadow-lg shadow-[#25B7D3]/20' 
@@ -34,9 +34,9 @@ const FilterControls: React.FC<FilterControlsProps> = ({
           >
             All
           </button>
-        </div>
+        </div> */}
         
-        <div className="flex flex-wrap gap-2">
+        {/* <div className="flex flex-wrap gap-2"> */}
           {categories.map(category => (
             <button
               key={category}
@@ -50,7 +50,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
               {category}
             </button>
           ))}
-        </div>
+        {/* </div> */}
       </div>
     </motion.div>
   );

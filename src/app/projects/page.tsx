@@ -5,6 +5,7 @@ import { Project } from '@/types/project';
 
 // Define project categories
 const projectCategories = [
+  'All',
   'Data Engineering',
   'AI',
   'Deep Learning', 

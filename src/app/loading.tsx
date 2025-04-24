@@ -12,10 +12,8 @@ const penguinFacts = [
 ];
 
 export default function Loading() {
-  // Use a fixed value or generate based on the date to ensure consistency
-  // This avoids hydration errors by ensuring the same content is rendered
-  // on both server and client
-  const index = new Date().getDate() % penguinFacts.length;
+  // Randomize fact on each load by picking a random index
+  const index = Math.floor(Math.random() * penguinFacts.length);
   const fact = penguinFacts[index];
   
   return (
