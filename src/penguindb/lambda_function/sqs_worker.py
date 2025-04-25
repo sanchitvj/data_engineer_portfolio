@@ -9,7 +9,8 @@ from datetime import datetime
 from penguindb.utils.content_processing_utils import (
     validate_field_types,
     prepare_data_for_dynamodb,
-    generate_content_with_llm
+    generate_content_with_llm,
+    generate_fallback_content
 )
 
 logger = logging.getLogger()
@@ -155,30 +156,37 @@ def lambda_handler(event, context):
                         description=body.get('description', ''),
                         tags=body.get('tags', ''),
                         logger=logger,
-                        timeout=120  # 2 minute timeout
+                        timeout=180  # Increase timeout to 3 minutes
                     )
 
+                    # NEW: Check if we got meaningful content from LLM
+                    if not llm_result.get('title') and not llm_result.get('tags'):
+                        raise ValueError("LLM returned empty content - cannot proceed")
+                        
                     body['generated_title'] = llm_result.get('title', '')
                     body['generated_description'] = llm_result.get('description', '')
                     body['generated_tags'] = llm_result.get('tags', [])
 
                     logger.info(f"SQS Worker - Generated content for {content_id}")
                     
-                    # Check if we got meaningful content from LLM
-                    has_content = bool(body['generated_title'] or body['generated_tags'])
-                    
                     # Track LLM success/failure
-                    if has_content:
-                        success_count += 1
-                    else:
-                        llm_error_count += 1
-                        
+                    success_count += 1
+                    
                 except Exception as llm_error:
                     logger.error(f"SQS Worker - LLM error for {content_id}: {str(llm_error)}")
-                    # Continue with empty content rather than failing
-                    body['generated_title'] = ''
-                    body['generated_description'] = ''
-                    body['generated_tags'] = []
+                    
+                    # NEW: Use fallback instead of empty values
+                    fallback_result = generate_fallback_content(
+                        content_type=body.get('content_type', ''),
+                        description=body.get('description', ''),
+                        tags=body.get('tags', ''),
+                        logger=logger
+                    )
+                    
+                    body['generated_title'] = fallback_result.get('title', '')
+                    body['generated_description'] = fallback_result.get('description', '')
+                    body['generated_tags'] = fallback_result.get('tags', [])
+                    body['used_fallback'] = True  # Flag to indicate fallback was used
                     
                     # Track LLM errors
                     llm_error_count += 1
