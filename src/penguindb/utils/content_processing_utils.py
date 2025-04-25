@@ -159,17 +159,18 @@ def prepare_data_for_dynamodb(item):
     
     return dynamodb_item
 
-def generate_content_with_llm(content_type, model, description, tags, logger, timeout=120, max_retries=3):
+def generate_content_with_llm(content_type, model, description, tags, logger, timeout=180, max_retries=10):
     """
-    Generate content using Claude LLM with timeout handling and exponential backoff.
+    Generate content using Claude LLM with aggressive timeout handling and persistent retries.
+    Will retry until successful or until max_retries is reached.
     
     Args:
         content_type: Type of content ('post', 'article', etc.)
         description: Original content description
         tags: Original tags (string or list)
         logger: Logger instance
-        timeout: Timeout in seconds
-        max_retries: Maximum number of retries for API rate limiting
+        timeout: Timeout in seconds for each attempt
+        max_retries: Maximum number of retry attempts for failure
     
     Returns:
         Dictionary with generated title, description, and tags
@@ -215,20 +216,21 @@ def generate_content_with_llm(content_type, model, description, tags, logger, ti
 
     Return as JSON with keys: title, description, tags (array of up to 10 strings)
     """
-
-    # Implement exponential backoff for API rate limiting
-    retry_count = 0
-    backoff_time = 2  # Start with 2 second backoff
+    
+    # Initialize empty result
     llm_result = {"title": "", "description": "", "tags": []}
     
-    while retry_count <= max_retries:
-        if retry_count > 0:
-            logger.info(f"Retrying LLM call (attempt {retry_count}/{max_retries}) after {backoff_time}s delay")
+    # PERSISTENT RETRY LOOP
+    for retry_attempt in range(max_retries):
+        # Calculate exponential backoff with some randomness
+        backoff_time = min(300, 2 ** retry_attempt + (retry_attempt * 5))  # Max 5 minute backoff
+        
+        # Log the retry attempt
+        if retry_attempt > 0:
+            logger.info(f"LLM RETRY ATTEMPT {retry_attempt}/{max_retries} after {backoff_time}s backoff")
             time.sleep(backoff_time)
-            # Exponential backoff: double the wait time for next retry
-            backoff_time *= 2
-            
-        # Run LLM call with timeout using threading
+        
+        # Thread variables
         llm_error = None
         thread_completed = False
         
@@ -245,50 +247,48 @@ def generate_content_with_llm(content_type, model, description, tags, logger, ti
                 if "error" in response:
                     error_msg = response.get('error', '')
                     logger.warning(f"LLM response contained an error: {error_msg}")
-                    
-                    # Check if this is a rate limit error
-                    if 'rate' in error_msg.lower() or 'limit' in error_msg.lower() or 'too many' in error_msg.lower():
-                        logger.warning("Detected rate limiting error, will retry with backoff")
-                        llm_error = "RATE_LIMITED"
-                    else:
-                        # Other API error
-                        if "raw_response" in response:
-                            logger.info(f"Raw LLM response: {response.get('raw_response')}")
-                        llm_error = error_msg
+                    llm_error = error_msg
                     return
                     
+                # Check for valid content in response
+                if not response.get('title') or not response.get('tags'):
+                    logger.warning(f"LLM returned incomplete data: {json.dumps(response)}")
+                    llm_error = "Incomplete LLM response"
+                    return
+                
+                # Success path
                 llm_result.update(response)
                 thread_completed = True
+                
             except Exception as e:
                 llm_error = str(e)
                 logger.error(f"Error in LLM thread: {llm_error}")
 
         # Run in thread with timeout
         llm_thread = threading.Thread(target=_generate_llm_content_thread)
+        llm_thread.daemon = True  # Allow thread to be killed when lambda exits
         llm_thread.start()
         llm_thread.join(timeout=timeout)
 
-        # Handle timeout and results
+        # Check for timeout
         if llm_thread.is_alive():
-            logger.warning(f"LLM generation timed out after {timeout} seconds")
-            # Thread is still running but we're moving on
-            break
-            
-        if thread_completed:
-            # Success! Break out of retry loop
-            break
-            
-        if llm_error == "RATE_LIMITED" and retry_count < max_retries:
-            # Special case for rate limiting - we'll retry
-            retry_count += 1
+            logger.warning(f"LLM generation timed out after {timeout} seconds on attempt {retry_attempt+1}")
+            # Continue to next retry
             continue
-        elif llm_error:
-            logger.error(f"LLM generation error: {llm_error}")
-            # For non-rate-limiting errors, don't retry
+            
+        # Check for success
+        if thread_completed and llm_result.get('title') and llm_result.get('tags'):
+            logger.info(f"LLM generation successful on attempt {retry_attempt+1}")
             break
             
-        # If we got here without either success or a specific error, break the loop
-        break
+        # If we got here, the thread completed but with errors or empty results
+        logger.warning(f"LLM attempt {retry_attempt+1} failed: {llm_error or 'Unknown error'}")
+        # Continue to next retry
+    
+    # Check if we have valid content after all retries
+    if not llm_result.get('title') or not llm_result.get('tags'):
+        logger.error(f"LLM generation failed after {max_retries} attempts")
+        raise ValueError(f"Failed to generate content with LLM after {max_retries} attempts")
     
     # Ensure tags is a list
     if 'tags' in llm_result and not isinstance(llm_result['tags'], list):

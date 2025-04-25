@@ -10,7 +10,6 @@ from penguindb.utils.content_processing_utils import (
     validate_field_types,
     prepare_data_for_dynamodb,
     generate_content_with_llm,
-    generate_fallback_content
 )
 
 logger = logging.getLogger()
@@ -82,7 +81,6 @@ def lambda_handler(event, context):
         # Track processing stats
         record_count = len(event.get('Records', []))
         success_count = 0
-        llm_error_count = 0
         db_error_count = 0
         
         # Calculate time limit per record to prevent timeout
@@ -147,49 +145,34 @@ def lambda_handler(event, context):
                 # body['processed_by'] = context.function_name
                 body['processed_at'] = datetime.now().isoformat()
 
-                # Generate content with LLM
                 try:
-                    # Pass logger to the utility function
+                    # Use persistent retries in the LLM function
                     llm_result = generate_content_with_llm(
                         content_type=body.get('content_type', ''),
                         model=LLM_MODEL,
                         description=body.get('description', ''),
                         tags=body.get('tags', ''),
                         logger=logger,
-                        timeout=180  # Increase timeout to 3 minutes
+                        timeout=240,        # Increase timeout to 4 minutes per attempt
+                        max_retries=15      # Up to 15 retries (could take a while but will persist)
                     )
-
-                    # NEW: Check if we got meaningful content from LLM
-                    if not llm_result.get('title') and not llm_result.get('tags'):
-                        raise ValueError("LLM returned empty content - cannot proceed")
-                        
+                    
+                    # Will only reach here if LLM succeeded
                     body['generated_title'] = llm_result.get('title', '')
                     body['generated_description'] = llm_result.get('description', '')
                     body['generated_tags'] = llm_result.get('tags', [])
-
-                    logger.info(f"SQS Worker - Generated content for {content_id}")
+                    # body['llm_retries'] = llm_result.get('retry_count', 0)  # Track retries
                     
-                    # Track LLM success/failure
+                    logger.info(f"SQS Worker - Successfully generated content for {content_id}")
                     success_count += 1
                     
                 except Exception as llm_error:
-                    logger.error(f"SQS Worker - LLM error for {content_id}: {str(llm_error)}")
+                    # Log the error and re-raise to trigger SQS retry
+                    logger.error(f"SQS Worker - All LLM retries failed for {content_id}: {str(llm_error)}")
+                    logger.error(traceback.format_exc())
                     
-                    # NEW: Use fallback instead of empty values
-                    fallback_result = generate_fallback_content(
-                        content_type=body.get('content_type', ''),
-                        description=body.get('description', ''),
-                        tags=body.get('tags', ''),
-                        logger=logger
-                    )
-                    
-                    body['generated_title'] = fallback_result.get('title', '')
-                    body['generated_description'] = fallback_result.get('description', '')
-                    body['generated_tags'] = fallback_result.get('tags', [])
-                    body['used_fallback'] = True  # Flag to indicate fallback was used
-                    
-                    # Track LLM errors
-                    llm_error_count += 1
+                    # Don't proceed to DynamoDB - throw error to trigger SQS retry of entire message
+                    raise ValueError(f"Failed to generate content with LLM after multiple attempts: {str(llm_error)}")
 
                 # Prepare and store data in DynamoDB
                 try:
