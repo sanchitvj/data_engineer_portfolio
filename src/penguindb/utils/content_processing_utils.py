@@ -181,9 +181,17 @@ def generate_content_with_llm(content_type, model, description, tags, logger, ti
         tags_str = tags or ""
 
     # Adjust word count based on content type
-    word_count = "10-15" if content_type.lower() == "post" else "15-20"
+    if content_type.lower() == "post":
+        desc_word_count = "10-15"
+    elif content_type.lower() == "article":
+        desc_word_count = "15-20"
+    elif content_type.lower() == "youtube":
+        desc_word_count = "7-10"
+    else:
+        desc_word_count = "20-25"
+
+    title_word_count = "3-4" if content_type.lower() == "youtube" else "3-6"
     
-    # Create prompt for LLM
     prompt = f"""
     Content Type: {content_type}
     My Draft: {description}
@@ -191,11 +199,11 @@ def generate_content_with_llm(content_type, model, description, tags, logger, ti
 
     Hey, help me refine this {content_type} I'm working on. I need:
 
-    1. An attention-grabbing title (3-6 words) - something that would make YOU want to click. Be intriguing but not clickbaity and not daramatic.
+    1. An attention-grabbing title ({title_word_count} words) - something that would make YOU want to click. Be intriguing but not clickbaity and not daramatic.
 
-    2. A punchy description (around {word_count} words) that sounds like a real person wrote it - conversational, occasionally using "I" statements, and avoiding perfectionist language or overly formal structure.
+    2. A punchy description (around {desc_word_count} words) that sounds like a real person wrote it - conversational, occasionally using "I" statements, and avoiding perfectionist language or overly formal structure.
 
-    3. Exactly 4 tags that would help this content reach the right audience - focus on data engineering concepts, cloud technologies, or specific tools mentioned in the content. Avoid generic tech terms like "software-dev" or irrelevant fields like "machine-learning" unless directly addressed.
+    3. Generate up to 10 relevant tags that comprehensively cover all key technical concepts, tools, and topics mentioned in my description. Extract specific technologies, methodologies, platforms, and concepts that would make excellent search terms. Prioritize specific technical terms (like "Apache Airflow", "AWS Glue", "data lake") over generic categories ("tool", "cloud", "storage"). Ensure each tag directly relates to content in the description.
 
     Style guidelines:
     - For content tagged with "humor" or where humor is explicitly requested: Use my conversational style with witty elements and occasional wordplay.
@@ -205,7 +213,7 @@ def generate_content_with_llm(content_type, model, description, tags, logger, ti
 
     My writing style is straightforward with clear technical explanations. I prefer active voice and concrete examples over abstract concepts. I sometimes use short sentences for emphasis.
 
-    Return as JSON with keys: title, description, tags (array of 4 strings)
+    Return as JSON with keys: title, description, tags (array of up to 10 strings)
     """
 
     # Implement exponential backoff for API rate limiting

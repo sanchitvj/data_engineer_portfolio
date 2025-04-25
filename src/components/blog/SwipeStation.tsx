@@ -277,18 +277,45 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
   };
 
   return (
-    <div className={`mb-12 ${className}`}>
-      <div className="flex justify-between items-center mb-5">
-        <h3 className="text-xl font-bold text-white">{title}</h3>
-        
-        {/* Show pagination indicator if there are posts */}
-        {totalItems > 0 && (
-          <div className="ml-auto px-2 py-0.5 rounded-full bg-dark-300/40 backdrop-blur-sm border border-data/10">
-            <span className="text-xs font-medium text-data">
-              {getRightmostVisibleCard()}/{totalItems}
-            </span>
-          </div>
-        )}
+    <section className={`relative w-full ${className}`}>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-bold text-white">{title}</h2>
+        <div className="flex items-center space-x-3">
+          {/* Show pagination indicator if there are posts */}
+          {totalItems > 0 && (
+            <div className="px-2 py-0.5 rounded-full bg-dark-300/40 backdrop-blur-sm border border-data/10">
+              <span className="text-xs font-medium text-data">
+                {getRightmostVisibleCard()}/{totalItems}
+              </span>
+            </div>
+          )}
+          
+          {/* Hide navigation buttons on mobile */}
+          {!isMobile && (
+            <>
+              <button
+                onClick={handlePrev}
+                disabled={currentIndex === 0}
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
+                  currentIndex === 0 ? 'bg-dark-300/40 text-gray-500 cursor-not-allowed' : 'bg-dark-300/40 hover:bg-data/20 text-gray-300 hover:text-data'
+                }`}
+                aria-label="Previous slides"
+              >
+                <FaChevronLeft className="w-3 h-3" />
+              </button>
+              <button
+                onClick={handleNext}
+                disabled={currentIndex >= maxIndex}
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
+                  currentIndex >= maxIndex ? 'bg-dark-300/40 text-gray-500 cursor-not-allowed' : 'bg-dark-300/40 hover:bg-data/20 text-gray-300 hover:text-data'
+                }`}
+                aria-label="Next slides"
+              >
+                <FaChevronRight className="w-3 h-3" />
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <div 
@@ -383,23 +410,25 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
           )}
         </AnimatePresence>
 
-        {/* Progress Indicators */}
-        <div className="flex justify-center mt-4 gap-1.5">
-          {Array.from({ length: Math.ceil(totalItems / responsiveVisibleCards) }).map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setCurrentIndex(Math.min(i * responsiveVisibleCards, maxIndex))}
-              className={`w-2 h-2 rounded-full transition-all ${
-                i === Math.floor(currentIndex / responsiveVisibleCards)
-                  ? 'bg-data w-4'
-                  : 'bg-gray-600 hover:bg-gray-500'
-              }`}
-              aria-label={`Go to slide group ${i + 1}`}
-            />
-          ))}
-        </div>
+        {/* Progress Indicators - hide on mobile */}
+        {!isMobile && (
+          <div className="flex justify-center mt-4 gap-1.5">
+            {Array.from({ length: Math.ceil(totalItems / responsiveVisibleCards) }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentIndex(Math.min(i * responsiveVisibleCards, maxIndex))}
+                className={`w-2 h-2 rounded-full transition-all ${
+                  i === Math.floor(currentIndex / responsiveVisibleCards)
+                    ? 'bg-data w-4'
+                    : 'bg-gray-600 hover:bg-gray-500'
+                }`}
+                aria-label={`Go to slide group ${i + 1}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
-    </div>
+    </section>
   );
 };
 

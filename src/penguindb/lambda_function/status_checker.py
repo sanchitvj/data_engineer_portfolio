@@ -12,7 +12,7 @@ import random
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME', 'content_data')
+DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME', 'content_data_test')
 GOOGLE_SHEET_URL = os.environ.get('GOOGLE_SHEET_URL')
 
 dynamodb = boto3.resource('dynamodb')

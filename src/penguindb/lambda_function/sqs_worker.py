@@ -15,7 +15,7 @@ from penguindb.utils.content_processing_utils import (
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME', 'content_data')
+DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME', 'content_data_test')
 LLM_MODEL = os.environ.get('LLM_MODEL', 'us.anthropic.claude-3-5-haiku-20241022-v1:0')
 
 dynamodb = boto3.resource('dynamodb')
