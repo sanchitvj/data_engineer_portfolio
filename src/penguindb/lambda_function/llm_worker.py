@@ -150,6 +150,17 @@ def lambda_handler(event, context):
                 # --- Update DynamoDB with Generated Content ---
                 if llm_result:
                     try:
+                        # Print content_id details for debugging
+                        logger.info(f"Content ID type: {type(content_id)}, Value: {content_id}")
+                        
+                        # Debug the table schema
+                        try:
+                            table_info = dynamodb.meta.client.describe_table(TableName=DYNAMODB_TABLE_NAME)
+                            key_schema = table_info['Table']['KeySchema']
+                            logger.info(f"Table key schema: {json.dumps(key_schema)}")
+                        except Exception as e:
+                            logger.error(f"Failed to get table schema: {str(e)}")
+                        
                         update_expression_parts = []
                         expression_attribute_values = {}
                         expression_attribute_names = {} # Needed if using reserved words
