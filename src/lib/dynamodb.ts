@@ -16,7 +16,7 @@ const client = new DynamoDBClient({
 const docClient = DynamoDBDocumentClient.from(client);
 
 // Table name for content data
-const CONTENT_TABLE = process.env.DYNAMODB_TABLE_NAME || 'content_data';
+const CONTENT_TABLE = process.env.DYNAMODB_TABLE_NAME || 'content_data_test';
 
 /**
  * Fetch all content items from DynamoDB

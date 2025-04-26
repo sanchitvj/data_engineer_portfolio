@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
         thumbnail: thumbnailUrl || '',
         author: {
           name: 'Sanchit Vijay',
-          avatar: '/images/profile.jpeg'
+          avatar: '/images/penguindn_main_logo.png'
         },
         featured: false,
         readTime: '3 min read',
