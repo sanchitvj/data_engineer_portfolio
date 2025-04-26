@@ -115,7 +115,8 @@ def lambda_handler(event, context):
 
             # --- Prepare Raw Data for DynamoDB ---
             initial_item_data = {}
-            excluded_fields = ['generated_title', 'generated_description', 'generated_tags', 'llm_retries', 'used_fallback']
+            # Add 'status' and 'timestamp' to excluded fields since they're unnecessary
+            excluded_fields = ['generated_title', 'generated_description', 'generated_tags', 'llm_retries', 'used_fallback', 'status', 'timestamp']
             for key, value in body.items():
                  # Skip excluded fields and None/empty strings
                  if key not in excluded_fields and value is not None and value != '':

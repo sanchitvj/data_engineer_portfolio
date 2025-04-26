@@ -1,4 +1,4 @@
-# src/penguindb/lambda_function/llm_worker_lambda.py
+# src/penguindb/lambda_function/llm_worker.py
 import json
 import boto3
 import os
@@ -6,6 +6,9 @@ import logging
 import traceback
 from datetime import datetime
 import requests
+import time
+import threading
+import queue
 
 from penguindb.utils.content_processing_utils import (
     generate_content_with_llm,
@@ -22,6 +25,9 @@ GOOGLE_SHEET_URL = os.environ.get('GOOGLE_SHEET_URL') # Needed for final status 
 # AWS Clients
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(DYNAMODB_TABLE_NAME)
+
+# Queue for async sheet updates
+sheet_update_queue = queue.Queue()
 
 # --- Reusable Sheet Update Logic (Adapted from status_checker.py) ---
 def update_sheet_final_status(content_id, status, llm_result=None, error_message=None):
@@ -71,7 +77,70 @@ def update_sheet_final_status(content_id, status, llm_result=None, error_message
     except Exception as e:
         logger.error(f"Error updating sheet to {status} for {content_id}: {str(e)}")
         return False
-# --- End Sheet Update Logic ---
+
+def update_sheet_with_retry(content_id, status, llm_result=None, error_message=None, max_retries=3):
+    """Updates sheet status with retries and exponential backoff."""
+    for attempt in range(max_retries):
+        try:
+            success = update_sheet_final_status(content_id, status, llm_result, error_message)
+            if success:
+                return True
+            time.sleep(2 ** attempt)  # Exponential backoff: 1, 2, 4 seconds
+        except Exception as e:
+            logger.warning(f"Sheet update attempt {attempt+1} failed for {content_id}: {str(e)}")
+    
+    logger.error(f"All {max_retries} attempts to update sheet for {content_id} failed")
+    return False
+
+def async_sheet_update(content_id, status, llm_result=None, error_message=None):
+    """Queue a sheet status update to be performed asynchronously."""
+    if not GOOGLE_SHEET_URL:
+        return
+    
+    # Add update request to queue
+    sheet_update_queue.put({
+        'content_id': content_id,
+        'status': status,
+        'llm_result': llm_result,
+        'error_message': error_message,
+        'timestamp': datetime.now().isoformat()
+    })
+    
+    # Start update thread if not already running
+    update_thread = threading.Thread(target=process_sheet_updates)
+    update_thread.daemon = True
+    update_thread.start()
+    
+    logger.info(f"Queued sheet update for {content_id} with status {status}")
+
+def process_sheet_updates():
+    """Process queued sheet updates in background thread."""
+    try:
+        while not sheet_update_queue.empty():
+            try:
+                update = sheet_update_queue.get(block=False)
+                logger.info(f"Processing queued sheet update for {update['content_id']}")
+                
+                success = update_sheet_with_retry(
+                    update['content_id'],
+                    update['status'],
+                    update.get('llm_result'),
+                    update.get('error_message')
+                )
+                
+                if success:
+                    logger.info(f"Async sheet update succeeded for {update['content_id']}")
+                else:
+                    logger.warning(f"Async sheet update failed for {update['content_id']} after retries")
+                
+                sheet_update_queue.task_done()
+            except queue.Empty:
+                break
+            except Exception as e:
+                logger.error(f"Error in sheet update thread: {str(e)}")
+                # Continue processing other updates
+    except Exception as e:
+        logger.error(f"Fatal error in sheet update thread: {str(e)}")
 
 def dynamodb_to_dict(dynamodb_item):
     """Converts a DynamoDB item (low-level format) to a standard Python dict."""
@@ -113,8 +182,9 @@ def lambda_handler(event, context):
                 if not raw_item.get('content_type'):
                     logger.error(f"Missing content_type for {content_id} - cannot update record with composite key")
                     if GOOGLE_SHEET_URL:
-                        update_sheet_final_status(content_id, 'DB_UPDATE_ERROR', 
-                                                 error_message="Missing content_type for composite key")
+                        # Use async update with retry for sheet error
+                        async_sheet_update(content_id, 'DB_UPDATE_ERROR', 
+                                          error_message="Missing content_type for composite key")
                     continue
 
                 logger.info(f"Processing content_id: {content_id} from stream")
@@ -124,7 +194,9 @@ def lambda_handler(event, context):
                      logger.info(f"LLM fields already exist for {content_id}, skipping LLM generation.")
                      # Optionally, ensure sheet status is correct
                      if GOOGLE_SHEET_URL:
-                         update_sheet_final_status(content_id, 'PROCESSED', {'title': raw_item.get('generated_title'), 'tags': raw_item.get('generated_tags')})
+                         # Use async update with retry for existing item
+                         async_sheet_update(content_id, 'PROCESSED', 
+                                          {'title': raw_item.get('generated_title'), 'tags': raw_item.get('generated_tags')})
                      continue
 
 
@@ -148,7 +220,8 @@ def lambda_handler(event, context):
                     logger.error(f"LLM Worker - {llm_error_message} for {content_id}")
                     # Update sheet status to LLM_ERROR
                     if GOOGLE_SHEET_URL:
-                         update_sheet_final_status(content_id, 'LLM_ERROR', error_message=llm_error_message)
+                         # Use async update with retry for LLM error
+                         async_sheet_update(content_id, 'LLM_ERROR', error_message=llm_error_message)
                     # We will let this record fail, potentially triggering DLQ
                     raise llm_error # Re-raise to indicate failure for this record
                 # --- End LLM Call ---
@@ -177,7 +250,6 @@ def lambda_handler(event, context):
                             'generated_description': llm_result.get('description'),
                             'generated_tags': llm_result.get('tags'),
                             'llm_processed_at': datetime.now().isoformat(),
-                            # 'llm_model_used': LLM_MODEL,
                             'llm_retries_used': llm_result.get('retry_count', 0)
                         }
 
@@ -211,21 +283,26 @@ def lambda_handler(event, context):
 
                             # --- Update Google Sheet Status to PROCESSED ---
                             if GOOGLE_SHEET_URL:
-                                 update_sheet_final_status(content_id, 'PROCESSED', llm_result)
+                                 # Use async update with retry for successful processing
+                                 async_sheet_update(content_id, 'PROCESSED', llm_result)
                             # --- End Sheet Update ---
 
                         else:
                              logger.warning(f"No valid generated fields to update for {content_id}")
                              # Update sheet to error? Or leave as INGESTED? Let's mark error
                              if GOOGLE_SHEET_URL:
-                                 update_sheet_final_status(content_id, 'LLM_ERROR', error_message="LLM returned no valid fields")
+                                 # Use async update with retry for no valid fields
+                                 async_sheet_update(content_id, 'LLM_ERROR', 
+                                                  error_message="LLM returned no valid fields")
 
                     except Exception as db_update_error:
                         logger.error(f"Error updating DynamoDB for {content_id}: {str(db_update_error)}")
                         logger.error(traceback.format_exc())
                         # Update sheet to indicate DB update error
                         if GOOGLE_SHEET_URL:
-                             update_sheet_final_status(content_id, 'DB_UPDATE_ERROR', error_message=str(db_update_error))
+                             # Use async update with retry for DB error
+                             async_sheet_update(content_id, 'DB_UPDATE_ERROR', 
+                                              error_message=str(db_update_error))
                         # Let this record fail
                         raise db_update_error
                 # --- End DynamoDB Update ---
@@ -239,6 +316,15 @@ def lambda_handler(event, context):
              if sequence_number:
                   failed_record_sequences.append(sequence_number)
              # Continue processing other records in the batch if possible
+
+    # --- Process any remaining sheet updates ---
+    try:
+        remaining_updates = sheet_update_queue.qsize()
+        if remaining_updates > 0:
+            logger.info(f"Processing {remaining_updates} remaining sheet updates")
+            process_sheet_updates()
+    except Exception as e:
+        logger.error(f"Error processing remaining sheet updates: {str(e)}")
 
     # --- Handle Batch Failures (Optional but Recommended) ---
     # If using Lambda event source mapping with 'ReportBatchItemFailures: True'

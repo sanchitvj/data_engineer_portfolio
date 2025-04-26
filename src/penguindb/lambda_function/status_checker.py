@@ -128,10 +128,13 @@ def update_google_sheet(content_id, dynamo_item):
             logger.error("GOOGLE_SHEET_URL environment variable not set")
             return False
             
-        # Prepare update data
+        # Prepare update data - Remove reference to dynamo_item.get('status', 'ERROR')
+        # Instead determine status based on presence of generated fields
+        sheet_status = 'PROCESSED' if dynamo_item.get('generated_title') else 'ERROR'
+        
         update_data = {
             'content_id': content_id,
-            'status': dynamo_item.get('status', 'ERROR'),
+            'status': sheet_status,
             'last_updated': datetime.now().isoformat()
         }
         
@@ -519,7 +522,7 @@ def send_status_update(content_id, status, db_item=None):
                 if response_data.get('status') == 'success':
                     logger.info(f"Status update successful for {content_id}")
                     
-                    # Update DynamoDB item to mark as reported to sheet
+                    # Update DynamoDB to mark as reported to sheet (removing status field)
                     try:
                         table.update_item(
                             Key={'content_id': content_id},
