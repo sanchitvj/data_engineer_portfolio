@@ -92,10 +92,10 @@ def lambda_handler(event, context):
         sequence_number = record.get('dynamodb', {}).get('SequenceNumber')
         try:
             # --- Process Stream Record ---
-            if record.get('eventName') == 'INSERT': # Only process new items
+            if record.get('eventName') in ['INSERT', 'MODIFY']: # Only process new or modified items
                 new_image = record.get('dynamodb', {}).get('NewImage')
                 if not new_image:
-                    logger.warning("No NewImage found in INSERT record, skipping.")
+                    logger.warning("No NewImage found in INSERT or MODIFY record, skipping.")
                     continue
 
                 # Convert DynamoDB format to Python dict
