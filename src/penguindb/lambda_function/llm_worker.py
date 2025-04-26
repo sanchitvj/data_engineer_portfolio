@@ -102,6 +102,10 @@ def lambda_handler(event, context):
                 raw_item = dynamodb_to_dict(new_image)
                 content_id = raw_item.get('content_id')
 
+                # ENSURE content_id is a string here
+                if content_id is not None and not isinstance(content_id, str):
+                    content_id = str(content_id)
+
                 if not content_id:
                     logger.error(f"Missing content_id in DynamoDB stream record: {json.dumps(raw_item)}")
                     continue
@@ -155,7 +159,7 @@ def lambda_handler(event, context):
                             'generated_description': llm_result.get('description'),
                             'generated_tags': llm_result.get('tags'),
                             'llm_processed_at': datetime.now().isoformat(),
-                            'llm_model_used': LLM_MODEL,
+                            # 'llm_model_used': LLM_MODEL,
                             'llm_retries_used': llm_result.get('retry_count', 0)
                         }
 
