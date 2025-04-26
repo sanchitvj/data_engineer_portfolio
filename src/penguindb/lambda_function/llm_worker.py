@@ -110,6 +110,13 @@ def lambda_handler(event, context):
                     logger.error(f"Missing content_id in DynamoDB stream record: {json.dumps(raw_item)}")
                     continue
 
+                if not raw_item.get('content_type'):
+                    logger.error(f"Missing content_type for {content_id} - cannot update record with composite key")
+                    if GOOGLE_SHEET_URL:
+                        update_sheet_final_status(content_id, 'DB_UPDATE_ERROR', 
+                                                 error_message="Missing content_type for composite key")
+                    continue
+
                 logger.info(f"Processing content_id: {content_id} from stream")
 
                 # Check if LLM fields already exist (e.g., from a previous partial run)
@@ -192,7 +199,10 @@ def lambda_handler(event, context):
                             # logger.debug(f"ExpressionAttributeNames: {json.dumps(expression_attribute_names)}")
 
                             table.update_item(
-                                Key={'content_id': content_id},
+                                Key={
+                                    'content_id': content_id,
+                                    'content_type': raw_item.get('content_type', '')  # Get content_type from raw_item
+                                },
                                 UpdateExpression=update_expression,
                                 ExpressionAttributeValues=expression_attribute_values,
                                 ExpressionAttributeNames=expression_attribute_names
