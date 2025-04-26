@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAllContentItems } from '@/lib/dynamodb';
 import { BlogPost } from '@/types/blog';
 
+// Force this route to be dynamically rendered
+export const dynamic = 'force-dynamic';
+
 /**
  * Parse DynamoDB StringSet format to regular array
  */
@@ -131,7 +134,7 @@ export async function GET(request: NextRequest) {
         type,
         link: item.url || item.embed_link || '',
         url: item.url || '',
-        image: type === 'youtube-video' ? thumbnailUrl : mediaLink || '/images/blog/placeholder.jpg',
+        image: type === 'youtube-video' ? thumbnailUrl : mediaLink || '/images/oops_penguin.png',
         thumbnail: thumbnailUrl || '',
         author: {
           name: 'Sanchit Vijay',

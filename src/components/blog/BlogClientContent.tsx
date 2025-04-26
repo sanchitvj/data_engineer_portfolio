@@ -1,14 +1,15 @@
 'use client'; // Mark this as a Client Component
 
-import React, { useState, useEffect, useRef, Suspense, useMemo, useCallback, CSSProperties } from 'react';
+import React, { useState, useEffect, useRef, Suspense, useMemo, useCallback, CSSProperties, Dispatch, SetStateAction, RefObject } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { FaSearch, FaFilter, FaStar, FaTimes, FaExternalLinkAlt, FaChevronLeft, FaChevronRight, FaChevronDown, FaMicroscope, FaNewspaper, FaPlay } from 'react-icons/fa';
+import { FaSearch, FaStar, FaExternalLinkAlt, FaChevronRight, FaMicroscope, FaNewspaper, FaPlay, FaExpandAlt } from 'react-icons/fa';
 import { X } from 'lucide-react';
 import { BlogPost } from '@/types/blog'; // Keep BlogPost type
 import LazyComponent from '@/components/blog/LazyComponent';
+import { formatTagDisplayName } from '@/components/blog/SearchModal';
 
 // Debounce utility function
 const debounce = <T extends (...args: any[]) => any>(
@@ -59,7 +60,17 @@ const BlogIcebergBackground = dynamic(() => import('@/components/blog/BlogIceber
 });
 
 // Lazy load SwipeStation with loading fallback
-const SwipeStation = dynamic(() => import('@/components/blog/SwipeStation'), {
+const SwipeStation = dynamic<{
+  title: string;
+  posts: BlogPost[];
+  visibleCards: number;
+  renderCard: (post: BlogPost, index: number, isLoading?: boolean) => React.ReactNode;
+  onLastSlideReached?: () => void;
+  totalPostCount?: number;
+  currentIndex?: number;
+  onIndexChange?: (index: number) => void;
+  className?: string;
+}>(() => import('@/components/blog/SwipeStation'), {
   loading: () => (
     <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-8 flex items-center justify-center">
       <div className="text-gray-500">Loading station...</div>
@@ -70,15 +81,15 @@ const SwipeStation = dynamic(() => import('@/components/blog/SwipeStation'), {
 // Lazy load the search modal component
 const SearchModal = dynamic<{
   searchQuery: string;
-  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
+  setSearchQuery: Dispatch<SetStateAction<string>>;
   activeFilter: string;
   activeSearchTerms: string[];
   blogCategories: { id: string; label: string }[];
-  searchInputRef: React.RefObject<HTMLInputElement>;
+  searchInputRef: RefObject<HTMLInputElement>;
   showSuggestions: boolean;
-  setShowSuggestions: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowSuggestions: Dispatch<SetStateAction<boolean>>;
   searchSuggestions: { value: string; display: string; type: string }[];
-  suggestionsRef: React.RefObject<(HTMLButtonElement | null)[]>;
+  suggestionsRef: RefObject<(HTMLButtonElement | null)[]>;
   focusedSuggestionIndex: number;
   handleSearchEnter: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   handleFilterButtonClick: (categoryId: string) => void;
@@ -86,14 +97,14 @@ const SearchModal = dynamic<{
   removeSearchTerm: (termToRemove: string) => void;
   resetAllFilters: () => void;
   showSearchModal: boolean;
-  setShowSearchModal: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowSearchModal: Dispatch<SetStateAction<boolean>>;
   handleSearchInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   searchDisabled?: boolean;
   showSearchDisabledMessage?: boolean;
-  setShowSearchDisabledMessage?: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowSearchDisabledMessage?: Dispatch<SetStateAction<boolean>>;
 }>(() => import('@/components/blog/SearchModal'), {
-  loading: () => null,
   ssr: false,
+  loading: () => null,
 });
 
 // Define the props type expected from the Server Component
@@ -243,11 +254,14 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
   const [isLinkedInIframeFolded, setIsLinkedInIframeFolded] = useState(true); // Start folded
   const [showModal, setShowModal] = useState(false);
   const [modalContent, setModalContent] = useState<{ 
-    type: string; 
+    type: 'embed' | 'no-embed' | 'article'; 
     title: string; 
     content: string; 
     link?: string; 
-    date?: string; 
+    date?: string;
+    mediaLinks?: string | string[]; 
+    postIndex?: number; // Add post index to remember position
+    stationType?: string; // Add station type to remember context
   } | null>(null);
   const [showSearchDisabledMessage, setShowSearchDisabledMessage] = useState(false);
   
@@ -255,6 +269,13 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
   const [loadingPosts, setLoadingPosts] = useState<Record<string, boolean>>({});
   const [hasMorePosts, setHasMorePosts] = useState<Record<string, boolean>>({});
   const [loadedPostsByType, setLoadedPostsByType] = useState<Record<string, number>>({});
+  
+  // First, update the state management - add a state to track if a modal is being opened
+  // to prevent SwipeStation from resetting
+  const [preventSwipeReset, setPreventSwipeReset] = useState(false);
+  
+  // Add state to track current index for each SwipeStation type
+  const [stationIndexes, setStationIndexes] = useState<Record<string, number>>({});
   
   // Detect device size to determine initial loading limits
   const getPostsLimit = useCallback((type: string) => {
@@ -440,18 +461,13 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
       'humor', 'data_engineering', 'open_source', 'ai', 'learning', 'achievement'
     ];
     
-    // Map display names for special cases
-    const keywordDisplayMap: { [key: string]: string } = {
-      'data_engineering': 'Data Engineering',
-    };
-    
     // Filter keywords by prefix (very efficient operation)
     const prefixSuggestions = fixedKeywords
       .filter(keyword => keyword.toLowerCase().startsWith(query))
       .filter(keyword => !currentActiveTermsLower.includes(keyword.toLowerCase()))
       .map(keyword => ({ 
         value: keyword, 
-        display: keywordDisplayMap[keyword] || keyword, 
+        display: formatTagDisplayName(keyword),
         type: 'keyword' as const 
       }))
       .slice(0, 3); // Limit to top 3 matching keywords
@@ -727,6 +743,8 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
       if (e.key === 'Escape' && showModal) {
         setShowModal(false);
         setModalContent(null);
+        // After modal closes, allow swipe reset on next data change
+        setTimeout(() => setPreventSwipeReset(false), 300);
       }
     };
 
@@ -734,7 +752,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [showModal]);
 
-  // Modify the SwipeStation rendering to add loading triggers and handle on swipe load more
+  // Update the renderSwipeStation function to preserve currentIndex
   const renderSwipeStation = useCallback((type: string, title: string, visibleCards: number, renderCard: any) => {
     // Get unique posts of this type by filtering by ID
     const postsOfType = filteredPosts
@@ -746,6 +764,9 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
       
     const isLoading = loadingPosts[type] || false;
     const hasMore = hasMorePosts[type] && postsOfType.length < (postCounts[type] || 0);
+    
+    // Get the current index for this station type
+    const currentIndex = stationIndexes[type] || 0;
     
     // Update the total count to reflect the actual number of posts after filtering
     // If no filter is applied, use the postCounts, otherwise use the filtered count
@@ -780,27 +801,36 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
     
     // Add debug logging in development
     if (process.env.NODE_ENV === 'development') {
-      console.log(`Rendering ${type} swipe station with ${displayPosts.length} posts`);
-      console.log(`Post IDs: ${displayPosts.map(p => p.id).join(', ')}`);
-      console.log(`Total count for ${type}: ${totalPosts} (filtered: ${postsOfType.length}, original: ${postCounts[type] || 0})`);
+      console.log(`Rendering ${type} swipe station with ${displayPosts.length} posts, currentIndex=${currentIndex}`);
     }
     
-    // Enhanced onLastSlideReached handler that specifically handles edge cases for LOL Hub and LinkedIn Articles
-    const handleLastSlideReached = () => {
-      // Only load more if we're showing unfiltered results
+    // Handle index change callback from SwipeStation
+    const handleIndexChange = (newIndex: number) => {
+      setStationIndexes(prev => ({
+        ...prev,
+        [type]: newIndex
+      }));
+      
+      // Enhanced onLastSlideReached handler that specifically handles edge cases for LOL Hub and LinkedIn Articles
+      // Only load more if we're showing unfiltered results and near the end
       if (activeFilter === 'all' && activeSearchTerms.length === 0) {
-        // Always check if we have more to load
-        if (hasMore && !isLoading) {
-          console.log(`Last slide reached for ${type}, loading more...`);
+        const maxIndex = Math.max(0, totalPosts - visibleCards);
+        if (newIndex >= maxIndex - 1 && hasMore && !isLoading) {
+          console.log(`Near last slide for ${type}, loading more...`);
           handleLoadMoreForType(type);
-          
-          // For troublesome sections, force a re-render after a small delay
-          if (type === 'quick-note' || type === 'research-report') {
-            setTimeout(() => {
-              setSearchStateKey(prev => prev + 1);
-            }, 100);
-          }
         }
+      }
+    };
+    
+    // Map content types to section IDs as defined in MainLayout.tsx
+    const getSectionId = (contentType: string) => {
+      switch(contentType) {
+        case 'youtube-video': return 'youtube-videos';
+        case 'linkedin-post': return 'linkedin-posts';
+        case 'quick-note': return 'lol-hub';
+        case 'research-report': return 'linkedin-articles';
+        case 'comprehensive-study': return 'substack-unpacked';
+        default: return contentType;
       }
     };
     
@@ -812,13 +842,20 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
           </div>
         }
       >
-        <div className="mb-12" id={type.replace('-', '-')}>
+        <div className="mb-12 section-container" id={getSectionId(type)} data-type={type}>
+          <h2 id={`${getSectionId(type)}-title`} className="sr-only">{title}</h2>
           <SwipeStation 
-            key={`${type}-${searchStateKey}-${displayPosts.length}`} // Extra key to force re-render when posts change
+            key={`${type}-${searchStateKey}`} // No need for the posts.length anymore
             title={title} 
             posts={displayPosts} 
             visibleCards={visibleCards}
-            onLastSlideReached={handleLastSlideReached} 
+            currentIndex={currentIndex} // Pass the controlled index
+            onIndexChange={handleIndexChange} // Handle index changes
+            onLastSlideReached={() => {
+              if (hasMore && !isLoading) {
+                handleLoadMoreForType(type);
+              }
+            }}
             renderCard={(post, index) => {
               // If this is a placeholder post, render the loading card
               if (post.isPlaceholder) {
@@ -842,7 +879,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
         </div>
       </LazyComponent>
     );
-  }, [filteredPosts, loadingPosts, hasMorePosts, postCounts, searchStateKey, handleLoadMoreForType, activeFilter, activeSearchTerms]);
+  }, [filteredPosts, loadingPosts, hasMorePosts, postCounts, searchStateKey, handleLoadMoreForType, activeFilter, activeSearchTerms, stationIndexes]);
 
   // --- Return JSX Structure ---
   return (
@@ -870,6 +907,8 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
           </h1>
           <p className="text-gray-300 max-w-2xl mx-auto">
             Welcome to my Antarctic Research Station, where I document insights and discoveries from my data engineering expeditions.
+            <br />This research station leverages AI to enhance content discovery and organization. Some content descriptions may be AI-assisted.
+            <br />Note: This station is under construction.
           </p>
         </motion.div>
         )}
@@ -898,7 +937,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
             {/* Display active category filter */}
             {activeFilter !== 'all' && (
               <div className="group bg-data/20 text-data text-xs px-2 py-1 rounded-full flex items-center relative shrink-0">
-                <span>{blogCategories.find(c => c.id === activeFilter)?.label || activeFilter}</span>
+                <span>{blogCategories.find(c => c.id === activeFilter)?.label || formatTagDisplayName(activeFilter)}</span>
                 <button 
                   onClick={(e) => { e.stopPropagation(); setActiveFilter('all'); }}
                   className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center w-4 h-4"
@@ -915,11 +954,11 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                 key={term}
                 className="group bg-data/20 text-data text-xs px-2 py-1 rounded-full flex items-center relative shrink-0"
               >
-                <span>{term}</span>
+                <span>{formatTagDisplayName(term)}</span>
                 <button 
                   onClick={(e) => { e.stopPropagation(); removeSearchTerm(term); }}
                   className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center w-4 h-4"
-                  aria-label={`Remove keyword ${term}`}
+                  aria-label={`Remove keyword ${formatTagDisplayName(term)}`}
                 >
                   <X size={12} className="text-data hover:text-white" />
                 </button>
@@ -1007,8 +1046,8 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                 )}
                 <div className={`p-6 lg:p-8 ${featuredPost.image ? 'lg:w-1/2' : 'w-full'} flex flex-col`}>
                   <div className="flex items-center mb-3">
-                    <FaStar className="text-data mr-2" />
-                    <span className="text-data text-sm font-medium">Featured Research</span>
+                    <FaStar className="text-data mr-2 text-2xl" />
+                    <span className="text-data text-xl font-medium">Featured Research</span>
                   </div>
                   <h2 className="text-2xl md:text-3xl font-bold mb-3 text-white leading-tight">
                     {highlightText(featuredPost.title, activeSearchTerms)}
@@ -1046,6 +1085,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
              <Suspense fallback={null}>
              
                {/* YouTube Station - Now positioned above LinkedIn Posts Station */}
+               <div id="youtube-videos-anchor" className="section-anchor"></div>
                {renderSwipeStation(
                  'youtube-video',
                  'YouTube Videos',
@@ -1067,7 +1107,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                      <div className="relative h-[180px] overflow-hidden"> 
                        {(post.image || post.thumbnail) ? (
                          <Image 
-                           src={post.image || post.thumbnail || '/images/placeholder.jpg'} 
+                           src={post.image || post.thumbnail || '/images/oops_penguin.png'} 
                            alt={post.title} 
                            width={640} 
                            height={360} 
@@ -1105,6 +1145,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                )}
               
                {/* LinkedIn Posts Station (Original) */}
+               <div id="linkedin-posts-anchor" className="section-anchor"></div>
                {renderSwipeStation(
                  'linkedin-post',
                  'LinkedIn Posts',
@@ -1136,29 +1177,75 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                          >
                            View Post <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70" />
                          </a>
-                         {post.embed_link && (
-                           <button 
-                             onClick={(e) => {
-                               e.preventDefault();
-                               e.stopPropagation();
+                         <button 
+                           onClick={(e) => {
+                             e.preventDefault();
+                             e.stopPropagation();
+                             
+                             try {
+                               // Pass the post index and station type to remember position
+                               const stationType = 'linkedin-post';
+                               const postIndex = index;
                                
-                               const embedHtml = post.embed_link as string;
+                               // Parse multiple image URLs from media_link field
+                               let imageUrls: string | string[] | undefined = undefined;
                                
-                               setModalContent({
-                                 type: 'embed',
-                                 title: post.title,
-                                 content: embedHtml,
-                                 link: post.link || post.url || '#',
-                                 date: post.date
-                               });
+                               // First try to get multiple images from media_link
+                               if (post.media_link && typeof post.media_link === 'string' && post.media_link.includes(',')) {
+                                 // Handle comma-separated URLs
+                                 const links = post.media_link.split(',')
+                                   .map(url => url.trim())
+                                   .filter(url => url.length > 0 && url.startsWith('http'))
+                                   .slice(0, 2); // Get up to 2 images
+                                   
+                                   if (links.length > 0) {
+                                     imageUrls = links;
+                                     console.log('Using multiple image URLs:', links);
+                                   }
+                               } 
+                               // If no multiple images, fallback to single image
+                               else if (post.image && post.image !== '/images/oops_penguin.png') {
+                                 imageUrls = post.image;
+                                 console.log('Using single image URL:', post.image);
+                               }
+                               
+                               // Check if there's an embed_link to display
+                               if (post.embed_link) {
+                                 const embedHtml = post.embed_link as string;
+                                 
+                                 setModalContent({
+                                   type: 'embed',
+                                   title: post.title,
+                                   content: embedHtml,
+                                   link: post.link || post.url || '#',
+                                   date: post.date,
+                                   mediaLinks: imageUrls,
+                                   postIndex,
+                                   stationType
+                                 });
+                               } else {
+                                 // For posts without embed_link
+                                 setModalContent({
+                                   type: 'no-embed',
+                                   title: post.title,
+                                   content: '',
+                                   link: post.link || post.url || '#',
+                                   date: post.date,
+                                   mediaLinks: imageUrls,
+                                   postIndex,
+                                   stationType
+                                 });
+                               }
                                setShowModal(true);
-                             }}
-                             className="w-7 h-7 bg-data/20 hover:bg-data/30 text-data rounded-full flex items-center justify-center transition-colors"
-                             aria-label="View in modal"
-                           >
-                             <FaChevronRight className="w-3 h-3" />
-                           </button>
-                         )}
+                             } catch (error) {
+                               console.error('Error setting modal content:', error);
+                             }
+                           }}
+                           className="w-7 h-7 bg-data/20 hover:bg-data/30 text-data rounded-full flex items-center justify-center transition-colors"
+                           aria-label="View in modal"
+                         >
+                           <FaExpandAlt className="w-3 h-3" />
+                         </button>
                          <span className="text-xs text-gray-400">{formatDate(post.date)}</span>
                        </div>
                      </div>
@@ -1167,6 +1254,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                )}
 
                {/* Humorous Data Insights Station (previously Quick Notes) */}
+               <div id="lol-hub-anchor" className="section-anchor"></div>
                {renderSwipeStation(
                  'quick-note',
                  'LOL Hub',
@@ -1205,29 +1293,75 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                          >
                            View Post <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70" />
                          </a>
-                         {post.embed_link && (
-                           <button 
-                             onClick={(e) => {
-                               e.preventDefault();
-                               e.stopPropagation();
+                         <button 
+                           onClick={(e) => {
+                             e.preventDefault();
+                             e.stopPropagation();
+                             
+                             try {
+                               // Pass the post index and station type to remember position
+                               const stationType = 'quick-note';
+                               const postIndex = index;
                                
-                               const embedHtml = post.embed_link as string;
+                               // Parse multiple image URLs from media_link field
+                               let imageUrls: string | string[] | undefined = undefined;
                                
-                               setModalContent({
-                                 type: 'embed',
-                                 title: post.title,
-                                 content: embedHtml,
-                                 link: post.link || post.url || '#',
-                                 date: post.date
-                               });
+                               // First try to get multiple images from media_link
+                               if (post.media_link && typeof post.media_link === 'string' && post.media_link.includes(',')) {
+                                 // Handle comma-separated URLs
+                                 const links = post.media_link.split(',')
+                                   .map(url => url.trim())
+                                   .filter(url => url.length > 0 && url.startsWith('http'))
+                                   .slice(0, 2); // Get up to 2 images
+                                   
+                                   if (links.length > 0) {
+                                     imageUrls = links;
+                                     console.log('Using multiple image URLs:', links);
+                                   }
+                               } 
+                               // If no multiple images, fallback to single image
+                               else if (post.image && post.image !== '/images/oops_penguin.png') {
+                                 imageUrls = post.image;
+                                 console.log('Using single image URL:', post.image);
+                               }
+                               
+                               // Check if there's an embed_link to display
+                               if (post.embed_link) {
+                                 const embedHtml = post.embed_link as string;
+                                 
+                                 setModalContent({
+                                   type: 'embed',
+                                   title: post.title,
+                                   content: embedHtml,
+                                   link: post.link || post.url || '#',
+                                   date: post.date,
+                                   mediaLinks: imageUrls,
+                                   postIndex,
+                                   stationType
+                                 });
+                               } else {
+                                 // For posts without embed_link
+                                 setModalContent({
+                                   type: 'no-embed',
+                                   title: post.title,
+                                   content: '',
+                                   link: post.link || post.url || '#',
+                                   date: post.date,
+                                   mediaLinks: imageUrls,
+                                   postIndex,
+                                   stationType
+                                 });
+                               }
                                setShowModal(true);
-                             }}
-                             className="w-7 h-7 bg-data/20 hover:bg-data/30 text-data rounded-full flex items-center justify-center transition-colors"
-                             aria-label="View in modal"
-                           >
-                             <FaChevronRight className="w-3 h-3" />
-                           </button>
-                         )}
+                             } catch (error) {
+                               console.error('Error setting modal content:', error);
+                             }
+                           }}
+                           className="w-7 h-7 bg-data/20 hover:bg-data/30 text-data rounded-full flex items-center justify-center transition-colors"
+                           aria-label="View in modal"
+                         >
+                           <FaExpandAlt className="w-3 h-3" />
+                         </button>
                          <span className="text-xs text-gray-400">{formatDate(post.date)}</span>
                        </div>
                      </div>
@@ -1236,6 +1370,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                )}
               
                {/* Technical Articles Station (previously Research Reports) */}
+               <div id="linkedin-articles-anchor" className="section-anchor"></div>
                {renderSwipeStation(
                  'research-report',
                  'LinkedIn Articles',
@@ -1286,6 +1421,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                )}
               
                {/* Substack Publications Station (previously Comprehensive Studies) */}
+               <div id="substack-unpacked-anchor" className="section-anchor"></div>
                {renderSwipeStation(
                  'comprehensive-study',
                  'Substack Unpacked',
@@ -1334,9 +1470,6 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                    </motion.div> 
                  )
                )}
-
-               {/* LinkedIn Iframe Posts Station (Moved to Last) */}
-               {/* Temporarily removed LinkedIn Iframe Posts Station */}
 
              </Suspense>
                      </div>
@@ -1396,14 +1529,86 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                   <div className="flex justify-center mt-2">
                     <a 
                       href={modalContent.link} 
-                                       target="_blank"
-                                       rel="noopener noreferrer"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="py-2 px-4 bg-data/20 hover:bg-data/30 text-data rounded transition-colors inline-flex items-center"
-                                     >
+                    >
                       View on LinkedIn <FaExternalLinkAlt className="ml-2 h-3 w-3" />
-                                     </a>
-                                   </div>
-                                       </div>
+                    </a>
+                  </div>
+                </div>
+              )}
+              
+              {modalContent?.type === 'no-embed' && (
+                <div className="w-full flex flex-col items-center">
+                  <div className="text-center mb-4 text-gray-300">
+                    <p className="mb-4">LinkedIn hasn't quite figured out how to embed posts with multiple images yet...</p>
+                    
+                    {/* Display media if available using Next.js Image - just like in the article cards */}
+                    {modalContent.mediaLinks ? (
+                      <div className="mt-4 max-w-[504px] w-full mx-auto">
+                        {/* Debug info - hidden in production */}
+                        {/* {process.env.NODE_ENV === 'development' && (
+                          <div className="mb-4 text-xs text-left bg-dark-300/50 p-2 rounded">
+                            <p className="text-gray-400 mb-1">Debug info:</p>
+                            <pre className="whitespace-pre-wrap break-words text-gray-500 text-[10px]">
+                              {typeof modalContent.mediaLinks === 'string' 
+                                ? modalContent.mediaLinks 
+                                : JSON.stringify(modalContent.mediaLinks, null, 2)}
+                            </pre>
+                          </div>
+                        )} */}
+                        
+                        {Array.isArray(modalContent.mediaLinks) ? (
+                          <div className={`grid ${modalContent.mediaLinks.length > 1 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'} gap-4 mx-auto`}>
+                            {modalContent.mediaLinks.slice(0, 2).map((mediaUrl, idx) => (
+                              <div key={idx} className="overflow-hidden rounded-lg border border-data/20">
+                                <div className="h-[200px] relative bg-dark-300/50">
+                                  <Image 
+                                    src={mediaUrl}
+                                    alt={`Media ${idx + 1} for ${modalContent.title}`}
+                                    fill
+                                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                    className="object-contain"
+                                    // Important: This allows external URLs
+                                    unoptimized={true}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="overflow-hidden rounded-lg border border-data/20 mx-auto">
+                            <div className="h-[300px] relative bg-dark-300/50">
+                              <Image 
+                                src={modalContent.mediaLinks}
+                                alt={`Media for ${modalContent.title}`}
+                                fill
+                                sizes="(max-width: 768px) 100vw, 600px"
+                                className="object-contain"
+                                // Important: This allows external URLs
+                                unoptimized={true}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-gray-400 text-sm">No media available for this post</p>
+                    )}
+                  </div>
+                  
+                  <div className="flex justify-center mt-4">
+                    <a 
+                      href={modalContent.link} 
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-2 px-4 bg-data/20 hover:bg-data/30 text-data rounded transition-colors inline-flex items-center"
+                    >
+                      View on LinkedIn <FaExternalLinkAlt className="ml-2 h-3 w-3" />
+                    </a>
+                  </div>
+                </div>
               )}
               
               {modalContent?.type === 'article' && (
@@ -1419,8 +1624,8 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                       {modalContent.link && (
                         <a 
                           href={modalContent.link} 
-                                       target="_blank"
-                                       rel="noopener noreferrer"
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="mt-4 py-2 px-4 bg-data/20 hover:bg-data/30 text-data rounded inline-flex items-center"
                         >
                           View on LinkedIn <FaExternalLinkAlt className="ml-2 h-3 w-3" />

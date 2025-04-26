@@ -6,6 +6,50 @@ import Image from 'next/image';
 import { FaSearch, FaFilter } from 'react-icons/fa';
 import { X } from 'lucide-react';
 
+// Helper function to format tag display names
+export const formatTagDisplayName = (tag: string): string => {
+  // Special cases for known acronyms (add more as needed)
+  const knownAcronyms: Record<string, string> = {
+    'ai': 'AI',
+    'ml': 'ML',
+    'nlp': 'NLP',
+    'ui': 'UI',
+    'ux': 'UX',
+    'api': 'API',
+    'aws': 'AWS',
+    'gcp': 'GCP',
+    'sql': 'SQL',
+    'nosql': 'NoSQL',
+    'etl': 'ETL',
+    'elt': 'ELT',
+    'data': 'Data',
+    'open': 'Open',
+    'source': 'Source',
+    'engineering': 'Engineering'
+  };
+
+  // Replace underscores with spaces
+  let formattedTag = tag.replace(/_/g, ' ');
+  
+  // Split into words
+  const words = formattedTag.split(' ');
+  
+  // Process each word
+  const processedWords = words.map(word => {
+    // Check if it's a known acronym (case insensitive)
+    const lowerWord = word.toLowerCase();
+    if (knownAcronyms[lowerWord]) {
+      return knownAcronyms[lowerWord];
+    }
+    
+    // Otherwise capitalize first letter of the word
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  });
+  
+  // Join words back together
+  return processedWords.join(' ');
+};
+
 interface SearchModalProps {
   searchQuery: string;
   setSearchQuery: Dispatch<SetStateAction<string>>;
@@ -126,8 +170,12 @@ const SearchModal: React.FC<SearchModalProps> = ({
                       All
                     </button>
                     {['humor', 'data_engineering', 'open_source', 'ai', 'learning', 'achievement'].map((id) => {
-                      const category = blogCategories.find(cat => cat.id === id) || 
-                                     { id, label: id.charAt(0).toUpperCase() + id.slice(1).replace('_', ' ') };
+                      // Find the category or create a new one with the id
+                      const category = blogCategories.find(cat => cat.id === id) || { id, label: id };
+                      
+                      // Always use formatTagDisplayName for display, regardless of source
+                      const displayLabel = formatTagDisplayName(category.id);
+                      
                       return (
                         <button
                           key={category.id}
@@ -146,7 +194,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
                               : 'bg-dark-300/50 text-gray-300 hover:bg-dark-300'
                           }`}
                         >
-                          {category.label}
+                          {displayLabel}
                         </button>
                       );
                     })}
@@ -180,7 +228,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
                       <input
                         ref={searchInputRef}
                         type="text"
-                        placeholder={isMobileDevice ? "Add up to 3 keywords..." : "Add up to 3 keywords (e.g., humor, learning, ai)..."}
+                        placeholder={isMobileDevice ? "Add up to 3 keywords..." : "Add up to 3 keywords (e.g., spark, real-time, databricks)..."}
                         className={`bg-transparent border-none focus:outline-none ${
                           searchDisabled ? 'text-gray-500 cursor-not-allowed' : 'text-white'
                         } w-full font-poppins px-3 py-2 sm:py-3 text-sm sm:text-base`}
@@ -294,7 +342,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
                       <span className="mr-1 font-medium text-gray-400">Active keywords:</span>
                       {activeSearchTerms.map((term) => (
                         <span key={term} className="bg-data/20 text-data px-2 py-1 rounded-full flex items-center text-xs">
-                          {term}
+                          {formatTagDisplayName(term)}
                           <button
                             onClick={() => removeSearchTerm(term)}
                             className="ml-1.5 text-gray-400 hover:text-white"

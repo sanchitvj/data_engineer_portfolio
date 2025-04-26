@@ -14,6 +14,7 @@ export type BlogPost = {
   link?: string;
   url?: string;
   embed_link?: string;
+  media_link?: string | string[];
   featured?: boolean;
   tags?: string[];
   description?: string;

@@ -9,6 +9,8 @@ import BlogClientContent from '@/components/blog/BlogClientContent';
 // Remove static data import
 // import { blogPosts, blogCategories } from '@/data/blog-data';
 import { getAllContentItems } from '@/lib/dynamodb';
+// Remove client component import to fix server/client boundary issue
+// import { formatTagDisplayName } from '@/components/blog/SearchModal';
 
 // Set metadata for SEO
 export const metadata: Metadata = {
@@ -18,6 +20,45 @@ export const metadata: Metadata = {
 
 // This enables ISR - Incremental Static Regeneration
 export const revalidate = 3600; // Revalidate every hour (3600 seconds)
+
+// Server-side implementation of formatTagDisplayName
+function formatCategoryLabel(tag: string): string {
+  // Special cases for known acronyms
+  const knownAcronyms: Record<string, string> = {
+    'ai': 'AI',
+    'ml': 'ML',
+    'nlp': 'NLP',
+    'api': 'API',
+    'aws': 'AWS',
+    'gcp': 'GCP',
+    'sql': 'SQL',
+    'data': 'Data',
+    'open': 'Open',
+    'source': 'Source',
+    'engineering': 'Engineering'
+  };
+
+  // Replace underscores with spaces
+  const formattedTag = tag.replace(/_/g, ' ');
+  
+  // Split into words
+  const words = formattedTag.split(' ');
+  
+  // Process each word
+  const processedWords = words.map(word => {
+    // Check if it's a known acronym (case insensitive)
+    const lowerWord = word.toLowerCase();
+    if (knownAcronyms[lowerWord]) {
+      return knownAcronyms[lowerWord];
+    }
+    
+    // Otherwise capitalize first letter of the word
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  });
+  
+  // Join words back together
+  return processedWords.join(' ');
+}
 
 /**
  * Parse DynamoDB StringSet format to regular array
@@ -121,7 +162,7 @@ export default async function ArchivePage() {
   // Create categories from collected unique values
   const allCategories = Array.from(dynamicCategories).map(category => ({
     id: category,
-    label: category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, ' ')
+    label: formatCategoryLabel(category)
   }));
   
   // Add 'all' category at the beginning

@@ -250,7 +250,8 @@ const TimelineSection: React.FC = () => {
   }, [selectedYear, trackWidth]);
 
   return (
-    <section id="journey-section" className="py-20 relative">
+    <section id="journey" className="py-20 relative">
+      <div id="journey-anchor" className="section-anchor"></div>
       <div className="container mx-auto px-4">
         <h2 className="text-3xl md:text-4xl font-bold text-center text-white mb-12 md:mb-20">
           My Data Journey
@@ -281,7 +282,7 @@ const TimelineSection: React.FC = () => {
             }}
             drag="x"
             dragConstraints={constraintsRef}
-            dragElastic={0.1}
+            dragElastic={0.9}
             dragMomentum={false}
             onDragEnd={handleDragEnd}
             whileTap={{ cursor: "grabbing" }}

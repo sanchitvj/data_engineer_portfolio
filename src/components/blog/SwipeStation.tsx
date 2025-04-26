@@ -17,6 +17,8 @@ interface SwipeStationProps {
   className?: string;
   onLastSlideReached?: () => void;
   totalPostCount?: number;
+  currentIndex?: number;
+  onIndexChange?: (index: number) => void;
 }
 
 const SwipeStation: React.FC<SwipeStationProps> = ({
@@ -28,9 +30,14 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
   autoplayInterval = 5000,
   className = '',
   onLastSlideReached,
-  totalPostCount
+  totalPostCount,
+  currentIndex: controlledIndex,
+  onIndexChange
 }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [internalIndex, setInternalIndex] = useState(0);
+  // Use controlled index if provided, otherwise use internal state
+  const currentIndex = controlledIndex !== undefined ? controlledIndex : internalIndex;
+  
   const [animating, setAnimating] = useState(false);
   const [hovering, setHovering] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -112,7 +119,7 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
     if (!autoplay || hovering || isDragging) return;
     
     const interval = setInterval(() => {
-      setCurrentIndex(prev => {
+      setInternalIndex(prev => {
         const nextIndex = prev + 1;
         // Loop back to start if we exceed maxIndex based on visible cards
         return nextIndex > maxIndex ? 0 : nextIndex;
@@ -122,9 +129,20 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
     return () => clearInterval(interval);
   }, [autoplay, currentIndex, hovering, isDragging, maxIndex, autoplayInterval]); // Added isDragging dependency
 
-  // Reset index and update width when posts change
+  // Update the setCurrentIndex calls to properly handle both controlled and uncontrolled mode
+  const updateCurrentIndex = (newIndex: number) => {
+    setInternalIndex(newIndex);
+    if (onIndexChange) {
+      onIndexChange(newIndex);
+    }
+  }
+  
+  // Reset index and update width when posts change, but only if not controlled externally
   useEffect(() => {
-    setCurrentIndex(0);
+    // Only reset if we're not controlled and there's no specific index provided
+    if (controlledIndex === undefined) {
+      setInternalIndex(0);
+    }
     
     // Ensure container width is updated AFTER the posts have likely rendered
     const timer = setTimeout(() => {
@@ -134,14 +152,14 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
     }, 50); // Small delay for DOM update
 
     return () => clearTimeout(timer);
-  }, [posts]); // Trigger only when the posts array itself changes
-
-  // Adjust currentIndex if it becomes invalid after filtering or resize
+  }, [posts, controlledIndex]);
+  
+  // Additional effect to sync internal state with controlled value
   useEffect(() => {
-    if (currentIndex > maxIndex) {
-      setCurrentIndex(maxIndex);
+    if (controlledIndex !== undefined && controlledIndex !== internalIndex) {
+      setInternalIndex(controlledIndex);
     }
-  }, [currentIndex, maxIndex]);
+  }, [controlledIndex]);
 
   // Recalculate container width specifically on mobile state change
   useEffect(() => {
@@ -189,11 +207,11 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
     });
   }, [currentIndex, posts, prefetchedImages]);
 
-  // Modify handleNext to prevent going past the available posts
+  // Modify handleNext to use updateCurrentIndex
   const handleNext = () => {
     if (currentIndex < maxIndex) {
       const newIndex = Math.min(currentIndex + 1, maxIndex);
-      setCurrentIndex(newIndex);
+      updateCurrentIndex(newIndex);
       
       // If we're at or beyond the last post minus 2, trigger load more
       if (newIndex >= posts.length - responsiveVisibleCards && onLastSlideReached) {
@@ -214,14 +232,14 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
     
     // If current index is beyond max, adjust it
     if (currentIndex > maxIndex) {
-      setCurrentIndex(maxIndex);
+      updateCurrentIndex(maxIndex);
     }
   }, [totalItems, responsiveVisibleCards, maxIndex]);
 
-  // Simplified handlePrev/handleNext - directly set index
+  // Modify handlePrev to use updateCurrentIndex
   const handlePrev = () => {
     if (currentIndex > 0) {
-      setCurrentIndex(prev => prev - 1);
+      updateCurrentIndex(currentIndex - 1);
     }
   };
 
@@ -247,7 +265,7 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
     setIsDragging(true);
   };
 
-  // Unified Drag End Handler
+  // Modify handleDragEnd to use updateCurrentIndex
   const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     setIsDragging(false);
 
@@ -262,10 +280,6 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
     const projectedOffset = offset + velocity * velocityFactor;
 
     // Calculate the fractional index based on the projected final position
-    // targetX = -currentTranslateX + projectedOffset 
-    // targetFractionalIndex = -targetX / cardAndGapWidth 
-    // targetFractionalIndex = (currentTranslateX - projectedOffset) / cardAndGapWidth
-    // targetFractionalIndex = (currentIndex * cardAndGapWidth - projectedOffset) / cardAndGapWidth
     const targetFractionalIndex = currentIndex - (projectedOffset / cardAndGapWidth);
 
     // Round to the nearest whole index
@@ -275,7 +289,7 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
     const finalIndex = Math.max(0, Math.min(nearestIndex, maxIndex));
 
     // Set the state to trigger the animation to the final index
-    setCurrentIndex(finalIndex);
+    updateCurrentIndex(finalIndex);
   };
 
   // Calculate drag constraints
@@ -298,8 +312,39 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
       return index >= totalItems - responsiveVisibleCards && index < totalItems;
     }
     
+    // When dragging, extend the visible range to show additional cards
+    // This prevents empty space during drag operations
+    if (isDragging) {
+      // Show cards in an extended window (current + next + previous)
+      const extendedRange = 2; // Number of additional cards to show
+      return index >= currentIndex - extendedRange && 
+             index < currentIndex + responsiveVisibleCards + extendedRange &&
+             index < totalItems; // Don't go beyond total items
+    }
+    
     // Otherwise, show the current window of posts
     return index >= currentIndex && index < currentIndex + responsiveVisibleCards;
+  };
+
+  // Determine card appearance state (fully visible, partially visible placeholder, or hidden)
+  const getCardAppearance = (index: number) => {
+    // Always fully show cards in the main visible window
+    if (index >= currentIndex && index < currentIndex + responsiveVisibleCards) {
+      return 'visible';
+    }
+    
+    // During dragging, show placeholders for cards just outside the visible window
+    if (isDragging) {
+      const extendedRange = 2; // Should match the value in getCardVisibility
+      if ((index >= currentIndex - extendedRange && index < currentIndex) || 
+          (index >= currentIndex + responsiveVisibleCards && index < currentIndex + responsiveVisibleCards + extendedRange) &&
+           index < totalItems) {
+        return 'placeholder';
+      }
+    }
+    
+    // Otherwise hide the card
+    return 'hidden';
   };
 
   // Calculate the rightmost visible card for pagination display
@@ -387,15 +432,18 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
               }
               
               const isVisible = getCardVisibility(index);
+              const appearance = getCardAppearance(index);
               
               return (
                 <div
                   key={post.id}
-                  className="relative flex-none transition-opacity duration-300" // Use opacity transition
+                  className="relative flex-none transition-all duration-300" // Use transition-all for smoother effects
                   style={{
                     width: singleCardWidth > 0 ? `${singleCardWidth}px` : '100%',
-                    opacity: isVisible ? 1 : 0, // Complete hide non-visible cards
-                    pointerEvents: isVisible ? 'auto' : 'none', // Only allow interaction with visible cards
+                    opacity: appearance === 'hidden' ? 0 : appearance === 'placeholder' ? 0.4 : 1,
+                    filter: appearance === 'placeholder' ? 'blur(2px)' : 'none',
+                    transform: appearance === 'placeholder' ? 'scale(0.98)' : 'scale(1)',
+                    pointerEvents: appearance === 'visible' ? 'auto' : 'none', // Only allow interaction with fully visible cards
                     userSelect: 'none', // Prevent text selection
                     ...getCardInnerStyles()
                   }}
@@ -466,7 +514,7 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
               {Array.from({ length: Math.ceil(totalItems / responsiveVisibleCards) }).map((_, i) => (
                 <button
                   key={i}
-                  onClick={() => setCurrentIndex(Math.min(i * responsiveVisibleCards, maxIndex))}
+                  onClick={() => updateCurrentIndex(Math.min(i * responsiveVisibleCards, maxIndex))}
                   className={`w-2 h-2 rounded-full transition-all ${
                     i === Math.floor(currentIndex / responsiveVisibleCards)
                       ? 'bg-data w-4'

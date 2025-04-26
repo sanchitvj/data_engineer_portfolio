@@ -72,10 +72,10 @@ export async function GET() {
         category: generatedTags[0] || tags[0] || item.content_type || 'article',
         type,
         link: item.url || item.embed_link || '',
-        image: mediaLink || '/images/blog/placeholder.jpg',
+        image: mediaLink || '/images/oops_penguin.png',
         author: {
           name: 'Sanchit Vijay',
-          avatar: '/images/profile.jpeg'
+          avatar: '/images/penguindb_main_logo.png'
         },
         featured: false,
         readTime: '3 min read',
