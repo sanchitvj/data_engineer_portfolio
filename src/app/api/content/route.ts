@@ -50,7 +50,7 @@ export async function GET() {
       }
       
       // Set type based on content_type
-      let type: 'linkedin-post' | 'quick-note' | 'research-report' | 'comprehensive-study' = 'research-report';
+      let type = 'research-report';
       if (item.content_type === 'post') {
         // Check if it has humor tag
         const hasHumorTag = tags.includes('humor');
@@ -59,20 +59,64 @@ export async function GET() {
         type = 'research-report';
       } else if (item.content_type === 'substack') {
         type = 'comprehensive-study';
+      } else if (item.content_type === 'youtube') {
+        // For YouTube content, use the 'youtube-video' type
+        type = 'youtube-video';
+      }
+      
+      // For YouTube videos, ensure we have a thumbnail
+      let thumbnailUrl = '';
+      if (type === 'youtube-video') {
+        // First try to use the media_link directly
+        thumbnailUrl = mediaLink;
+        
+        // If no media_link but we have a URL, try to extract YouTube ID and create thumbnail URL
+        if (!thumbnailUrl && item.url) {
+          const url = item.url;
+          // Try to extract video ID from different YouTube URL formats
+          let videoId = '';
+          
+          if (url.includes('youtu.be/')) {
+            // Format: https://youtu.be/VIDEO_ID
+            videoId = url.split('youtu.be/')[1]?.split('?')[0];
+          } else if (url.includes('youtube.com/watch')) {
+            // Format: https://www.youtube.com/watch?v=VIDEO_ID
+            const urlObj = new URL(url);
+            videoId = urlObj.searchParams.get('v') || '';
+          } else if (url.includes('youtube.com/embed/')) {
+            // Format: https://www.youtube.com/embed/VIDEO_ID
+            videoId = url.split('youtube.com/embed/')[1]?.split('?')[0];
+          }
+          
+          if (videoId) {
+            // Create high quality thumbnail URL
+            thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+          }
+        }
+      }
+      
+      // Make sure generated ID is consistent
+      let postId = item.content_id;
+      if (!postId) {
+        // Create deterministic ID based on content properties instead of random
+        const contentHash = `${item.content_type || ''}-${item.title || ''}-${item.date_published || ''}`;
+        postId = `dynamo-${contentHash.replace(/\s+/g, '-').substring(0, 20)}`;
       }
       
       return {
-        id: item.content_id || `dynamo-${Math.random().toString(36).substring(2, 9)}`,
+        id: postId,
         title: item.generated_title || item.title || 'Untitled Post',
         excerpt: item.generated_description || item.description || '',
         description: item.generated_description || item.description || '',
         content: item.generated_content || '',
         date: item.date_published || item.processed_at || new Date().toISOString(),
         tags: [...generatedTags, ...tags].filter((v, i, a) => a.indexOf(v) === i), // Combine tags and remove duplicates
-        category: generatedTags[0] || tags[0] || item.content_type || 'article',
+        category: generatedTags.length > 0 ? generatedTags : tags.length > 0 ? tags : [item.content_type || 'article'],
         type,
         link: item.url || item.embed_link || '',
-        image: mediaLink || '/images/oops_penguin.png',
+        url: item.url || '',
+        image: type === 'youtube-video' ? thumbnailUrl : mediaLink || '/images/oops_penguin.png',
+        thumbnail: thumbnailUrl || '',
         author: {
           name: 'Sanchit Vijay',
           avatar: '/images/penguindb_main_logo.png'
@@ -80,6 +124,9 @@ export async function GET() {
         featured: false,
         readTime: '3 min read',
         embed_link: item.embed_link || null, // Preserve the embed_link for iframe display
+        // Add raw tags for better searching
+        raw_tags: tags,
+        generated_tags: generatedTags
       };
     });
 
