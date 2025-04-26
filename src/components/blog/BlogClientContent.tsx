@@ -1,6 +1,6 @@
 'use client'; // Mark this as a Client Component
 
-import React, { useState, useEffect, useRef, Suspense, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, Suspense, useMemo, useCallback, CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -100,9 +100,127 @@ const SearchModal = dynamic<{
 interface BlogClientContentProps {
   initialBlogPosts: BlogPost[];
   initialBlogCategories: { id: string; label: string }[];
+  postCounts?: Record<string, number>;
+  initialLimits?: {
+    desktop: Record<string, number>;
+    mobile: Record<string, number>;
+  };
 }
 
-const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts, initialBlogCategories }) => {
+// Create a loading card component for each post type
+const LoadingCard = ({ type, style }: { type: string, style?: CSSProperties }) => {
+  // Different loading card layouts based on post type
+  switch (type) {
+    case 'youtube-video':
+      return (
+        <div className="bg-dark-200/60 backdrop-blur-sm rounded-lg animate-pulse h-[340px] flex flex-col" style={style}>
+          <div className="bg-dark-300/80 h-[180px] rounded-t-lg relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-dark-200/50 to-dark-300/50" />
+          </div>
+          <div className="px-4 py-4 flex flex-col flex-grow">
+            <div className="h-5 bg-dark-300/80 rounded mb-3 w-3/4"></div>
+            <div className="h-4 bg-dark-300/80 rounded mb-2 w-full"></div>
+            <div className="h-4 bg-dark-300/80 rounded mb-2 w-5/6"></div>
+            <div className="h-4 bg-dark-300/80 rounded mb-4 w-2/3"></div>
+            <div className="mt-auto flex justify-between items-center">
+              <div className="h-4 bg-dark-300/80 rounded w-20"></div>
+              <div className="h-4 bg-dark-300/80 rounded w-16"></div>
+            </div>
+          </div>
+        </div>
+      );
+    
+    case 'research-report':
+      return (
+        <div className="bg-dark-200/60 backdrop-blur-sm rounded-lg animate-pulse h-[410px] flex flex-col" style={style}>
+          <div className="h-48 mb-4 bg-dark-300/80 rounded-lg"></div>
+          <div className="h-6 bg-dark-300/80 rounded mb-3 w-4/5"></div>
+          <div className="h-4 bg-dark-300/80 rounded mb-2 w-full"></div>
+          <div className="h-4 bg-dark-300/80 rounded mb-2 w-11/12"></div>
+          <div className="h-4 bg-dark-300/80 rounded mb-4 w-4/5"></div>
+          <div className="mt-auto">
+            <div className="flex justify-between items-center mb-2">
+              <div className="h-3 bg-dark-300/80 rounded w-20"></div>
+              <div className="h-3 bg-dark-300/80 rounded w-16"></div>
+            </div>
+            <div className="h-8 bg-dark-300/80 rounded w-32"></div>
+          </div>
+        </div>
+      );
+      
+    case 'comprehensive-study':
+      return (
+        <div className="bg-dark-200/60 backdrop-blur-sm rounded-lg animate-pulse h-[450px] flex flex-col" style={style}>
+          <div className="h-60 mb-4 bg-dark-300/80 rounded-lg"></div>
+          <div className="h-6 bg-dark-300/80 rounded mb-3 w-4/5"></div>
+          <div className="h-4 bg-dark-300/80 rounded mb-2 w-full"></div>
+          <div className="h-4 bg-dark-300/80 rounded mb-2 w-11/12"></div>
+          <div className="h-4 bg-dark-300/80 rounded mb-4 w-4/5"></div>
+          <div className="mt-auto">
+            <div className="flex justify-between items-center mb-2">
+              <div className="h-3 bg-dark-300/80 rounded w-20"></div>
+              <div className="h-3 bg-dark-300/80 rounded w-16"></div>
+            </div>
+            <div className="h-8 bg-dark-300/80 rounded w-32"></div>
+          </div>
+        </div>
+      );
+    
+    // Default card for linkedin-post and quick-note
+    default:
+      return (
+        <div className="bg-dark-200/60 backdrop-blur-sm rounded-lg animate-pulse h-[230px] flex flex-col" style={style}>
+          <div className="flex items-center mb-2">
+            <div className="w-6 h-6 rounded-full bg-dark-300/80"></div>
+            <div className="ml-1.5 h-3 bg-dark-300/80 rounded w-20"></div>
+          </div>
+          <div className="h-5 bg-dark-300/80 rounded mb-2 w-11/12"></div>
+          <div className="h-4 bg-dark-300/80 rounded mb-2 w-full"></div>
+          <div className="h-4 bg-dark-300/80 rounded mb-2 w-5/6"></div>
+          <div className="h-4 bg-dark-300/80 rounded mb-4 w-2/3"></div>
+          <div className="mt-auto">
+            <div className="flex justify-between items-center mb-2">
+              <div className="h-4 bg-dark-300/80 rounded w-20"></div>
+              <div className="h-4 bg-dark-300/80 rounded w-5"></div>
+              <div className="h-3 bg-dark-300/80 rounded w-16"></div>
+            </div>
+          </div>
+        </div>
+      );
+  }
+};
+
+// Add this after the LoadingCard component to create a utility function for generating placeholder posts
+const createPlaceholderPost = (type: string, index: number): BlogPost => {
+  return {
+    id: `loading-${type}-${index}`,
+    title: 'Loading...',
+    excerpt: '',
+    description: '',
+    content: '',
+    date: new Date().toISOString(),
+    tags: [],
+    category: [],
+    type: type as BlogPost['type'], // Properly cast to the BlogPost type
+    link: '',
+    url: '',
+    image: '',
+    author: {
+      name: '',
+      avatar: ''
+    },
+    featured: false,
+    readTime: '',
+    isPlaceholder: true
+  };
+};
+
+const BlogClientContent: React.FC<BlogClientContentProps> = ({ 
+  initialBlogPosts, 
+  initialBlogCategories,
+  postCounts = {}, 
+  initialLimits
+}) => {
   // All the state, effects, refs, handlers, and JSX from the original BlogPage go here
   const [isLoaded, setIsLoaded] = useState(false);
   const [showContent, setShowContent] = useState(false);
@@ -110,7 +228,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
   const [activeFilter, setActiveFilter] = useState('all');
   const [activeSearchTerms, setActiveSearchTerms] = useState<string[]>([]);
   // Use the props for initial state and keep a copy for filtering
-  const [blogPosts] = useState<BlogPost[]>(initialBlogPosts); 
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>(initialBlogPosts); 
   const [blogCategories] = useState<{ id: string; label: string }[]>(initialBlogCategories);
   // State for the currently displayed posts after filtering
   const [filteredPosts, setFilteredPosts] = useState<BlogPost[]>(initialBlogPosts); 
@@ -132,6 +250,22 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
     date?: string; 
   } | null>(null);
   const [showSearchDisabledMessage, setShowSearchDisabledMessage] = useState(false);
+  
+  // Add state for posts loading
+  const [loadingPosts, setLoadingPosts] = useState<Record<string, boolean>>({});
+  const [hasMorePosts, setHasMorePosts] = useState<Record<string, boolean>>({});
+  const [loadedPostsByType, setLoadedPostsByType] = useState<Record<string, number>>({});
+  
+  // Detect device size to determine initial loading limits
+  const getPostsLimit = useCallback((type: string) => {
+    if (!initialLimits) {
+      return 10; // Default limit
+    }
+    if (isMobileDevice) {
+      return initialLimits.mobile[type] || 3;
+    }
+    return initialLimits.desktop[type] || 6;
+  }, [initialLimits, isMobileDevice]);
 
   // --- Start of useEffects and Handlers ---
 
@@ -150,6 +284,126 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
     // Clean up
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
+  
+  // Initialize loading states for each post type based on post counts
+  useEffect(() => {
+    if (postCounts && Object.keys(postCounts).length > 0) {
+      // Initialize hasMorePosts state
+      const initialHasMore: Record<string, boolean> = {};
+      const initialLoadedCount: Record<string, number> = {};
+      
+      Object.keys(postCounts).forEach(type => {
+        // If we have post counts, check if there are more than the initial limit
+        const limit = getPostsLimit(type);
+        initialHasMore[type] = (postCounts[type] || 0) > limit;
+        initialLoadedCount[type] = 0; // Start with 0 loaded posts
+      });
+      
+      setHasMorePosts(initialHasMore);
+      setLoadedPostsByType(initialLoadedCount);
+      
+      // Trigger initial loading for each type
+      Object.keys(postCounts).forEach(type => {
+        loadMorePosts(type);
+      });
+    }
+  }, [postCounts, getPostsLimit]);
+
+  // Function to load more posts for a specific type
+  const loadMorePosts = useCallback(async (type: string) => {
+    // Prevent multiple simultaneous loading requests for the same type
+    if (loadingPosts[type]) return;
+    
+    try {
+      setLoadingPosts(prev => ({ ...prev, [type]: true }));
+      
+      const loadedCount = loadedPostsByType[type] || 0;
+      const limit = getPostsLimit(type);
+      
+      // Construct API URL with parameters
+      let apiUrl = `/api/posts?type=${type}&offset=${loadedCount}&limit=${limit}`;
+      
+      // Add tags parameter if search terms are active
+      if (activeFilter !== 'all') {
+        // If filtering by category, use it as a tag
+        apiUrl += `&tags=${encodeURIComponent(activeFilter)}`;
+      } else if (activeSearchTerms.length > 0) {
+        // If searching, pass all search terms as tags
+        apiUrl += `&tags=${encodeURIComponent(activeSearchTerms.join(','))}`;
+      }
+      
+      // Fetch posts through API
+      const response = await fetch(apiUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch posts: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const newPosts = data.posts as BlogPost[];
+      const totalCount = data.total;
+      
+      // Update loaded count
+      const newLoadedCount = loadedCount + newPosts.length;
+      setLoadedPostsByType(prev => ({ ...prev, [type]: newLoadedCount }));
+      
+      // Check if there are more posts to load
+      setHasMorePosts(prev => ({ 
+        ...prev, 
+        [type]: newLoadedCount < totalCount
+      }));
+      
+      // Fix: Add new posts to state with deduplication by ID
+      setBlogPosts(prev => {
+        // Get existing post IDs for fast lookup
+        const existingIds = new Set(prev.map(post => post.id));
+        
+        // Filter out any new posts that already exist in the state
+        const uniqueNewPosts = newPosts.filter(post => !existingIds.has(post.id));
+        
+        return [...prev, ...uniqueNewPosts];
+      });
+    } catch (error) {
+      console.error(`Error loading more ${type} posts:`, error);
+    } finally {
+      setLoadingPosts(prev => ({ ...prev, [type]: false }));
+    }
+  }, [loadingPosts, loadedPostsByType, getPostsLimit, activeFilter, activeSearchTerms]);
+  
+  // Load more posts when the user reaches the end of a section
+  const handleLoadMoreForType = useCallback((type: string) => {
+    if (hasMorePosts[type] && !loadingPosts[type]) {
+      console.log(`Loading more posts for ${type}`);
+      loadMorePosts(type);
+    }
+  }, [hasMorePosts, loadingPosts, loadMorePosts]);
+  
+  // Monitor scroll position to trigger loading more posts when near the end of a section
+  useEffect(() => {
+    const handleSwipeSectionScroll = (entries: IntersectionObserverEntry[]) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const sectionType = entry.target.getAttribute('data-type');
+          if (sectionType) {
+            handleLoadMoreForType(sectionType);
+          }
+        }
+      });
+    };
+    
+    const observer = new IntersectionObserver(handleSwipeSectionScroll, {
+      root: null,
+      rootMargin: '0px 0px 200px 0px', // Start loading when within 200px of the bottom
+      threshold: 0.1
+    });
+    
+    // Observe loading trigger elements
+    document.querySelectorAll('.load-more-trigger').forEach(el => {
+      observer.observe(el);
+    });
+    
+    return () => observer.disconnect();
+  }, [handleLoadMoreForType]);
 
   // Generate search suggestions with debounce
   const debouncedSetSearchQuery = useCallback(
@@ -161,14 +415,19 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
 
   // Memoize search suggestions calculation for better performance
   const searchSuggestions = useMemo(() => {
-    // Don't generate suggestions for very short queries (efficiency)
+    // Don't generate suggestions on mobile devices at all
+    if (isMobileDevice) {
+      return [];
+    }
+    
+    // Don't generate suggestions for very short queries
     if (!searchQuery.trim() || searchQuery.trim().length < 2) {
       return [];
     }
     
     const query = searchQuery.toLowerCase();
     
-    // Only compute categories that match the query (optimization)
+    // Only compute categories that match the query
     const matchingCategories = blogCategories
       .filter(cat => cat.label.toLowerCase().includes(query))
       .map(cat => ({ value: cat.id, display: cat.label, type: 'category' as const }));
@@ -197,73 +456,10 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
       }))
       .slice(0, 3); // Limit to top 3 matching keywords
     
-    // If we already have enough prefix suggestions, we can skip the more expensive content search
-    if (prefixSuggestions.length >= 3 && query.length < 3) {
-      // Return early with just the prefix suggestions and categories
-      return [...prefixSuggestions, ...matchingCategories].slice(0, 5);
-    }
-    
-    // Optimize title word extraction with Set for uniqueness
-    const uniqueTitleWords = new Set<string>();
-    
-    // Process all posts - no post limit
-    blogPosts.forEach(post => {
-      // Extract individual words (more efficient with RegExp compiled once)
-      const wordSplitter = /\s+/;
-      const wordCleaner = /[^\w]/g;
-      
-      // Extract individual words
-      post.title.split(wordSplitter)
-        .map(word => word.toLowerCase().replace(wordCleaner, ''))
-        // Filter for prefix matches and minimum length
-        .filter(word => word.length > 3 && word.startsWith(query))
-        .forEach(word => uniqueTitleWords.add(word));
-      
-      // Only process phrases for longer queries (optimization)
-      if (query.length >= 3) {
-        // Extract phrases (2-3 words) that start with the query
-        const words = post.title.toLowerCase().split(wordSplitter);
-        for (let i = 0; i < words.length; i++) {
-          if (words[i].startsWith(query)) {
-            // Extract 2-word phrase
-            if (i < words.length - 1) {
-              const twoWordPhrase = words[i] + ' ' + words[i+1];
-              uniqueTitleWords.add(twoWordPhrase);
-            }
-            // Extract 3-word phrase (only for longer queries)
-            if (i < words.length - 2 && query.length >= 4) {
-              const threeWordPhrase = words[i] + ' ' + words[i+1] + ' ' + words[i+2];
-              uniqueTitleWords.add(threeWordPhrase);
-            }
-          }
-        }
-        
-        // Also check excerpt for relevant keywords
-        if (post.excerpt) {
-        post.excerpt.split(wordSplitter)
-          .map(word => word.toLowerCase().replace(wordCleaner, ''))
-          .filter(word => word.length > 3 && word.startsWith(query))
-          .forEach(word => uniqueTitleWords.add(word));
-        }
-      }
-    });
-    
-    // Convert to the expected format and filter out already selected terms
-    const contentWords = Array.from(uniqueTitleWords)
-      .map(word => ({ value: word, display: word, type: 'keyword' as const }))
-      .filter(suggestion => !currentActiveTermsLower.includes(suggestion.value.toLowerCase()))
-      .slice(0, 4); // Limit content words to avoid processing too many
-    
-    // Filter out categories that match the current filter
-    const filteredMatchingCategories = matchingCategories.filter(
-      suggestion => suggestion.value !== activeFilter
-    ).slice(0, 2); // Limit categories
-
     // Combine all suggestions with priority
     const allSuggestions = [
       ...prefixSuggestions, // Fixed keywords first
-      ...contentWords,      // Content-specific words second
-      ...filteredMatchingCategories // Categories last
+      ...matchingCategories.slice(0, 2) // Limit categories
     ];
 
     // Remove duplicates and limit results
@@ -272,7 +468,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
     )
       .map(item => JSON.parse(item))
       .slice(0, 5); // Limit to 5 suggestions
-  }, [searchQuery, blogPosts, blogCategories, activeSearchTerms, activeFilter]);
+  }, [searchQuery, blogCategories, activeSearchTerms, activeFilter, isMobileDevice]);
 
   // Replace the previous state setter with the memoized result
   useEffect(() => {
@@ -358,41 +554,45 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
      return () => document.removeEventListener('mousedown', handleClickOutside);
    }, []); // Empty dependency array means this runs once on mount
 
-  // Memoize filtered posts calculation - update to make filters mutually exclusive
+  // Memoize filtered posts calculation with optimized tag-based search
   const filteredPostsResult = useMemo(() => {
     console.log("Recalculating filtered posts");
-    let tempFiltered = [...blogPosts]; // Start with original posts
+    
+    // First deduplicate posts by ID (keep only the first occurrence of each ID)
+    const uniquePosts = blogPosts
+      .filter((post, index, self) => 
+        index === self.findIndex(p => p.id === post.id)
+      );
+    
+    let tempFiltered = [...uniquePosts]; // Start with deduplicated original posts
 
     // Either apply category filter OR search terms filtering, but not both
     if (activeFilter !== 'all') {
-      // If category filter is active, use it
+      // If category filter is active, use it - match against tags
       tempFiltered = tempFiltered.filter(post => 
-        Array.isArray(post.category) 
-          ? post.category.includes(activeFilter) 
-          : post.category === activeFilter
+        Array.isArray(post.tags) 
+          ? post.tags.includes(activeFilter) 
+          : post.tags === activeFilter
       );
     } else if (activeSearchTerms.length > 0) {
-      // Only apply search terms if category filter is not active
-      // Create a single normalized array of search terms for faster lookups
+      // Optimize search to only look at tags for better performance
+      // Normalize search terms for case-insensitive comparison
       const normalizedTerms = activeSearchTerms.map(term => term.toLowerCase());
       
       tempFiltered = tempFiltered.filter(post => {
-        // Search in title and excerpt
-        const titleLower = post.title.toLowerCase();
-        const excerptLower = post.excerpt?.toLowerCase() ?? '';
+        // Get post tags, ensuring we have an array to work with
+        const postTags = Array.isArray(post.tags) 
+          ? post.tags 
+          : typeof post.tags === 'string' 
+            ? [post.tags] 
+            : [];
+            
+        // Convert tags to lowercase for case-insensitive matching
+        const normalizedTags = postTags.map(tag => tag.toLowerCase());
         
-        // Check categories for matches
-        const categoriesLower = Array.isArray(post.category)
-          ? post.category.map(cat => cat.toLowerCase())
-          : typeof post.category === 'string' ? [post.category.toLowerCase()] : [];
-        
-        // A post matches if ANY term is found in its data
-        return normalizedTerms.some(term => 
-          // Check title and excerpt
-          titleLower.includes(term) ||
-          excerptLower.includes(term) ||
-          // Check categories
-          categoriesLower.some(cat => cat.includes(term))
+        // A post matches if ANY search term is found in ANY tag (including partial matches)
+        return normalizedTerms.some(searchTerm => 
+          normalizedTags.some(tag => tag.includes(searchTerm))
         );
       });
     }
@@ -424,34 +624,9 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
   
   // Optimize highlightText with memoization for each post/terms combination
   const highlightText = useCallback((text: string, terms: string[]) => {
-    if (!text) return ''; // Handle cases where text might be undefined
-    if (!terms.length) return text;
-    
-    // Ensure terms are strings and escape them
-    const escapedTerms = terms.filter(t => typeof t === 'string').map(escapeRegExp);
-    if (!escapedTerms.length) return text;
-    
-    const regex = new RegExp(`(${escapedTerms.join('|')})`, 'gi');
-    const parts = text.split(regex);
-    
-    return (
-      <>
-        {parts.map((part, i) => {
-          if (!part) return null; // Skip empty parts
-          const isMatch = escapedTerms.some(term => 
-            part.toLowerCase() === term.toLowerCase()
-          );
-          return isMatch ? (
-            <span key={i} className="bg-data/30 text-white font-medium px-1 rounded">
-              {part}
-            </span>
-          ) : (
-            <span key={i}>{part}</span>
-          );
-        })}
-      </>
-    );
-  }, [escapeRegExp]);
+    // Return plain text without highlighting for better performance
+    return text;
+  }, []);
 
   // Optimize formatDate and truncateToWords with useCallback
   const formatDate = useCallback((dateString: string) => {
@@ -558,6 +733,116 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, [showModal]);
+
+  // Modify the SwipeStation rendering to add loading triggers and handle on swipe load more
+  const renderSwipeStation = useCallback((type: string, title: string, visibleCards: number, renderCard: any) => {
+    // Get unique posts of this type by filtering by ID
+    const postsOfType = filteredPosts
+      .filter(post => post.type === type)
+      // Deduplicate by ID (keep only the first occurrence of each ID)
+      .filter((post, index, self) => 
+        index === self.findIndex(p => p.id === post.id)
+      );
+      
+    const isLoading = loadingPosts[type] || false;
+    const hasMore = hasMorePosts[type] && postsOfType.length < (postCounts[type] || 0);
+    
+    // Update the total count to reflect the actual number of posts after filtering
+    // If no filter is applied, use the postCounts, otherwise use the filtered count
+    const totalPosts = 
+      (activeFilter !== 'all' || activeSearchTerms.length > 0) 
+        ? postsOfType.length 
+        : (postCounts[type] || postsOfType.length);
+    
+    // Create an array with posts and loading placeholders if needed
+    let displayPosts = [...postsOfType];
+    
+    // If loading and fewer posts than minimum to show, add loading placeholders
+    if (isLoading && displayPosts.length < visibleCards) {
+      const placeholdersNeeded = visibleCards - displayPosts.length;
+      
+      // Create placeholder posts
+      for (let i = 0; i < placeholdersNeeded; i++) {
+        displayPosts.push(createPlaceholderPost(type, i));
+      }
+    }
+    
+    // Early return if we don't have posts of this type and aren't loading any
+    // Also return null when we have a search active and no matching posts
+    if (displayPosts.length === 0 && !isLoading) {
+      return null;
+    }
+    
+    // For search results, don't show sections with no matches
+    if ((activeFilter !== 'all' || activeSearchTerms.length > 0) && postsOfType.length === 0) {
+      return null;
+    }
+    
+    // Add debug logging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Rendering ${type} swipe station with ${displayPosts.length} posts`);
+      console.log(`Post IDs: ${displayPosts.map(p => p.id).join(', ')}`);
+      console.log(`Total count for ${type}: ${totalPosts} (filtered: ${postsOfType.length}, original: ${postCounts[type] || 0})`);
+    }
+    
+    // Enhanced onLastSlideReached handler that specifically handles edge cases for LOL Hub and LinkedIn Articles
+    const handleLastSlideReached = () => {
+      // Only load more if we're showing unfiltered results
+      if (activeFilter === 'all' && activeSearchTerms.length === 0) {
+        // Always check if we have more to load
+        if (hasMore && !isLoading) {
+          console.log(`Last slide reached for ${type}, loading more...`);
+          handleLoadMoreForType(type);
+          
+          // For troublesome sections, force a re-render after a small delay
+          if (type === 'quick-note' || type === 'research-report') {
+            setTimeout(() => {
+              setSearchStateKey(prev => prev + 1);
+            }, 100);
+          }
+        }
+      }
+    };
+    
+    return (
+      <LazyComponent 
+        placeholder={
+          <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-12 flex items-center justify-center">
+            <div className="text-gray-500">Loading {title}...</div>
+          </div>
+        }
+      >
+        <div className="mb-12" id={type.replace('-', '-')}>
+          <SwipeStation 
+            key={`${type}-${searchStateKey}-${displayPosts.length}`} // Extra key to force re-render when posts change
+            title={title} 
+            posts={displayPosts} 
+            visibleCards={visibleCards}
+            onLastSlideReached={handleLastSlideReached} 
+            renderCard={(post, index) => {
+              // If this is a placeholder post, render the loading card
+              if (post.isPlaceholder) {
+                return <LoadingCard type={type} />;
+              }
+              // Otherwise render the actual post card
+              return renderCard(post, index, isLoading);
+            }}
+            totalPostCount={totalPosts} // Pass the correct filtered count for pagination display
+          />
+          
+          {/* Only show loading indicator when viewing unfiltered results */}
+          {(isLoading || (hasMore && activeFilter === 'all' && activeSearchTerms.length === 0)) && (
+            <div 
+              className="load-more-trigger mt-2 text-center text-sm text-gray-400" 
+              data-type={type}
+            >
+              {isLoading ? "Loading more..." : "Scroll to load more"}
+            </div>
+          )}
+        </div>
+      </LazyComponent>
+    );
+  }, [filteredPosts, loadingPosts, hasMorePosts, postCounts, searchStateKey, handleLoadMoreForType, activeFilter, activeSearchTerms]);
 
   // --- Return JSX Structure ---
   return (
@@ -761,352 +1046,293 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
              <Suspense fallback={null}>
              
                {/* YouTube Station - Now positioned above LinkedIn Posts Station */}
-               {shouldShowStation('youtube') && (
-                 <LazyComponent 
-                   placeholder={
-                     <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-12 flex items-center justify-center">
-                       <div className="text-gray-500">Loading YouTube Videos...</div>
-                     </div>
-                   }
-                 >
-                   <div className="mb-12" id="youtube-videos">
-                     <SwipeStation 
-                       key={`youtube-${searchStateKey}-${filteredPosts.filter(post => post.type === 'youtube').length}`} 
-                       title="YouTube Videos" 
-                       posts={filteredPosts.filter(post => post.type === 'youtube')} 
-                       visibleCards={3} 
-                       renderCard={(post, index) => ( 
-                         <motion.div 
-                           initial={{ opacity: 0, y: 20 }} 
-                           animate={{ opacity: 1, y: 0 }} 
-                           transition={{ duration: 0.5, delay: index * 0.1 }} 
-                           className="bg-dark-300 overflow-hidden h-[360px] rounded-xl flex flex-col"
-                           onClick={(e) => {
-                             // Only redirect if not clicking a specific button or link
-                             if (!(e.target as HTMLElement).closest('button')) {
-                               window.open(post.youtubeUrl, '_blank', 'noopener,noreferrer');
-                             }
-                           }}
-                           style={{ cursor: 'pointer' }}
+               {renderSwipeStation(
+                 'youtube-video',
+                 'YouTube Videos',
+                 3,
+                 (post: BlogPost, index: number, isLoading: boolean) => (
+                   <motion.div 
+                     initial={{ opacity: 0, y: 20 }} 
+                     animate={{ opacity: 1, y: 0 }} 
+                     transition={{ duration: 0.5, delay: index * 0.1 }} 
+                     className="bg-dark-300 overflow-hidden h-[360px] rounded-xl flex flex-col"
+                     onClick={(e) => {
+                       // Only redirect if not clicking a specific button or link
+                       if (!(e.target as HTMLElement).closest('button')) {
+                         window.open(post.url || post.link, '_blank', 'noopener,noreferrer');
+                       }
+                     }}
+                     style={{ cursor: 'pointer' }}
+                   > 
+                     <div className="relative h-[180px] overflow-hidden"> 
+                       {(post.image || post.thumbnail) ? (
+                         <Image 
+                           src={post.image || post.thumbnail || '/images/placeholder.jpg'} 
+                           alt={post.title} 
+                           width={640} 
+                           height={360} 
+                           className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" 
+                         />
+                       ) : (
+                         <div className="w-full h-full bg-dark-400/50 flex items-center justify-center">
+                           <FaPlay size={30} className="text-data/70" />
+                         </div>
+                       )}
+                       <div className="absolute inset-0 bg-gradient-to-t from-dark-300/80 to-transparent" /> 
+                       <div className="absolute bottom-4 left-4 flex items-center justify-center w-10 h-10 rounded-full bg-data/90 text-white"> 
+                         <FaPlay size={14} className="ml-0.5" /> 
+                       </div> 
+                     </div> 
+                     <div className="px-4 py-4 flex flex-col flex-grow h-[180px]"> 
+                       <h3 className="font-bold mb-3 text-white line-clamp-2 h-[52px]">{highlightText(post.title, activeSearchTerms)}</h3> 
+                       <p className="text-gray-300 text-sm line-clamp-3 mb-4 h-[72px]">{highlightText(post.excerpt, activeSearchTerms)}</p> 
+                       <div className="mt-auto flex justify-between items-center"> 
+                         <a 
+                           href={post.url || post.link || "#"} 
+                           target="_blank" 
+                           rel="noopener noreferrer" 
+                           className="text-data hover:text-data-light text-sm inline-flex items-center" 
                          > 
-                           <div className="relative h-[180px] overflow-hidden"> 
-                             <Image 
-                               src={post.thumbnail || '/images/placeholder.jpg'} 
-                               alt={post.title} 
-                               width={640} 
-                               height={360} 
-                               className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" 
-                             /> 
-                             <div className="absolute inset-0 bg-gradient-to-t from-dark-300/80 to-transparent" /> 
-                             <div className="absolute bottom-4 left-4 flex items-center justify-center w-10 h-10 rounded-full bg-data/90 text-white"> 
-                               <FaPlay size={14} className="ml-0.5" /> 
-                             </div> 
-                           </div> 
-                           <div className="px-4 py-4 flex flex-col flex-grow h-[180px]"> 
-                             <h3 className="font-bold mb-3 text-white line-clamp-2 h-[52px]">{post.title}</h3> 
-                             <p className="text-gray-300 text-sm line-clamp-3 mb-4 h-[72px]">{post.excerpt}</p> 
-                             <div className="mt-auto flex justify-between items-center"> 
-                               <a 
-                                 href={post.youtubeUrl || "#"} 
-                                 target="_blank" 
-                                 rel="noopener noreferrer" 
-                                 className="text-data hover:text-data-light text-sm inline-flex items-center" 
-                               > 
-                                 Watch Video <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70" /> 
-                               </a> 
-                               <span className="text-gray-400 text-xs"> 
-                                 {formatDate(post.date)} 
-                               </span> 
-                             </div> 
-                           </div> 
-                         </motion.div> 
-                       )} 
-                     />
-                   </div>
-                 </LazyComponent>
+                           Watch Video <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70" /> 
+                         </a> 
+                         <span className="text-gray-400 text-xs"> 
+                           {formatDate(post.date)} 
+                         </span> 
+                       </div> 
+                     </div> 
+                   </motion.div> 
+                 )
                )}
               
                {/* LinkedIn Posts Station (Original) */}
-               {shouldShowStation('linkedin-post') && (
-                 <LazyComponent 
-                   placeholder={
-                     <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-12 flex items-center justify-center">
-                       <div className="text-gray-500">Loading LinkedIn Posts...</div>
-                     </div>
-                   }
-                 >
-                   <div className="mb-12" id="linkedin-posts">
-                     <SwipeStation 
-                       key={`linkedin-${searchStateKey}-${filteredPosts.filter(post => post.type === 'linkedin-post').length}`} 
-                       title="LinkedIn Posts" 
-                       posts={filteredPosts.filter(post => post.type === 'linkedin-post')} 
-                       visibleCards={3} 
-                       renderCard={(post, index) => ( 
-                         <motion.div 
-                           key={post.id} 
-                           initial={{ opacity: 0, y: 20 }} 
-                           animate={{ opacity: 1, y: 0 }} 
-                           transition={{ duration: 0.3, delay: index * 0.05 }} 
-                           className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-3 h-[230px] flex flex-col"
-                           onClick={(e) => {
-                             // Prevent any unwanted navigation
-                             if (!(e.target as HTMLElement).closest('a, button')) {
-                               e.preventDefault();
-                             }
-                           }}
+               {renderSwipeStation(
+                 'linkedin-post',
+                 'LinkedIn Posts',
+                 3,
+                 (post: BlogPost, index: number, isLoading: boolean) => (
+                   <motion.div 
+                     key={post.id} 
+                     initial={{ opacity: 0, y: 20 }} 
+                     animate={{ opacity: 1, y: 0 }} 
+                     transition={{ duration: 0.3, delay: index * 0.05 }} 
+                     className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-3 h-[230px] flex flex-col"
+                     onClick={(e) => {
+                       // Prevent any unwanted navigation
+                       if (!(e.target as HTMLElement).closest('a, button')) {
+                         e.preventDefault();
+                       }
+                     }}
+                   >
+                     <div className="flex items-center mb-2"> <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0"> <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"> <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"></path> </svg> </div> <span className="ml-1.5 text-xs text-gray-400">LinkedIn Post</span> </div> 
+                     <h4 className="font-semibold text-md mb-1.5 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> 
+                     <p className="text-gray-300 text-xs mb-2 line-clamp-3 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt || '', 24), activeSearchTerms)} </p>
+                     <div className="mt-auto">
+                       <div className="flex justify-between items-center mb-2">
+                         <a 
+                           href={post.url || post.link || "#"}
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           className="text-data hover:text-data-light text-sm inline-flex items-center"
                          >
-                           <div className="flex items-center mb-2"> <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0"> <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"> <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"></path> </svg> </div> <span className="ml-1.5 text-xs text-gray-400">LinkedIn Post</span> </div> 
-                           <h4 className="font-semibold text-md mb-1.5 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> 
-                           <p className="text-gray-300 text-xs mb-2 line-clamp-3 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt || '', 24), activeSearchTerms)} </p>
-                           <div className="mt-auto">
-                             <div className="flex justify-between items-center mb-2">
-                               <a 
-                                 href={post.url || post.link || "#"}
-                                 target="_blank"
-                                 rel="noopener noreferrer"
-                                 className="text-data hover:text-data-light text-sm inline-flex items-center"
-                               >
-                                 View Post <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70" />
-                               </a>
-                               {post.embed_link && (
-                                 <button 
-                                   onClick={(e) => {
-                                     e.preventDefault();
-                                     e.stopPropagation();
-                                     
-                                     const embedHtml = post.embed_link as string;
-                                     
-                                     setModalContent({
-                                       type: 'embed',
-                                       title: post.title,
-                                       content: embedHtml,
-                                       link: post.link || post.url || '#',
-                                       date: post.date
-                                     });
-                                     setShowModal(true);
-                                   }}
-                                   className="w-7 h-7 bg-data/20 hover:bg-data/30 text-data rounded-full flex items-center justify-center transition-colors"
-                                   aria-label="View in modal"
-                                 >
-                                   <FaChevronRight className="w-3 h-3" />
-                                 </button>
-                               )}
-                               <span className="text-xs text-gray-400">{formatDate(post.date)}</span>
-                             </div>
-                           </div>
-                         </motion.div> 
-                       )} 
-                     /> 
-                   </div>
-                 </LazyComponent>
+                           View Post <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70" />
+                         </a>
+                         {post.embed_link && (
+                           <button 
+                             onClick={(e) => {
+                               e.preventDefault();
+                               e.stopPropagation();
+                               
+                               const embedHtml = post.embed_link as string;
+                               
+                               setModalContent({
+                                 type: 'embed',
+                                 title: post.title,
+                                 content: embedHtml,
+                                 link: post.link || post.url || '#',
+                                 date: post.date
+                               });
+                               setShowModal(true);
+                             }}
+                             className="w-7 h-7 bg-data/20 hover:bg-data/30 text-data rounded-full flex items-center justify-center transition-colors"
+                             aria-label="View in modal"
+                           >
+                             <FaChevronRight className="w-3 h-3" />
+                           </button>
+                         )}
+                         <span className="text-xs text-gray-400">{formatDate(post.date)}</span>
+                       </div>
+                     </div>
+                   </motion.div> 
+                 )
                )}
 
                {/* Humorous Data Insights Station (previously Quick Notes) */}
-               {shouldShowStation('quick-note') && (
-                 <LazyComponent 
-                   placeholder={
-                     <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-12 flex items-center justify-center">
-                       <div className="text-gray-500">Loading LOL Hub...</div>
-                     </div>
-                   }
-                 >
-                   <div className="mb-12" id="lol-hub">
-                     <SwipeStation 
-                       key={`quick-note-${searchStateKey}-${filteredPosts.filter(post => post.type === 'quick-note').length}`} 
-                       title="LOL Hub" 
-                       posts={filteredPosts.filter(post => post.type === 'quick-note')} 
-                       visibleCards={3} 
-                       renderCard={(post, index) => ( 
-                         <motion.div 
-                           key={post.id} 
-                           initial={{ opacity: 0, y: 20 }} 
-                           animate={{ opacity: 1, y: 0 }} 
-                           transition={{ duration: 0.3, delay: index * 0.05 }} 
-                           className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-3 h-[230px] flex flex-col"
-                           onClick={(e) => {
-                             // Prevent any unwanted navigation
-                             if (!(e.target as HTMLElement).closest('a, button')) {
-                               e.preventDefault();
-                             }
-                           }}
+               {renderSwipeStation(
+                 'quick-note',
+                 'LOL Hub',
+                 3,
+                 (post: BlogPost, index: number, isLoading: boolean) => (
+                   <motion.div 
+                     key={post.id} 
+                     initial={{ opacity: 0, y: 20 }} 
+                     animate={{ opacity: 1, y: 0 }} 
+                     transition={{ duration: 0.3, delay: index * 0.05 }} 
+                     className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-3 h-[230px] flex flex-col"
+                     onClick={(e) => {
+                       // Prevent any unwanted navigation
+                       if (!(e.target as HTMLElement).closest('a, button')) {
+                         e.preventDefault();
+                       }
+                     }}
+                   >
+                     <div className="flex items-center mb-2"> 
+                       <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0">
+                         <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                           <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"></path>
+                         </svg>
+                       </div> 
+                       <span className="ml-1.5 text-xs text-gray-400">LinkedIn Post</span> 
+                     </div> 
+                     <h4 className="font-semibold text-md mb-1.5 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> 
+                     <p className="text-gray-300 text-xs mb-2 line-clamp-3 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt || '', 24), activeSearchTerms)} </p>
+                     <div className="mt-auto">
+                       <div className="flex justify-between items-center mb-2">
+                         <a 
+                           href={post.url || post.link || "#"}
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           className="text-data hover:text-data-light text-sm inline-flex items-center"
                          >
-                           <div className="flex items-center mb-2"> 
-                             <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0">
-                               <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                                 <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"></path>
-                               </svg>
-                             </div> 
-                             <span className="ml-1.5 text-xs text-gray-400">LinkedIn Post</span> 
-                           </div> 
-                           <h4 className="font-semibold text-md mb-1.5 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> 
-                           <p className="text-gray-300 text-xs mb-2 line-clamp-3 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt || '', 24), activeSearchTerms)} </p>
-                           <div className="mt-auto">
-                             <div className="flex justify-between items-center mb-2">
-                               <a 
-                                 href={post.url || post.link || "#"}
-                                 target="_blank"
-                                 rel="noopener noreferrer"
-                                 className="text-data hover:text-data-light text-sm inline-flex items-center"
-                               >
-                                 View Post <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70" />
-                               </a>
-                               {post.embed_link && (
-                                 <button 
-                                   onClick={(e) => {
-                                     e.preventDefault();
-                                     e.stopPropagation();
-                                     
-                                     const embedHtml = post.embed_link as string;
-                                     
-                                     setModalContent({
-                                       type: 'embed',
-                                       title: post.title,
-                                       content: embedHtml,
-                                       link: post.link || post.url || '#',
-                                       date: post.date
-                                     });
-                                     setShowModal(true);
-                                   }}
-                                   className="w-7 h-7 bg-data/20 hover:bg-data/30 text-data rounded-full flex items-center justify-center transition-colors"
-                                   aria-label="View in modal"
-                                 >
-                                   <FaChevronRight className="w-3 h-3" />
-                                 </button>
-                               )}
-                               <span className="text-xs text-gray-400">{formatDate(post.date)}</span>
-                             </div>
-                           </div>
-                         </motion.div> 
-                       )} 
-                     /> 
-                   </div>
-                 </LazyComponent>
+                           View Post <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70" />
+                         </a>
+                         {post.embed_link && (
+                           <button 
+                             onClick={(e) => {
+                               e.preventDefault();
+                               e.stopPropagation();
+                               
+                               const embedHtml = post.embed_link as string;
+                               
+                               setModalContent({
+                                 type: 'embed',
+                                 title: post.title,
+                                 content: embedHtml,
+                                 link: post.link || post.url || '#',
+                                 date: post.date
+                               });
+                               setShowModal(true);
+                             }}
+                             className="w-7 h-7 bg-data/20 hover:bg-data/30 text-data rounded-full flex items-center justify-center transition-colors"
+                             aria-label="View in modal"
+                           >
+                             <FaChevronRight className="w-3 h-3" />
+                           </button>
+                         )}
+                         <span className="text-xs text-gray-400">{formatDate(post.date)}</span>
+                       </div>
+                     </div>
+                   </motion.div> 
+                 )
                )}
               
                {/* Technical Articles Station (previously Research Reports) */}
-               {shouldShowStation('research-report') && (
-                 <LazyComponent 
-                   placeholder={
-                     <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-12 flex items-center justify-center">
-                       <div className="text-gray-500">Loading LinkedIn Articles...</div>
+               {renderSwipeStation(
+                 'research-report',
+                 'LinkedIn Articles',
+                 2,
+                 (post: BlogPost, index: number, isLoading: boolean) => (
+                   <motion.div 
+                     key={post.id} 
+                     initial={{ opacity: 0, y: 20 }} 
+                     animate={{ opacity: 1, y: 0 }} 
+                     transition={{ duration: 0.3, delay: index * 0.05 }}
+                     className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-4 h-[410px] flex flex-col"
+                   >
+                     <div className="h-48 mb-4 overflow-hidden rounded-lg bg-dark-300/60 relative">
+                       {post.image ? (
+                         <Image 
+                           src={post.image} 
+                           alt={post.title} 
+                           width={600} 
+                           height={300}
+                           className="object-cover h-full w-full transition-transform hover:scale-105"
+                         />
+                       ) : (
+                         <div className="h-full w-full flex items-center justify-center bg-gradient-to-b from-dark-300 to-dark-200">
+                           <FaMicroscope className="text-3xl text-gray-400" />
+                         </div>
+                       )}
                      </div>
-                   }
-                 >
-                   <div className="mb-12" id="linkedin-articles">
-                     <SwipeStation 
-                       key={`research-report-${searchStateKey}-${filteredPosts.filter(post => post.type === 'research-report' && !post.featured).length}`} 
-                       title="LinkedIn Articles" 
-                       posts={filteredPosts.filter(post => post.type === 'research-report' && !post.featured)} 
-                       visibleCards={2} 
-                       renderCard={(post, index) => ( 
-                         <motion.div 
-                           key={post.id} 
-                           initial={{ opacity: 0, y: 20 }} 
-                           animate={{ opacity: 1, y: 0 }} 
-                           transition={{ duration: 0.3, delay: index * 0.05 }}
-                           className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-4 h-[410px] flex flex-col"
-                         >
-                           <div className="h-48 mb-4 overflow-hidden rounded-lg bg-dark-300/60 relative">
-                             {post.image ? (
-                               <Image 
-                                 src={post.image} 
-                                 alt={post.title} 
-                                 width={600} 
-                                 height={300}
-                                 className="object-cover h-full w-full transition-transform hover:scale-105"
-                               />
-                             ) : (
-                               <div className="h-full w-full flex items-center justify-center bg-gradient-to-b from-dark-300 to-dark-200">
-                                 <FaMicroscope className="text-3xl text-gray-400" />
-                               </div>
-                             )}
-                           </div>
-                           <h4 className="font-semibold text-lg mb-2 text-white line-clamp-2">{highlightText(post.title, activeSearchTerms)}</h4>
-                           <p className="text-gray-300 text-sm mb-4 flex-grow overflow-auto">
-                             {highlightText(post.excerpt || '', activeSearchTerms)}
-                           </p>
-                           <div className="mt-auto">
-                             <div className="flex justify-between text-xs text-gray-400 mb-2">
-                               <span>{formatDate(post.date)}</span>
-                               <span>{post.readTime}</span>
-                             </div>
-                             <a 
-                               href={post.link || post.url || '#'}
-                               target="_blank"
-                               rel="noopener noreferrer"
-                               className="py-1.5 px-4 bg-data/20 hover:bg-data/30 text-data rounded-md text-sm inline-flex items-center transition-colors"
-                             >
-                               Read Article <FaChevronRight className="ml-1 w-3 h-3" />
-                             </a>
-                           </div>
-                         </motion.div> 
-                       )} 
-                     /> 
-                   </div>
-                 </LazyComponent>
+                     <h4 className="font-semibold text-lg mb-2 text-white line-clamp-2">{highlightText(post.title, activeSearchTerms)}</h4>
+                     <p className="text-gray-300 text-sm mb-4 flex-grow overflow-auto">
+                       {highlightText(post.excerpt || '', activeSearchTerms)}
+                     </p>
+                     <div className="mt-auto">
+                       <div className="flex justify-between text-xs text-gray-400 mb-2">
+                         <span>{formatDate(post.date)}</span>
+                         <span>{post.readTime}</span>
+                       </div>
+                       <a 
+                         href={post.link || post.url || '#'}
+                         target="_blank"
+                         rel="noopener noreferrer"
+                         className="py-1.5 px-4 bg-data/20 hover:bg-data/30 text-data rounded-md text-sm inline-flex items-center transition-colors"
+                       >
+                         Read Article <FaChevronRight className="ml-1 w-3 h-3" />
+                       </a>
+                     </div>
+                   </motion.div> 
+                 )
                )}
               
                {/* Substack Publications Station (previously Comprehensive Studies) */}
-               {shouldShowStation('comprehensive-study') && (
-                 <LazyComponent 
-                   placeholder={
-                     <div className="animate-pulse bg-dark-200/40 rounded-lg h-80 mb-12 flex items-center justify-center">
-                       <div className="text-gray-500">Loading Substack Unpacked...</div>
+               {renderSwipeStation(
+                 'comprehensive-study',
+                 'Substack Unpacked',
+                 1,
+                 (post: BlogPost, index: number, isLoading: boolean) => (
+                   <motion.div 
+                     key={post.id} 
+                     initial={{ opacity: 0, y: 20 }} 
+                     animate={{ opacity: 1, y: 0 }} 
+                     transition={{ duration: 0.3, delay: index * 0.05 }} 
+                     className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-4 h-[520px] flex flex-col"
+                   >
+                     <div className="h-60 mb-4 overflow-hidden rounded-lg bg-dark-300/60 relative">
+                       {post.image ? (
+                         <Image 
+                           src={post.image} 
+                           alt={post.title} 
+                           width={800} 
+                           height={400}
+                           className="object-cover h-full w-full transition-transform hover:scale-105"
+                         />
+                       ) : (
+                         <div className="h-full w-full flex items-center justify-center bg-gradient-to-b from-dark-300 to-dark-200">
+                           <FaNewspaper className="text-4xl text-gray-400" />
+                         </div>
+                       )}
                      </div>
-                   }
-                 >
-                   <div className="mb-12" id="substack-unpacked">
-                     <SwipeStation 
-                       key={`comprehensive-study-${searchStateKey}-${filteredPosts.filter(post => post.type === 'comprehensive-study').length}`} 
-                       title="Substack Unpacked" 
-                       posts={filteredPosts.filter(post => post.type === 'comprehensive-study')} 
-                       visibleCards={1} 
-                       renderCard={(post, index) => ( 
-                                 <motion.div 
-                                   key={post.id} 
-                                   initial={{ opacity: 0, y: 20 }} 
-                                   animate={{ opacity: 1, y: 0 }} 
-                                   transition={{ duration: 0.3, delay: index * 0.05 }} 
-                           className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-4 h-[520px] flex flex-col"
-                         >
-                           <div className="h-60 mb-4 overflow-hidden rounded-lg bg-dark-300/60 relative">
-                             {post.image ? (
-                               <Image 
-                                 src={post.image} 
-                                 alt={post.title} 
-                                 width={800} 
-                                 height={400}
-                                 className="object-cover h-full w-full transition-transform hover:scale-105"
-                               />
-                             ) : (
-                               <div className="h-full w-full flex items-center justify-center bg-gradient-to-b from-dark-300 to-dark-200">
-                                 <FaNewspaper className="text-4xl text-gray-400" />
-                                   </div>
-                             )}
-                                   </div>
-                           <h4 className="font-semibold text-xl mb-2 text-white">{highlightText(post.title, activeSearchTerms)}</h4>
-                           <p className="text-gray-300 text-sm mb-4 flex-grow overflow-auto">
-                             {highlightText(post.excerpt || '', activeSearchTerms)}
-                           </p>
-                           <div className="mt-auto">
-                             <div className="flex justify-between text-xs text-gray-400 mb-3">
-                               <span>{formatDate(post.date)}</span>
-                               <span>{post.readTime}</span>
-                                     </div>
-                                     <a 
-                               href={post.link || post.url || '#'}
-                                       target="_blank"
-                                       rel="noopener noreferrer"
-                               className="py-2 px-5 bg-data/20 hover:bg-data/30 text-data rounded-md inline-flex items-center justify-center transition-colors"
-                                     >
-                               Read on Substack <FaExternalLinkAlt className="ml-2 w-3 h-3" />
-                                     </a>
-                                   </div>
-                         </motion.div> 
-                       )} 
-                     /> 
-                   </div>
-                 </LazyComponent>
+                     <h4 className="font-semibold text-xl mb-2 text-white">{highlightText(post.title, activeSearchTerms)}</h4>
+                     <p className="text-gray-300 text-sm mb-4 flex-grow overflow-auto">
+                       {highlightText(post.excerpt || '', activeSearchTerms)}
+                     </p>
+                     <div className="mt-auto">
+                       <div className="flex justify-between text-xs text-gray-400 mb-3">
+                         <span>{formatDate(post.date)}</span>
+                         <span>{post.readTime}</span>
+                       </div>
+                       <a 
+                         href={post.link || post.url || '#'}
+                         target="_blank"
+                         rel="noopener noreferrer"
+                         className="py-2 px-5 bg-data/20 hover:bg-data/30 text-data rounded-md inline-flex items-center justify-center transition-colors"
+                       >
+                         Read on Substack <FaExternalLinkAlt className="ml-2 w-3 h-3" />
+                       </a>
+                     </div>
+                   </motion.div> 
+                 )
                )}
 
                {/* LinkedIn Iframe Posts Station (Moved to Last) */}

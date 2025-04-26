@@ -15,6 +15,8 @@ interface SwipeStationProps {
   autoplay?: boolean;
   autoplayInterval?: number;
   className?: string;
+  onLastSlideReached?: () => void;
+  totalPostCount?: number;
 }
 
 const SwipeStation: React.FC<SwipeStationProps> = ({
@@ -25,6 +27,8 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
   autoplay = false,
   autoplayInterval = 5000,
   className = '',
+  onLastSlideReached,
+  totalPostCount
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [animating, setAnimating] = useState(false);
@@ -32,7 +36,7 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const dragX = useMotionValue(0);
-  const totalItems = posts.length;
+  const totalItems = totalPostCount !== undefined ? totalPostCount : posts.length;
   
   // Track prefetched images to avoid duplicate prefetching
   const [prefetchedImages, setPrefetchedImages] = useState<Set<string>>(new Set());
@@ -46,7 +50,13 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
   const [maxIndex, setMaxIndex] = useState(0);
 
   useEffect(() => {
-    setMaxIndex(Math.max(0, totalItems - responsiveVisibleCards));
+    // If we have same or fewer posts than visible cards, still allow at least 1 maxIndex
+    // to enable arrow navigation (useful for peeking at end of content)
+    if (totalItems <= responsiveVisibleCards) {
+      setMaxIndex(Math.max(0, totalItems - Math.max(1, Math.floor(responsiveVisibleCards * 0.7))));
+    } else {
+      setMaxIndex(Math.max(0, totalItems - responsiveVisibleCards));
+    }
   }, [totalItems, responsiveVisibleCards]);
 
   // Update container width on resize or when container ref updates
@@ -179,16 +189,39 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
     });
   }, [currentIndex, posts, prefetchedImages]);
 
+  // Modify handleNext to prevent going past the available posts
+  const handleNext = () => {
+    if (currentIndex < maxIndex) {
+      const newIndex = Math.min(currentIndex + 1, maxIndex);
+      setCurrentIndex(newIndex);
+      
+      // If we're at or beyond the last post minus 2, trigger load more
+      if (newIndex >= posts.length - responsiveVisibleCards && onLastSlideReached) {
+        onLastSlideReached();
+      }
+    }
+  };
+
+  // Add effect to properly constrain maxIndex based on available cards
+  useEffect(() => {
+    if (totalItems <= responsiveVisibleCards) {
+      // If we have fewer cards than visible cards, don't allow scrolling
+      setMaxIndex(0);
+    } else {
+      // Otherwise, set max index to show the last card at the rightmost position
+      setMaxIndex(Math.max(0, totalItems - responsiveVisibleCards));
+    }
+    
+    // If current index is beyond max, adjust it
+    if (currentIndex > maxIndex) {
+      setCurrentIndex(maxIndex);
+    }
+  }, [totalItems, responsiveVisibleCards, maxIndex]);
+
   // Simplified handlePrev/handleNext - directly set index
   const handlePrev = () => {
     if (currentIndex > 0) {
       setCurrentIndex(prev => prev - 1);
-    }
-  };
-
-  const handleNext = () => {
-    if (currentIndex < maxIndex) {
-      setCurrentIndex(prev => prev + 1);
     }
   };
 
@@ -254,9 +287,18 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
 
   // Calculate which cards should be visible based on dragging
   const getCardVisibility = (index: number) => {
-    if (posts.length > 0 && posts.length <= responsiveVisibleCards) {
-      return index < responsiveVisibleCards;
+    // If we have fewer or equal posts than visibleCards, show all of them
+    if (posts.length <= responsiveVisibleCards) {
+      return true;
     }
+    
+    // Special handling for end of collection to ensure all cards are visible
+    if (currentIndex >= maxIndex) {
+      // When at the last position, show the last batch of cards
+      return index >= totalItems - responsiveVisibleCards && index < totalItems;
+    }
+    
+    // Otherwise, show the current window of posts
     return index >= currentIndex && index < currentIndex + responsiveVisibleCards;
   };
 
@@ -280,42 +322,15 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
     <section className={`relative w-full ${className}`}>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold text-white">{title}</h2>
-        <div className="flex items-center space-x-3">
-          {/* Show pagination indicator if there are posts */}
-          {totalItems > 0 && (
-            <div className="px-2 py-0.5 rounded-full bg-dark-300/40 backdrop-blur-sm border border-data/10">
-              <span className="text-xs font-medium text-data">
-                {getRightmostVisibleCard()}/{totalItems}
-              </span>
-            </div>
-          )}
-          
-          {/* Hide navigation buttons on mobile */}
-          {!isMobile && (
-            <>
-              <button
-                onClick={handlePrev}
-                disabled={currentIndex === 0}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
-                  currentIndex === 0 ? 'bg-dark-300/40 text-gray-500 cursor-not-allowed' : 'bg-dark-300/40 hover:bg-data/20 text-gray-300 hover:text-data'
-                }`}
-                aria-label="Previous slides"
-              >
-                <FaChevronLeft className="w-3 h-3" />
-              </button>
-              <button
-                onClick={handleNext}
-                disabled={currentIndex >= maxIndex}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
-                  currentIndex >= maxIndex ? 'bg-dark-300/40 text-gray-500 cursor-not-allowed' : 'bg-dark-300/40 hover:bg-data/20 text-gray-300 hover:text-data'
-                }`}
-                aria-label="Next slides"
-              >
-                <FaChevronRight className="w-3 h-3" />
-              </button>
-            </>
-          )}
-        </div>
+        
+        {/* Only show pagination on top for desktop */}
+        {!isMobile && totalItems > 0 && (
+          <div className="px-2 py-0.5 rounded-full bg-dark-300/40 backdrop-blur-sm border border-data/10">
+            <span className="text-xs font-medium text-data">
+              {getRightmostVisibleCard()}/{totalItems}
+            </span>
+          </div>
+        )}
       </div>
 
       <div 
@@ -323,25 +338,25 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={() => setHovering(false)}
       >
-        {/* Left Arrow */}
-        <AnimatePresence>
-          {currentIndex > 0 && !isDragging && (
-            <motion.button
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 10 }}
-              transition={{ duration: 0.2 }}
-              onClick={handlePrev}
-              className={`absolute left-0 top-[calc(50%-28px)] -translate-y-1/2 z-20 ${
-                isMobile ? 'w-8 h-8 bg-dark-300/90' : 'w-10 h-10 bg-dark-300/80'
-              } hover:bg-data/40 rounded-full flex items-center justify-center text-white transition-colors shadow-lg`}
-              aria-label="View previous items"
-              disabled={currentIndex === 0}
-            >
-              <FaChevronLeft size={isMobile ? 14 : 16} />
-            </motion.button>
-          )}
-        </AnimatePresence>
+        {/* Left Arrow - Only show on larger displays */}
+        {!isMobile && (
+          <AnimatePresence>
+            {currentIndex > 0 && !isDragging && (
+              <motion.button
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.2 }}
+                onClick={handlePrev}
+                className="absolute left-0 top-[calc(50%-28px)] -translate-y-1/2 z-20 w-10 h-10 bg-dark-300/80 hover:bg-data/40 rounded-full flex items-center justify-center text-white transition-colors shadow-lg"
+                aria-label="View previous items"
+                disabled={currentIndex === 0}
+              >
+                <FaChevronLeft size={16} />
+              </motion.button>
+            )}
+          </AnimatePresence>
+        )}
 
         {/* Cards Container */}
         <div
@@ -366,6 +381,11 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
             style={{ width: totalContentWidth }} // Explicitly set width for constraints
           >
             {posts.map((post, index) => {
+              // Debug logging in development
+              if (process.env.NODE_ENV === 'development' && index >= posts.length - 3) {
+                console.log(`Card ${index} (${post.id}): currentIndex=${currentIndex}, visible=${getCardVisibility(index)}`);
+              }
+              
               const isVisible = getCardVisibility(index);
               
               return (
@@ -374,14 +394,14 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
                   className="relative flex-none transition-opacity duration-300" // Use opacity transition
                   style={{
                     width: singleCardWidth > 0 ? `${singleCardWidth}px` : '100%',
-                    opacity: isVisible ? 1 : 0.4, // Adjust non-visible opacity
-                    pointerEvents: 'none', // Let drag happen on parent
+                    opacity: isVisible ? 1 : 0, // Complete hide non-visible cards
+                    pointerEvents: isVisible ? 'auto' : 'none', // Only allow interaction with visible cards
                     userSelect: 'none', // Prevent text selection
                     ...getCardInnerStyles()
                   }}
                 >
-                  {/* Ensure content inside is interactive if needed */} 
-                  <div style={{ pointerEvents: 'auto' }}>
+                  {/* Always render the content, but control visibility and interaction with CSS */}
+                  <div>
                      {renderCard(post, index)}
                   </div>
                 </div>
@@ -390,42 +410,73 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
           </motion.div>
         </div>
 
-        {/* Right Arrow */}
-        <AnimatePresence>
-          {currentIndex < maxIndex && !isDragging && posts.length > responsiveVisibleCards && (
-            <motion.button
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              transition={{ duration: 0.2 }}
-              onClick={handleNext}
-              className={`absolute right-0 top-[calc(50%-28px)] -translate-y-1/2 z-20 ${
-                isMobile ? 'w-8 h-8 bg-dark-300/90' : 'w-10 h-10 bg-dark-300/80'
-              } hover:bg-data/40 rounded-full flex items-center justify-center text-white transition-colors shadow-lg`}
-              aria-label="View next items"
-              disabled={currentIndex >= maxIndex}
-            >
-              <FaChevronRight size={isMobile ? 14 : 16} />
-            </motion.button>
-          )}
-        </AnimatePresence>
-
-        {/* Progress Indicators - hide on mobile */}
+        {/* Right Arrow - Only show on larger displays */}
         {!isMobile && (
-          <div className="flex justify-center mt-4 gap-1.5">
-            {Array.from({ length: Math.ceil(totalItems / responsiveVisibleCards) }).map((_, i) => (
+          <AnimatePresence>
+            {currentIndex < maxIndex && !isDragging && posts.length > responsiveVisibleCards && (
+              <motion.button
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+                onClick={handleNext}
+                className="absolute right-0 top-[calc(50%-28px)] -translate-y-1/2 z-20 w-10 h-10 bg-dark-300/80 hover:bg-data/40 rounded-full flex items-center justify-center text-white transition-colors shadow-lg"
+                aria-label="View next items"
+                disabled={currentIndex >= maxIndex}
+              >
+                <FaChevronRight size={16} />
+              </motion.button>
+            )}
+          </AnimatePresence>
+        )}
+
+        {/* Progress Indicators - Bottom center on mobile, hidden on desktop */}
+        {isMobile ? (
+          <div className="flex justify-center items-center mt-4 space-x-2">
+            {currentIndex > 0 && (
               <button
-                key={i}
-                onClick={() => setCurrentIndex(Math.min(i * responsiveVisibleCards, maxIndex))}
-                className={`w-2 h-2 rounded-full transition-all ${
-                  i === Math.floor(currentIndex / responsiveVisibleCards)
-                    ? 'bg-data w-4'
-                    : 'bg-gray-600 hover:bg-gray-500'
-                }`}
-                aria-label={`Go to slide group ${i + 1}`}
-              />
-            ))}
+                onClick={handlePrev}
+                className="w-8 h-8 bg-dark-300/60 hover:bg-data/30 rounded-full flex items-center justify-center text-white transition-colors"
+                aria-label="Previous slides"
+              >
+                <FaChevronLeft size={14} />
+              </button>
+            )}
+            
+            <div className="px-2 py-0.5 rounded-full bg-dark-300/40 backdrop-blur-sm border border-data/10">
+              <span className="text-xs font-medium text-data">
+                {getRightmostVisibleCard()}/{totalItems}
+              </span>
+            </div>
+            
+            {currentIndex < maxIndex && currentIndex + responsiveVisibleCards < totalItems && (
+              <button
+                onClick={handleNext}
+                className="w-8 h-8 bg-dark-300/60 hover:bg-data/30 rounded-full flex items-center justify-center text-white transition-colors"
+                aria-label="Next slides"
+              >
+                <FaChevronRight size={14} />
+              </button>
+            )}
           </div>
+        ) : (
+          // Only show pagination dots if we have more than one page of content
+          totalItems > responsiveVisibleCards && (
+            <div className="flex justify-center mt-4 gap-1.5">
+              {Array.from({ length: Math.ceil(totalItems / responsiveVisibleCards) }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentIndex(Math.min(i * responsiveVisibleCards, maxIndex))}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    i === Math.floor(currentIndex / responsiveVisibleCards)
+                      ? 'bg-data w-4'
+                      : 'bg-gray-600 hover:bg-gray-500'
+                  }`}
+                  aria-label={`Go to slide group ${i + 1}`}
+                />
+              ))}
+            </div>
+          )
         )}
       </div>
     </section>
