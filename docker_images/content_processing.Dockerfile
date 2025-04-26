@@ -9,7 +9,7 @@ RUN yum install -y git
 WORKDIR /app
 RUN git clone https://github.com/sanchitvj/data_engineer_portfolio.git
 WORKDIR /app/data_engineer_portfolio
-RUN git checkout content
+RUN git checkout optimize
 RUN pip install .
 
 COPY src/penguindb/lambda_function/ ${LAMBDA_TASK_ROOT}/
