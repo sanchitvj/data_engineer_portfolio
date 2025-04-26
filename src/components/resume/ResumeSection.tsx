@@ -3,8 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, time } from 'framer-motion';
 import { FaBriefcase, FaGraduationCap, FaCode, FaDatabase, FaCloud, FaBrain, FaTools } from 'react-icons/fa';
-import PenguinFootprint from '../theme/PenguinFootprint';
-import PenguinIcons from '../theme/PenguinIcons';
 import Link from 'next/link';
 
 interface Experience {
@@ -154,21 +152,6 @@ const ResumeSection = () => {
 
   return (
     <section id="resume-section" className="py-20 relative overflow-hidden">
-      {/* Penguin Footprints Background */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-20 left-20">
-          <PenguinFootprint opacity={0.1} className="text-white" />
-        </div>
-        <div className="absolute bottom-20 right-20">
-          <PenguinFootprint opacity={0.1} className="text-white" />
-        </div>
-        <div className="absolute top-40 right-40">
-          <PenguinFootprint opacity={0.1} className="text-white" />
-        </div>
-        <div className="absolute bottom-40 left-40">
-          <PenguinFootprint opacity={0.1} className="text-white" />
-        </div>
-      </div>
 
       <div className="container mx-auto px-4">
         <motion.div

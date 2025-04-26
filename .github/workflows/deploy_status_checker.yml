@@ -4,6 +4,7 @@ on:
   push:
     branches: 
       - content
+      - optimize
     paths:
       - 'src/penguindb/lambda_function/status_checker.py'
       - 'docker_images/status_checker_lambda.Dockerfile'
@@ -53,7 +54,7 @@ jobs:
       - name: Retry Update Lambda Configuration
         run: |
           for i in {1..5}; do
-            aws lambda update-function-configuration --function-name status_checker --environment "Variables={DYNAMODB_TABLE_NAME=content_data,GOOGLE_SHEET_URL={{ secrets.GOOGLE_SHEET_URL }}}" && break || sleep 15;
+            aws lambda update-function-configuration --function-name status_checker --environment "Variables={DYNAMODB_TABLE_NAME=content_data_test,GOOGLE_SHEET_URL={{ secrets.GOOGLE_SHEET_URL }}}" && break || sleep 15;
           done
       # - name: Get latest image tag
       #   id: get-image

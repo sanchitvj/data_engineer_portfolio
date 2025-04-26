@@ -531,7 +531,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({ initialBlogPosts,
   }, [activeSearchTerms, searchQuery, activeFilter, setActiveFilter]);
 
   const handleFilterButtonClick = useCallback((categoryId: string) => {
-    setActiveFilter(categoryId);
+     setActiveFilter(categoryId);
     // Clear any active search terms when selecting a category
     if (activeSearchTerms.length > 0) {
       setActiveSearchTerms([]);
