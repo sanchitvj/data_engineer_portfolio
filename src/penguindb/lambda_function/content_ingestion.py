@@ -5,7 +5,7 @@ import logging
 import traceback
 from datetime import datetime
 import uuid
-import requests # For sheet update
+import requests
 
 from penguindb.utils.content_processing_utils import validate_field_types
 
