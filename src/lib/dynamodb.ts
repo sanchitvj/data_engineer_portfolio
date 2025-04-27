@@ -2,25 +2,14 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { fromEnv } from '@aws-sdk/credential-providers';
 
-// Create a more robust client initialization
-const client = new DynamoDBClient({
-  region: process.env.AWS_REGION || 'us-east-1',
-  
-  // Force AWS SDK to use Amplify's IAM role with fromEnv credential provider
-  // This avoids the common credential discovery issues with serverless functions
-  credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-    ? {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-      } 
-    : fromEnv() // This will better handle IAM roles in AWS environments
-});
+const REGION = process.env.REGION || 'us-east-1';
+const client = new DynamoDBClient({ region: REGION });
 
 // Create a document client for DynamoDB
 const docClient = DynamoDBDocumentClient.from(client);
 
 // Table name for content data
-const CONTENT_TABLE = process.env.DYNAMODB_TABLE_NAME || 'content_data_test';
+const CONTENT_TABLE = process.env.DDB_TABLE || 'content_data_test';
 
 /**
  * Fetch all content items from DynamoDB
