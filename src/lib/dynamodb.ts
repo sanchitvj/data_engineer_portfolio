@@ -1,20 +1,20 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { fromEnv } from '@aws-sdk/credential-providers';
 
-// Simplified version
-const clientConfig: any = {
+// Create a more robust client initialization
+const client = new DynamoDBClient({
   region: process.env.AWS_REGION || 'us-east-1',
-};
-
-// Only add credentials if both values exist
-if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
-  clientConfig.credentials = {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  };
-}
-
-const client = new DynamoDBClient(clientConfig);
+  
+  // Force AWS SDK to use Amplify's IAM role with fromEnv credential provider
+  // This avoids the common credential discovery issues with serverless functions
+  credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+    ? {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      } 
+    : fromEnv() // This will better handle IAM roles in AWS environments
+});
 
 // Create a document client for DynamoDB
 const docClient = DynamoDBDocumentClient.from(client);
