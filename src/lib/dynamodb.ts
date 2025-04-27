@@ -2,9 +2,10 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { fromEnv } from '@aws-sdk/credential-providers';
 
-const REGION = process.env.REGION || 'us-east-1';
-const client = new DynamoDBClient({ region: REGION });
-
+const client = new DynamoDBClient({
+  region: process.env.AWS_REGION || 'us-east-1',
+  // Don't specify credentials at all - let the SDK use the provider chain
+});
 // Create a document client for DynamoDB
 const docClient = DynamoDBDocumentClient.from(client);
 
