@@ -1,16 +1,20 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
 
-// Initialize the DynamoDB client
-const client = new DynamoDBClient({
+// Simplified version
+const clientConfig: any = {
   region: process.env.AWS_REGION || 'us-east-1',
-  credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-    ? {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-      }
-    : undefined,
-});
+};
+
+// Only add credentials if both values exist
+if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+  clientConfig.credentials = {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  };
+}
+
+const client = new DynamoDBClient(clientConfig);
 
 // Create a document client for DynamoDB
 const docClient = DynamoDBDocumentClient.from(client);
