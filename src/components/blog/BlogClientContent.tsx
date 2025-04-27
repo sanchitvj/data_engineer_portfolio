@@ -1,11 +1,11 @@
 'use client'; // Mark this as a Client Component
 
-import React, { useState, useEffect, useRef, Suspense, useMemo, useCallback, CSSProperties, Dispatch, SetStateAction, RefObject } from 'react';
+import React, { useState, useEffect, useRef, Suspense, useMemo, useCallback, CSSProperties, Dispatch, SetStateAction, RefObject, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { FaSearch, FaStar, FaExternalLinkAlt, FaChevronRight, FaMicroscope, FaNewspaper, FaPlay, FaExpandAlt } from 'react-icons/fa';
+import { FaSearch, FaStar, FaExternalLinkAlt, FaChevronRight, FaMicroscope, FaNewspaper, FaPlay, FaExpandAlt, FaArrowUp } from 'react-icons/fa';
 import { X } from 'lucide-react';
 import { BlogPost } from '@/types/blog'; // Keep BlogPost type
 import LazyComponent from '@/components/blog/LazyComponent';
@@ -264,6 +264,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
     stationType?: string; // Add station type to remember context
   } | null>(null);
   const [showSearchDisabledMessage, setShowSearchDisabledMessage] = useState(false);
+  const [showScrollToTop, setShowScrollToTop] = useState(false);
   
   // Add state for posts loading
   const [loadingPosts, setLoadingPosts] = useState<Record<string, boolean>>({});
@@ -276,6 +277,10 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
   
   // Add state to track current index for each SwipeStation type
   const [stationIndexes, setStationIndexes] = useState<Record<string, number>>({});
+  
+  // First add a new state to track the number of posts to show on mobile for each type
+  const [mobilePagination, setMobilePagination] = useState<Record<string, number>>({});
+  const [mobileScrollObserver, setMobileScrollObserver] = useState<IntersectionObserver | null>(null);
   
   // Detect device size to determine initial loading limits
   const getPostsLimit = useCallback((type: string) => {
@@ -881,6 +886,80 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
     );
   }, [filteredPosts, loadingPosts, hasMorePosts, postCounts, searchStateKey, handleLoadMoreForType, activeFilter, activeSearchTerms, stationIndexes]);
 
+  // Add this after the other useEffect hooks to set up mobile pagination
+  useEffect(() => {
+    if (isMobileDevice) {
+      const initialPagination: Record<string, number> = {};
+      // Start with smaller chunks on mobile for each content type
+      initialPagination['youtube-video'] = 2;
+      initialPagination['linkedin-post'] = 3;
+      initialPagination['quick-note'] = 3;
+      initialPagination['research-report'] = 2;
+      initialPagination['comprehensive-study'] = 1;
+      
+      setMobilePagination(initialPagination);
+      
+      // Create intersection observer for mobile infinite scroll
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const sectionType = entry.target.getAttribute('data-section-type');
+              if (sectionType) {
+                // Increase pagination limit for this section
+                setMobilePagination(prev => ({
+                  ...prev,
+                  [sectionType]: Math.min(
+                    (prev[sectionType] || 0) + 2, // Add 2 more items
+                    filteredPosts.filter(post => post.type === sectionType).length // Don't exceed available posts
+                  )
+                }));
+              }
+            }
+          });
+        },
+        { rootMargin: '0px 0px 300px 0px' } // Load more when scrolling within 300px of the bottom
+      );
+      
+      setMobileScrollObserver(observer);
+    } else {
+      // On desktop, don't limit pagination
+      setMobilePagination({});
+    }
+  }, [isMobileDevice, filteredPosts]);
+
+  // Observe loading triggers when they're rendered
+  useEffect(() => {
+    if (mobileScrollObserver) {
+      // First disconnect from any existing elements
+      mobileScrollObserver.disconnect();
+      
+      // Then observe all loading triggers
+      document.querySelectorAll('.mobile-load-more-trigger').forEach(el => {
+        mobileScrollObserver.observe(el);
+      });
+    }
+  }, [mobileScrollObserver, mobilePagination]);
+
+  // Scroll to top button
+  const scrollToTopButton = (
+    <motion.button
+      className="fixed bottom-5 right-5 z-50 rounded-full bg-black dark:bg-white p-3 text-white dark:text-black shadow-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-opacity"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: showScrollToTop ? 1 : 0 }}
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.9 }}
+      onClick={() => {
+        if (window) {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }}
+      aria-label="Scroll to top"
+    >
+      <FaArrowUp size={20} />
+    </motion.button>
+  );
+
   // --- Return JSX Structure ---
   return (
     <>
@@ -1037,7 +1116,8 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                   <div className="lg:w-1/2 overflow-hidden relative">
                     <Image 
                       src={featuredPost.image} 
-                      alt={featuredPost.title} 
+                      alt={featuredPost.title}
+                      loading="lazy" 
                       width={600} 
                       height={400} 
                       className="w-full h-64 lg:h-full object-cover transition-transform duration-300 hover:scale-105" 
@@ -1388,6 +1468,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                          <Image 
                            src={post.image} 
                            alt={post.title} 
+                           loading="lazy"
                            width={600} 
                            height={300}
                            className="object-cover h-full w-full transition-transform hover:scale-105"
@@ -1439,6 +1520,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                          <Image 
                            src={post.image} 
                            alt={post.title} 
+                           loading="lazy"
                            width={800} 
                            height={400}
                            className="object-cover h-full w-full transition-transform hover:scale-105"
@@ -1639,6 +1721,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
           </div>
         </div>
       )}
+      {scrollToTopButton}
     </>
   );
 };

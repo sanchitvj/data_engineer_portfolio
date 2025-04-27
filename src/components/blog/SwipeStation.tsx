@@ -62,7 +62,7 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
     if (totalItems <= responsiveVisibleCards) {
       setMaxIndex(Math.max(0, totalItems - Math.max(1, Math.floor(responsiveVisibleCards * 0.7))));
     } else {
-      setMaxIndex(Math.max(0, totalItems - responsiveVisibleCards));
+    setMaxIndex(Math.max(0, totalItems - responsiveVisibleCards));
     }
   }, [totalItems, responsiveVisibleCards]);
 
@@ -153,7 +153,7 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
 
     return () => clearTimeout(timer);
   }, [posts, controlledIndex]);
-  
+
   // Additional effect to sync internal state with controlled value
   useEffect(() => {
     if (controlledIndex !== undefined && controlledIndex !== internalIndex) {
@@ -385,22 +385,22 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
       >
         {/* Left Arrow - Only show on larger displays */}
         {!isMobile && (
-          <AnimatePresence>
-            {currentIndex > 0 && !isDragging && (
-              <motion.button
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
-                transition={{ duration: 0.2 }}
-                onClick={handlePrev}
+        <AnimatePresence>
+          {currentIndex > 0 && !isDragging && (
+            <motion.button
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 10 }}
+              transition={{ duration: 0.2 }}
+              onClick={handlePrev}
                 className="absolute left-0 top-[calc(50%-28px)] -translate-y-1/2 z-20 w-10 h-10 bg-dark-300/80 hover:bg-data/40 rounded-full flex items-center justify-center text-white transition-colors shadow-lg"
-                aria-label="View previous items"
-                disabled={currentIndex === 0}
-              >
+              aria-label="View previous items"
+              disabled={currentIndex === 0}
+            >
                 <FaChevronLeft size={16} />
-              </motion.button>
-            )}
-          </AnimatePresence>
+            </motion.button>
+          )}
+        </AnimatePresence>
         )}
 
         {/* Cards Container */}
@@ -460,22 +460,22 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
 
         {/* Right Arrow - Only show on larger displays */}
         {!isMobile && (
-          <AnimatePresence>
-            {currentIndex < maxIndex && !isDragging && posts.length > responsiveVisibleCards && (
-              <motion.button
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2 }}
-                onClick={handleNext}
+        <AnimatePresence>
+          {currentIndex < maxIndex && !isDragging && posts.length > responsiveVisibleCards && (
+            <motion.button
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              transition={{ duration: 0.2 }}
+              onClick={handleNext}
                 className="absolute right-0 top-[calc(50%-28px)] -translate-y-1/2 z-20 w-10 h-10 bg-dark-300/80 hover:bg-data/40 rounded-full flex items-center justify-center text-white transition-colors shadow-lg"
-                aria-label="View next items"
-                disabled={currentIndex >= maxIndex}
-              >
+              aria-label="View next items"
+              disabled={currentIndex >= maxIndex}
+            >
                 <FaChevronRight size={16} />
-              </motion.button>
-            )}
-          </AnimatePresence>
+            </motion.button>
+          )}
+        </AnimatePresence>
         )}
 
         {/* Progress Indicators - Bottom center on mobile, hidden on desktop */}
@@ -510,20 +510,20 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
         ) : (
           // Only show pagination dots if we have more than one page of content
           totalItems > responsiveVisibleCards && (
-            <div className="flex justify-center mt-4 gap-1.5">
-              {Array.from({ length: Math.ceil(totalItems / responsiveVisibleCards) }).map((_, i) => (
-                <button
-                  key={i}
+        <div className="flex justify-center mt-4 gap-1.5">
+          {Array.from({ length: Math.ceil(totalItems / responsiveVisibleCards) }).map((_, i) => (
+            <button
+              key={i}
                   onClick={() => updateCurrentIndex(Math.min(i * responsiveVisibleCards, maxIndex))}
-                  className={`w-2 h-2 rounded-full transition-all ${
-                    i === Math.floor(currentIndex / responsiveVisibleCards)
-                      ? 'bg-data w-4'
-                      : 'bg-gray-600 hover:bg-gray-500'
-                  }`}
-                  aria-label={`Go to slide group ${i + 1}`}
-                />
-              ))}
-            </div>
+              className={`w-2 h-2 rounded-full transition-all ${
+                i === Math.floor(currentIndex / responsiveVisibleCards)
+                  ? 'bg-data w-4'
+                  : 'bg-gray-600 hover:bg-gray-500'
+              }`}
+              aria-label={`Go to slide group ${i + 1}`}
+            />
+          ))}
+        </div>
           )
         )}
       </div>

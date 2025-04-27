@@ -126,6 +126,13 @@
   animation: menu-float 3s ease-in-out infinite;
 }
 
+/* Add mobile-optimized simple snowfall animation */
+.animate-snow-fall {
+  animation: snowfall linear forwards;
+  animation-duration: var(--fall-duration, 10s);
+  animation-delay: var(--fall-delay, 0s);
+}
+
 /* Add CSS for section anchors with proper scroll margin */
 .section-anchor {
   scroll-margin-top: 100px;

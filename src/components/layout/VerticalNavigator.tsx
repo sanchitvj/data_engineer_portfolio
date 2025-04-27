@@ -39,7 +39,7 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
   // Calculate slider dimensions based on viewport and number of sections
   useEffect(() => {
     const calculateSliderDimensions = () => {
-      const numSections = filteredSections.length;
+    const numSections = filteredSections.length;
       if (numSections <= 1) return;
 
       // Get viewport height
@@ -310,7 +310,7 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
           // Try all possible ways to find the element
           const element = findElementById(section.id);
           return {
-            id: section.id,
+          id: section.id,
             element: element,
             position: element?.getBoundingClientRect().top || Infinity
           };
@@ -335,10 +335,10 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
           // Only update if the active section has changed
           if (activeSection !== active.id) {
             debugLog(`Setting active section to: ${active.id}`);
-            setActiveSection(active.id);
-            
-            // Calculate smooth position for the indicator
-            const activeIndex = filteredSections.findIndex(section => section.id === active.id);
+        setActiveSection(active.id);
+        
+        // Calculate smooth position for the indicator
+        const activeIndex = filteredSections.findIndex(section => section.id === active.id);
             if (activeIndex !== -1) {
               const targetPosition = activeIndex * nodeSpacing;
               setIndicatorPosition(targetPosition);
@@ -365,8 +365,8 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
                 setActiveSection(matchingSection.id);
                 const activeIndex = filteredSections.findIndex(section => section.id === matchingSection.id);
                 const targetPosition = activeIndex * nodeSpacing;
-                setIndicatorPosition(targetPosition);
-              }
+        setIndicatorPosition(targetPosition);
+      }
             }
           }
         }
@@ -487,4 +487,4 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
   );
 };
 
-export default VerticalNavigator;
+export default VerticalNavigator; 
