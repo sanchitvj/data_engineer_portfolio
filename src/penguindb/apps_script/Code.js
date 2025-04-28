@@ -3,7 +3,7 @@
 // =============================================================
 
 // Constants for status values
-const STATUS = {
+var STATUS = typeof STATUS !== 'undefined' ? STATUS : {
   NEW: "new",
   PENDING: "pending",
   PROCESSED: "processed",
@@ -11,7 +11,7 @@ const STATUS = {
 };
 
 // Column indices (adjust based on your actual sheet structure)
-const COLUMNS = {
+var COLUMNS = typeof COLUMNS !== 'undefined' ? COLUMNS : {
   CONTENT_ID: 0,  // Column for unique identifier
   CONTENT_TYPE: 1,
   DATE_PUBLISHED: 2,

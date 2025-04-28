@@ -125,3 +125,32 @@
 .animate-menu-float {
   animation: menu-float 3s ease-in-out infinite;
 }
+
+/* Add mobile-optimized simple snowfall animation */
+.animate-snow-fall {
+  animation: snowfall linear forwards;
+  animation-duration: var(--fall-duration, 10s);
+  animation-delay: var(--fall-delay, 0s);
+}
+
+/* Add CSS for section anchors with proper scroll margin */
+.section-anchor {
+  scroll-margin-top: 100px;
+  position: relative;
+  top: -80px;
+  visibility: hidden;
+  height: 0;
+}
+
+.section-container {
+  scroll-margin-top: 100px;
+}
+
+/* Make headers in SwipeStation sections have scroll margin */
+[id^="youtube-videos"], 
+[id^="linkedin-posts"],
+[id^="lol-hub"],
+[id^="linkedin-articles"],
+[id^="substack-unpacked"] {
+  scroll-margin-top: 120px;
+}
