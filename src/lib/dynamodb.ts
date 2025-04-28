@@ -10,7 +10,7 @@ const client = new DynamoDBClient({
 const docClient = DynamoDBDocumentClient.from(client);
 
 // Table name for content data
-const CONTENT_TABLE = process.env.DDB_TABLE || 'content_data_test';
+const CONTENT_TABLE = process.env.DDB_TABLE || 'content_data';
 
 /**
  * Fetch all content items from DynamoDB

@@ -13,7 +13,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 # Environment Variables
-DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME', 'content_data_test') # Ensure this is set
+DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME', 'content_data') # Ensure this is set
 GOOGLE_SHEET_URL = os.environ.get('GOOGLE_SHEET_URL') # Optional: For sheet status update
 
 # AWS Clients
