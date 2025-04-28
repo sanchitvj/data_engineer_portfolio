@@ -2,7 +2,7 @@ name: Update Content Processing
 
 on:
   push:
-    branches: [ optimize ]
+    branches: [ dev, optimize ]
     paths:
       - 'docker_images/content_processing.Dockerfile'
       - 'src/penguindb/lambda_function/content_ingestion.py'
