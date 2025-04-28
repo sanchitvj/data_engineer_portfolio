@@ -1,22 +1,16 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
 
-// Initialize the DynamoDB client
 const client = new DynamoDBClient({
   region: process.env.AWS_REGION || 'us-east-1',
-  credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-    ? {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-      }
-    : undefined,
+  // Don't specify credentials at all - let the SDK use the provider chain
 });
 
 // Create a document client for DynamoDB
 const docClient = DynamoDBDocumentClient.from(client);
 
 // Table name for content data
-const CONTENT_TABLE = process.env.DYNAMODB_TABLE_NAME || 'content_data';
+const CONTENT_TABLE = process.env.DDB_TABLE || 'content_data_test';
 
 /**
  * Fetch all content items from DynamoDB

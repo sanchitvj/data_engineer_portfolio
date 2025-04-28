@@ -15,7 +15,7 @@ const HeroSection: React.FC = () => {
   if (!mounted) {
     return (
       <section 
-        id="hero-section" 
+        id="hero" 
         className="min-h-[80vh] pt-20 flex items-center justify-center relative overflow-hidden px-4 pb-10"
       >
         <div className="w-full max-w-4xl mx-auto bg-dark-100 rounded-lg shadow-xl border border-dark-200 p-6 relative z-10">
@@ -31,9 +31,10 @@ const HeroSection: React.FC = () => {
 
   return (
     <section 
-      id="hero-section" 
+      id="hero" 
       className="relative min-h-[80vh] pt-20 md:pt-24 flex items-center justify-center overflow-hidden px-4 pb-10"
     >
+      <div id="hero-anchor" className="section-anchor"></div>
       {/* Terminal Window */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

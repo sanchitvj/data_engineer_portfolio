@@ -4,7 +4,7 @@ export type BlogPost = {
   excerpt: string;
   content?: string;
   date: string;
-  type: 'blog' | 'linkedin' | 'youtube' | 'linkedin-post' | 'quick-note' | 'research-report' | 'comprehensive-study' | 'linkedin-iframe';
+  type: 'blog' | 'linkedin' | 'youtube' | 'youtube-video' | 'linkedin-post' | 'quick-note' | 'research-report' | 'comprehensive-study' | 'linkedin-iframe';
   category?: string | string[];
   readTime?: string;
   youtubeUrl?: string;
@@ -14,6 +14,7 @@ export type BlogPost = {
   link?: string;
   url?: string;
   embed_link?: string;
+  media_link?: string | string[];
   featured?: boolean;
   tags?: string[];
   description?: string;
@@ -21,4 +22,6 @@ export type BlogPost = {
     name: string;
     avatar: string;
   };
+  isPlaceholder?: boolean;
+  generated_tags?: string[];
 }; 

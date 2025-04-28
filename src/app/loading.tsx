@@ -1,4 +1,6 @@
-import React from 'react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 
 // Array of fun facts about penguins
@@ -12,9 +14,14 @@ const penguinFacts = [
 ];
 
 export default function Loading() {
-  // Randomize fact on each load by picking a random index
-  const index = Math.floor(Math.random() * penguinFacts.length);
-  const fact = penguinFacts[index];
+  // Start with a stable fact (first one) for server rendering
+  const [fact, setFact] = useState(penguinFacts[0]);
+  
+  // Only randomize on the client after mounting
+  useEffect(() => {
+    const randomIndex = Math.floor(Math.random() * penguinFacts.length);
+    setFact(penguinFacts[randomIndex]);
+  }, []);
   
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-black/90">

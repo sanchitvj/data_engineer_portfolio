@@ -48,7 +48,8 @@ const AboutSection: React.FC = () => {
   const [activePipeline, setActivePipeline] = useState<keyof Skills>('Data Sources');
 
   return (
-    <section id="about-section" className="py-36 relative">
+    <section id="about" className="py-36 relative">
+      <div id="about-anchor" className="section-anchor"></div>
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

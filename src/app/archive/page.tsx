@@ -6,9 +6,11 @@ import { BlogPost } from '@/types/blog';
 import { Metadata } from 'next';
 // Import the new client component
 import BlogClientContent from '@/components/blog/BlogClientContent';
-// Import data fetching source directly
-import { blogPosts, blogCategories } from '@/data/blog-data';
+// Remove static data import
+// import { blogPosts, blogCategories } from '@/data/blog-data';
 import { getAllContentItems } from '@/lib/dynamodb';
+// Remove client component import to fix server/client boundary issue
+// import { formatTagDisplayName } from '@/components/blog/SearchModal';
 
 // Set metadata for SEO
 export const metadata: Metadata = {
@@ -18,6 +20,45 @@ export const metadata: Metadata = {
 
 // This enables ISR - Incremental Static Regeneration
 export const revalidate = 3600; // Revalidate every hour (3600 seconds)
+
+// Server-side implementation of formatTagDisplayName
+function formatCategoryLabel(tag: string): string {
+  // Special cases for known acronyms
+  const knownAcronyms: Record<string, string> = {
+    'ai': 'AI',
+    'ml': 'ML',
+    'nlp': 'NLP',
+    'api': 'API',
+    'aws': 'AWS',
+    'gcp': 'GCP',
+    'sql': 'SQL',
+    'data': 'Data',
+    'open': 'Open',
+    'source': 'Source',
+    'engineering': 'Engineering'
+  };
+
+  // Replace underscores with spaces
+  const formattedTag = tag.replace(/_/g, ' ');
+  
+  // Split into words
+  const words = formattedTag.split(' ');
+  
+  // Process each word
+  const processedWords = words.map(word => {
+    // Check if it's a known acronym (case insensitive)
+    const lowerWord = word.toLowerCase();
+    if (knownAcronyms[lowerWord]) {
+      return knownAcronyms[lowerWord];
+    }
+    
+    // Otherwise capitalize first letter of the word
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  });
+  
+  // Join words back together
+  return processedWords.join(' ');
+}
 
 /**
  * Parse DynamoDB StringSet format to regular array
@@ -45,106 +86,97 @@ function parseTagsField(tags: any): string[] {
 
 // Make the page component async for potential server-side operations (though direct import is sync here)
 export default async function ArchivePage() {
-  // Get static data from local file
-  const staticBlogPosts: BlogPost[] = blogPosts;
-  const blogCategoriesData = blogCategories;
+  // Define initial post count limits based on device type (will be used client-side)
+  const initialLimits = {
+    desktop: {
+      'youtube-video': 6,
+      'linkedin-post': 6,
+      'quick-note': 6,
+      'research-report': 4,
+      'comprehensive-study': 2
+    },
+    mobile: {
+      'youtube-video': 3,
+      'linkedin-post': 3,
+      'quick-note': 3,
+      'research-report': 3,
+      'comprehensive-study': 3
+    }
+  };
   
-  // Fetch dynamic data from DynamoDB
-  let dynamoDBPosts: BlogPost[] = [];
+  // Storage for post counts and categories
+  let postCounts: Record<string, number> = {
+    'youtube-video': 0,
+    'linkedin-post': 0, 
+    'quick-note': 0,
+    'research-report': 0,
+    'comprehensive-study': 0
+  };
+  
+  // Fetch all content items just for counts and categories
+  let dynamicCategories = new Set<string>();
   
   try {
     const items = await getAllContentItems();
     
-    // Map DynamoDB items to match BlogPost structure
-    dynamoDBPosts = items.map((item: any) => {
-      // Parse tags from DynamoDB format
+    // Count posts by type and collect categories
+    items.forEach((item: any) => {
+      // Parse tags for categorization
       const tags = parseTagsField(item.tags);
       const generatedTags = parseTagsField(item.generated_tags);
       
-      // Handle media links (may be comma-separated)
-      let mediaLink = '';
-      if (item.media_link) {
-        const links = item.media_link.split(',');
-        mediaLink = links[0].trim(); // Get first image if multiple
-      }
-      
-      // Set type based on content_type
+      // Determine post type
       let type: BlogPost['type'] = 'research-report';
       if (item.content_type === 'post') {
-        // Check if it has humor tag
         const hasHumorTag = tags.includes('humor');
         type = hasHumorTag ? 'quick-note' : 'linkedin-post';
       } else if (item.content_type === 'article') {
         type = 'research-report';
       } else if (item.content_type === 'substack') {
         type = 'comprehensive-study';
+      } else if (item.content_type === 'youtube') {
+        type = 'youtube-video';
       }
       
-      return {
-        id: item.content_id || `dynamo-${Math.random().toString(36).substring(2, 9)}`,
-        title: item.generated_title || item.title || 'Untitled Post',
-        excerpt: item.generated_description || item.description || '',
-        description: item.generated_description || item.description || '',
-        content: item.generated_content || '',
-        date: item.date_published || item.processed_at || new Date().toISOString(),
-        tags: [...generatedTags, ...tags].filter((v, i, a) => a.indexOf(v) === i), // Combine tags and remove duplicates
-        category: generatedTags.length > 0 ? generatedTags : tags.length > 0 ? tags : [item.content_type || 'article'],
-        type,
-        link: item.url || item.embed_link || '',
-        url: item.url || '',
-        image: mediaLink || '/images/blog/placeholder.jpg',
-        author: {
-          name: 'Sanchit Vijay',
-          avatar: '/images/profile.jpeg'
-        },
-        featured: false,
-        readTime: '3 min read',
-        embed_link: item.embed_link || null, // Preserve the embed_link for iframe display
-      };
+      // Increment count for this type
+      postCounts[type] = (postCounts[type] || 0) + 1;
+      
+      // Collect categories
+      if (generatedTags.length > 0) {
+        generatedTags.forEach(tag => dynamicCategories.add(tag));
+      }
+      if (tags.length > 0) {
+        tags.forEach(tag => dynamicCategories.add(tag)); 
+      }
+      if (item.content_type) {
+        dynamicCategories.add(item.content_type);
+      }
     });
     
-    console.log(`Fetched ${dynamoDBPosts.length} posts from DynamoDB`);
+    console.log('Post counts:', postCounts);
   } catch (error) {
-    console.error('Error fetching posts from DynamoDB:', error);
-    // Continue with static data even if DynamoDB fetch fails
+    console.error('Error fetching content counts:', error);
+    // Keep default count values
   }
   
-  // Sort dynamoDB posts by date (newest first)
-  dynamoDBPosts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  // Create categories from collected unique values
+  const allCategories = Array.from(dynamicCategories).map(category => ({
+    id: category,
+    label: formatCategoryLabel(category)
+  }));
   
-  // Combine static and dynamic data
-  // Place DynamoDB posts before (newer content)
-  const combinedPosts = [...dynamoDBPosts, ...staticBlogPosts];
-  
-  // Extract all unique categories from dynamic posts to add to existing categories
-  const dynamicCategories = new Set<string>();
-  dynamoDBPosts.forEach(post => {
-    if (typeof post.category === 'string') {
-      dynamicCategories.add(post.category);
-    } else if (Array.isArray(post.category)) {
-      post.category.forEach(cat => dynamicCategories.add(cat));
-    }
-    
-    if (post.tags && Array.isArray(post.tags)) {
-      post.tags.forEach(tag => dynamicCategories.add(tag));
-    }
-  });
-  
-  // Add any new categories from DynamoDB posts
-  const allCategories = [...blogCategoriesData];
-  dynamicCategories.forEach(category => {
-    if (!allCategories.some(c => c.id === category)) {
-      allCategories.push({
-        id: category,
-        label: category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, ' ')
-      });
-    }
+  // Add 'all' category at the beginning
+  allCategories.unshift({
+    id: 'all',
+    label: 'All'
   });
 
   return (
     <BlogClientContent
-      initialBlogPosts={combinedPosts}
+      initialBlogPosts={[]} // No initial posts, will load through API
       initialBlogCategories={allCategories}
+      postCounts={postCounts}
+      initialLimits={initialLimits}
     />
   );
 }

@@ -82,6 +82,7 @@ const getRandomPoint = (offScreen = false) => {
 };
 
 const BlogIcebergBackground: React.FC = () => {
+  const [isMobile, setIsMobile] = useState(false);
   const [snowflakes, setSnowflakes] = useState<Snowflake[]>([]);
   const [iceCrystals, setIceCrystals] = useState<IceCrystal[]>([]);
   const [icebergs, setIcebergs] = useState<Iceberg[]>([]);
@@ -90,11 +91,26 @@ const BlogIcebergBackground: React.FC = () => {
   const [windGustTime, setWindGustTime] = useState(0);
   const rippleCount = useRef(0);
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  // Check for mobile viewport
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768); // Common breakpoint for tablets/mobile
+    };
+    
+    checkIfMobile();
+    window.addEventListener('resize', checkIfMobile);
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
   
   // Generate snowflakes, ice crystals, and icebergs
   useEffect(() => {
+    // Adjust counts based on device
+    const snowflakeCount = isMobile ? 15 : 60;
+    const crystalCount = isMobile ? 5 : 20;
+    const icebergInitialCount = isMobile ? 4 : 12;
+    
     // Regular snowflakes - smaller and more numerous with faster speed
-    const snowflakeCount = 60;
     const newSnowflakes = Array.from({ length: snowflakeCount }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
@@ -108,7 +124,6 @@ const BlogIcebergBackground: React.FC = () => {
     }));
     
     // Ice crystals - larger, shaped like snowflakes, with gust effect
-    const crystalCount = 20;
     const newCrystals = Array.from({ length: crystalCount }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
@@ -127,26 +142,27 @@ const BlogIcebergBackground: React.FC = () => {
     setIceCrystals(newCrystals);
     
     // Create initial icebergs
-    createIcebergs();
+    createIcebergs(icebergInitialCount);
 
-    // Set up wind gust timing
-    const windInterval = setInterval(() => {
-      setWindGustTime(prev => prev + 0.05);
-    }, 50);
-
-    return () => clearInterval(windInterval);
-  }, []);
+    // Set up wind gust timing - not needed on mobile
+    if (!isMobile) {
+      const windInterval = setInterval(() => {
+        setWindGustTime(prev => prev + 0.05);
+      }, 50);
+      
+      return () => clearInterval(windInterval);
+    }
+  }, [isMobile]);
   
   // Function to create a new set of icebergs
-  const createIcebergs = () => {
-    const icebergCount = 12;
-    const newIcebergs = Array.from({ length: icebergCount }, (_, i) => {
+  const createIcebergs = (count: number = 12) => {
+    const newIcebergs = Array.from({ length: count }, (_, i) => {
       let startPoint, endPoint;
       
-      if (i < 5) {
+      if (i < Math.floor(count/3)) {
         startPoint = getRandomPoint(false);
         endPoint = getRandomPoint(true);
-      } else if (i < 10) {
+      } else if (i < Math.floor(count*2/3)) {
         startPoint = getRandomPoint(true);
         endPoint = getRandomPoint(false);
       } else {
@@ -170,8 +186,10 @@ const BlogIcebergBackground: React.FC = () => {
     setIcebergs(newIcebergs);
   };
   
-  // Handle mouse movement for ripple effect
+  // Handle mouse movement for ripple effect - only on desktop
   useEffect(() => {
+    if (isMobile) return; // Skip ripple effects on mobile
+    
     const handleMouseMove = (e: MouseEvent) => {
       if (!canvasRef.current) return;
       
@@ -201,79 +219,160 @@ const BlogIcebergBackground: React.FC = () => {
         canvasRef.current.removeEventListener('mousemove', handleMouseMove);
       }
     };
-  }, []);
+  }, [isMobile]);
   
-  // Regenerate icebergs periodically
+  // Regenerate icebergs periodically - less frequently on mobile
   useEffect(() => {
-    const regenerateInterval = setInterval(() => {
-      const useOffscreenStart = Math.random() > 0.3;
-      const startPoint = getRandomPoint(useOffscreenStart);
-      const endPoint = getRandomPoint(Math.random() > 0.5);
+    if (isMobile) {
+      // Simplified iceberg regeneration for mobile - less frequent
+      const regenerateInterval = setInterval(() => {
+        const useOffscreenStart = Math.random() > 0.3;
+        const startPoint = getRandomPoint(useOffscreenStart);
+        const endPoint = getRandomPoint(Math.random() > 0.5);
+        
+        const newIceberg = {
+          id: Date.now(),
+          startX: startPoint.x,
+          startY: startPoint.y,
+          endX: endPoint.x,
+          endY: endPoint.y,
+          size: Math.random() * 8 + 4,
+          rotation: Math.random() * 20 - 10,
+          shape: Math.floor(Math.random() * icebergShapes.length),
+          duration: Math.random() * 40 + 30,
+        };
+        
+        // Keep only a few icebergs on mobile
+        setIcebergs(prev => [...prev.slice(-3), newIceberg]);
+      }, 8000); // Twice as slow on mobile
       
-      const newIceberg = {
-        id: Date.now(),
-        startX: startPoint.x,
-        startY: startPoint.y,
-        endX: endPoint.x,
-        endY: endPoint.y,
-        size: Math.random() * 8 + 4,
-        rotation: Math.random() * 20 - 10,
-        shape: Math.floor(Math.random() * icebergShapes.length),
-        duration: Math.random() * 40 + 30,
-      };
+      return () => clearInterval(regenerateInterval);
+    } else {
+      // Original desktop behavior
+      const regenerateInterval = setInterval(() => {
+        const useOffscreenStart = Math.random() > 0.3;
+        const startPoint = getRandomPoint(useOffscreenStart);
+        const endPoint = getRandomPoint(Math.random() > 0.5);
+        
+        const newIceberg = {
+          id: Date.now(),
+          startX: startPoint.x,
+          startY: startPoint.y,
+          endX: endPoint.x,
+          endY: endPoint.y,
+          size: Math.random() * 8 + 4,
+          rotation: Math.random() * 20 - 10,
+          shape: Math.floor(Math.random() * icebergShapes.length),
+          duration: Math.random() * 40 + 30,
+        };
+        
+        setIcebergs(prev => [...prev.slice(-14), newIceberg]);
+      }, 4000);
       
-      setIcebergs(prev => [...prev.slice(-14), newIceberg]);
-    }, 4000);
-    
-    return () => clearInterval(regenerateInterval);
-  }, []);
+      return () => clearInterval(regenerateInterval);
+    }
+  }, [isMobile]);
   
-  // Regenerate occasional ice crystals with faster rates
+  // Regenerate occasional ice crystals - fewer and slower on mobile
   useEffect(() => {
-    const regenerateCrystals = setInterval(() => {
-      const newCrystal = {
-        id: Date.now(),
-        x: Math.random() * 100,
-        y: -20,
-        size: Math.random() * 15 + 10,
-        opacity: Math.random() * 0.3 + 0.4,
-        speed: Math.random() * 10 + 6,
-        delay: 0,
-        rotation: Math.random() * 360,
-        variant: Math.floor(Math.random() * crystalShapes.length),
-        gustFactor: Math.random() * 15 + 10,
-        gustPhase: Math.random() * Math.PI * 2,
-      };
+    if (isMobile) {
+      // Simplified crystal regeneration for mobile
+      const regenerateCrystals = setInterval(() => {
+        const newCrystal = {
+          id: Date.now(),
+          x: Math.random() * 100,
+          y: -20,
+          size: Math.random() * 15 + 10,
+          opacity: Math.random() * 0.3 + 0.4,
+          speed: Math.random() * 10 + 6,
+          delay: 0,
+          rotation: Math.random() * 360,
+          variant: Math.floor(Math.random() * crystalShapes.length),
+          gustFactor: Math.random() * 15 + 10,
+          gustPhase: Math.random() * Math.PI * 2,
+        };
+        
+        // Keep only a few crystals on mobile
+        setIceCrystals(prev => [...prev.slice(-4), newCrystal]);
+      }, 4000); // Twice as slow on mobile
       
-      setIceCrystals(prev => [...prev.slice(-19), newCrystal]);
-    }, 2000);
-    
-    return () => clearInterval(regenerateCrystals);
-  }, []);
+      return () => clearInterval(regenerateCrystals);
+    } else {
+      // Original desktop behavior
+      const regenerateCrystals = setInterval(() => {
+        const newCrystal = {
+          id: Date.now(),
+          x: Math.random() * 100,
+          y: -20,
+          size: Math.random() * 15 + 10,
+          opacity: Math.random() * 0.3 + 0.4,
+          speed: Math.random() * 10 + 6,
+          delay: 0,
+          rotation: Math.random() * 360,
+          variant: Math.floor(Math.random() * crystalShapes.length),
+          gustFactor: Math.random() * 15 + 10,
+          gustPhase: Math.random() * Math.PI * 2,
+        };
+        
+        setIceCrystals(prev => [...prev.slice(-19), newCrystal]);
+      }, 2000);
+      
+      return () => clearInterval(regenerateCrystals);
+    }
+  }, [isMobile]);
   
-  // Regenerate occasional snowflakes (faster than in the original)
+  // Regenerate occasional snowflakes - fewer and slower on mobile
   useEffect(() => {
-    const regenerateSnowflakes = setInterval(() => {
-      const newSnowflake = {
-        id: Date.now(),
-        x: Math.random() * 100,
-        y: -10,
-        size: Math.random() * 4 + 1,
-        opacity: Math.random() * 0.6 + 0.2,
-        speed: Math.random() * 40 + 20,
-        delay: 0,
-        gustFactor: Math.random() * 10 + 5,
-        gustPhase: Math.random() * Math.PI * 2,
-      };
+    if (isMobile) {
+      // Simplified snowflake regeneration for mobile
+      const regenerateSnowflakes = setInterval(() => {
+        const newSnowflake = {
+          id: Date.now(),
+          x: Math.random() * 100,
+          y: -10,
+          size: Math.random() * 4 + 1,
+          opacity: Math.random() * 0.6 + 0.2,
+          speed: Math.random() * 40 + 20,
+          delay: 0,
+          gustFactor: Math.random() * 10 + 5,
+          gustPhase: Math.random() * Math.PI * 2,
+        };
+        
+        // Keep only a few snowflakes on mobile
+        setSnowflakes(prev => [...prev.slice(-14), newSnowflake]);
+      }, 1500); // 3x slower on mobile
       
-      setSnowflakes(prev => [...prev.slice(-59), newSnowflake]);
-    }, 500);
-    
-    return () => clearInterval(regenerateSnowflakes);
-  }, []);
+      return () => clearInterval(regenerateSnowflakes);
+    } else {
+      // Original desktop behavior
+      const regenerateSnowflakes = setInterval(() => {
+        const newSnowflake = {
+          id: Date.now(),
+          x: Math.random() * 100,
+          y: -10,
+          size: Math.random() * 4 + 1,
+          opacity: Math.random() * 0.6 + 0.2,
+          speed: Math.random() * 40 + 20,
+          delay: 0,
+          gustFactor: Math.random() * 10 + 5,
+          gustPhase: Math.random() * Math.PI * 2,
+        };
+        
+        setSnowflakes(prev => [...prev.slice(-59), newSnowflake]);
+      }, 500);
+      
+      return () => clearInterval(regenerateSnowflakes);
+    }
+  }, [isMobile]);
   
   // Calculate gust effect for x positions
   const getGustXAnimation = (gustFactor: number, gustPhase: number) => {
+    // Simplified for mobile
+    if (isMobile) {
+      return [0, 0]; // No gust effect on mobile
+    }
+    
+    // Original desktop behavior
     return [0, 
       `${10 * Math.cos(gustPhase)}vw`, 
       `${-5 * Math.cos(gustPhase + 0.5)}vw`, 
@@ -284,6 +383,66 @@ const BlogIcebergBackground: React.FC = () => {
     ];
   };
   
+  // Render a simplified mobile background
+  if (isMobile) {
+    return (
+      <div 
+        ref={canvasRef}
+        className="fixed inset-0 overflow-hidden bg-gradient-to-b from-[#05101c] via-[#062447] to-[#04152d] z-0"
+      >
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-radial from-transparent to-[#04152d]/70" />
+        
+        {/* Background grid lines - static on mobile */}
+        <div 
+          className="absolute inset-0 opacity-5"
+          style={{ 
+            backgroundImage: 'linear-gradient(0deg, transparent 24%, rgba(255, 255, 255, .05) 25%, rgba(255, 255, 255, .05) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .05) 75%, rgba(255, 255, 255, .05) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(255, 255, 255, .05) 25%, rgba(255, 255, 255, .05) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .05) 75%, rgba(255, 255, 255, .05) 76%, transparent 77%, transparent)',
+            backgroundSize: '100px 100px' 
+          }}
+        />
+
+        {/* Minimal Icebergs for mobile - use CSS transitions instead of motion for better performance */}
+        {icebergs.slice(0, 4).map(iceberg => (
+          <div
+            key={iceberg.id}
+            className="absolute opacity-20 transition-all duration-[40000ms] ease-in-out"
+            style={{
+              left: `${iceberg.startX}%`,
+              top: `${iceberg.startY}%`,
+              width: `${iceberg.size}%`,
+              height: `${iceberg.size * 0.6}%`,
+              clipPath: icebergShapes[iceberg.shape],
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.6) 0%, rgba(194, 240, 254, 0.3) 70%, rgba(37, 183, 211, 0.15) 100%)',
+              transform: `translateX(${iceberg.endX - iceberg.startX}%) translateY(${iceberg.endY - iceberg.startY}%) rotate(${iceberg.rotation}deg)`,
+            }}
+          />
+        ))}
+        
+        {/* Minimal Snowflakes for mobile - CSS animation for better performance */}
+        {snowflakes.slice(0, 15).map(snowflake => (
+          <div
+            key={snowflake.id}
+            className="absolute rounded-full bg-white animate-snow-fall"
+            style={{
+              left: `${snowflake.x}%`,
+              width: `${snowflake.size}px`,
+              height: `${snowflake.size}px`,
+              opacity: snowflake.opacity,
+              '--fall-duration': `${100 / snowflake.speed}s`,
+              '--fall-delay': `${snowflake.delay}s`,
+            } as React.CSSProperties}
+          />
+        ))}
+        
+        {/* Static light effects instead of animated ones */}
+        <div className="absolute top-1/4 left-1/3 w-1/3 h-1/3 bg-[#25B7D3]/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-1/4 right-1/3 w-1/3 h-1/3 bg-[#25B7D3]/5 rounded-full blur-3xl"></div>
+      </div>
+    );
+  }
+  
+  // Original desktop version (unchanged)
   return (
     <div 
       ref={canvasRef}
