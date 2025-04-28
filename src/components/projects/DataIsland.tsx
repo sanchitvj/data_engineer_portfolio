@@ -189,14 +189,14 @@ const DataIsland: React.FC<DataIslandProps> = ({ project, index, isFeatured = fa
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+              className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
               onClick={() => setShowDetails(false)}
             >
               <motion.div
                 initial={{ scale: 0.9, y: 20 }}
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.9, y: 20 }}
-                className="relative w-full max-w-4xl max-h-[80vh] overflow-auto bg-gradient-to-br from-white/10 to-[#25B7D3]/10 rounded-xl border-2 border-[#25B7D3]/30 shadow-lg shadow-[#25B7D3]/20 mt-20"
+                className="relative w-full max-w-4xl max-h-[75vh] overflow-auto bg-gradient-to-br from-white/10 to-[#25B7D3]/10 rounded-xl border-2 border-[#25B7D3]/30 shadow-lg shadow-[#25B7D3]/20 mt-20 mb-32"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Close Button */}
@@ -211,7 +211,7 @@ const DataIsland: React.FC<DataIslandProps> = ({ project, index, isFeatured = fa
                   {/* Project Header */}
                   <div className="mb-6 md:mb-8 border-b border-[#25B7D3]/30 pb-4 md:pb-6">
                     <h2 className="text-3xl md:text-4xl font-bold text-[#25B7D3] mb-3 md:mb-4">{project.title}</h2>
-                    <p className="text-lg md:text-xl text-white/80">{project.description}</p>
+                    <p className="text-base md:text-lg text-white/80">{project.description}</p>
                   </div>
                   
                   {/* Main Content Grid */}
@@ -305,8 +305,8 @@ const DataIsland: React.FC<DataIslandProps> = ({ project, index, isFeatured = fa
                         
                         {/* Metrics */}
                         <div className="bg-white/10 p-3 md:p-4 rounded-xl border-2 border-[#25B7D3]/30 shadow-md shadow-[#25B7D3]/10">
-                          <h3 className="text-lg md:text-xl font-semibold text-[#25B7D3] mb-2 md:mb-3 flex items-center">
-                            <span className="w-2 h-5 md:h-6 bg-[#25B7D3]/50 mr-2 rounded-sm"></span>
+                          <h3 className="text-xl md:text-xl font-semibold text-[#25B7D3] mb-2 md:mb-3 flex items-center">
+                            <span className="w-2 h-5 md:h-6 bg-[#25B7D3]/50 mr-3 rounded-sm"></span>
                             Metrics & Impact
                           </h3>
                           <div className="flex flex-wrap gap-2">

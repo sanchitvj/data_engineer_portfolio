@@ -1,6 +1,5 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
-import { fromEnv } from '@aws-sdk/credential-providers';
 
 const client = new DynamoDBClient({
   region: process.env.AWS_REGION || 'us-east-1',

@@ -266,6 +266,9 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
   const [showSearchDisabledMessage, setShowSearchDisabledMessage] = useState(false);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   
+  // Add state for card behavior info modal
+  const [showCardInfoModal, setShowCardInfoModal] = useState(false);
+  
   // Add state for posts loading
   const [loadingPosts, setLoadingPosts] = useState<Record<string, boolean>>({});
   const [hasMorePosts, setHasMorePosts] = useState<Record<string, boolean>>({});
@@ -986,8 +989,20 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
           </h1>
           <p className="text-gray-300 max-w-2xl mx-auto">
             Welcome to my Antarctic Research Station, where I document insights and discoveries from my data engineering expeditions.
-            <br />This research station leverages AI to enhance content discovery and organization. Some content descriptions may be AI-assisted.
-            <br />Note: This station is under construction.
+            Explore these content cards with a gentle swipe — they float freely in the digital waters, just like the real ones!
+            {/* Swipe through our Arctic Archives — like penguins on ice, they might slide a bit during navigation! */}
+            <br />
+            <button 
+              onClick={() => setShowCardInfoModal(true)}
+              className="ml-1 inline-flex items-center justify-center p-1 rounded-full bg-gradient-to-r from-[#25B7D3]/40 to-[#6559F5]/30 hover:from-[#25B7D3]/60 hover:to-[#6559F5]/50 text-white shadow-md border border-[#25B7D3]/30 transition-all group relative overflow-hidden"
+              aria-label="View AI content information"
+            >
+              <span className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+              <span className="absolute -inset-1 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10 blur-md opacity-0 group-hover:opacity-100 animate-pulse transition-opacity"></span>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" className="w-5 h-5 group-hover:scale-110 transition-transform">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+              </svg>
+            </button>
           </p>
         </motion.div>
         )}
@@ -1245,7 +1260,11 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                      }}
                    >
                      <div className="flex items-center mb-2"> <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0"> <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"> <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"></path> </svg> </div> <span className="ml-1.5 text-xs text-gray-400">LinkedIn Post</span> </div> 
-                     <h4 className="font-semibold text-md mb-1.5 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> 
+                     <h4 className="font-semibold text-lg mb-2 text-white overflow-auto max-h-[60px]"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}>
+                       {highlightText(post.title, activeSearchTerms)}
+                     </h4>
                      <p className="text-gray-300 text-xs mb-2 line-clamp-3 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt || '', 24), activeSearchTerms)} </p>
                      <div className="mt-auto">
                        <div className="flex justify-between items-center mb-2">
@@ -1361,7 +1380,11 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                        </div> 
                        <span className="ml-1.5 text-xs text-gray-400">LinkedIn Post</span> 
                      </div> 
-                     <h4 className="font-semibold text-md mb-1.5 text-white line-clamp-2 leading-snug">{highlightText(post.title, activeSearchTerms)}</h4> 
+                     <h4 className="font-semibold text-lg mb-2 text-white overflow-auto max-h-[60px]"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}>
+                       {highlightText(post.title, activeSearchTerms)}
+                     </h4>
                      <p className="text-gray-300 text-xs mb-2 line-clamp-3 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt || '', 24), activeSearchTerms)} </p>
                      <div className="mt-auto">
                        <div className="flex justify-between items-center mb-2">
@@ -1479,8 +1502,14 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                          </div>
                        )}
                      </div>
-                     <h4 className="font-semibold text-lg mb-2 text-white line-clamp-2">{highlightText(post.title, activeSearchTerms)}</h4>
-                     <p className="text-gray-300 text-sm mb-4 flex-grow overflow-auto">
+                     <h4 className="font-semibold text-lg mb-2 text-white overflow-auto max-h-[60px]"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}>
+                       {highlightText(post.title, activeSearchTerms)}
+                     </h4>
+                     <p className="text-gray-300 text-sm mb-4 flex-grow overflow-auto"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}>
                        {highlightText(post.excerpt || '', activeSearchTerms)}
                      </p>
                      <div className="mt-auto">
@@ -1531,8 +1560,14 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                          </div>
                        )}
                      </div>
-                     <h4 className="font-semibold text-xl mb-2 text-white">{highlightText(post.title, activeSearchTerms)}</h4>
-                     <p className="text-gray-300 text-sm mb-4 flex-grow overflow-auto">
+                     <h4 className="font-semibold text-xl mb-2 text-white overflow-auto max-h-[60px]"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}>
+                       {highlightText(post.title, activeSearchTerms)}
+                     </h4>
+                     <p className="text-gray-300 text-sm mb-4 flex-grow overflow-auto"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}>
                        {highlightText(post.excerpt || '', activeSearchTerms)}
                      </p>
                      <div className="mt-auto">
@@ -1722,6 +1757,42 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
         </div>
       )}
       {scrollToTopButton}
+      
+      {/* Card Info Modal */}
+      {showCardInfoModal && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowCardInfoModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            transition={{ type: "spring", damping: 20 }}
+            className="bg-dark-200 border border-data/30 rounded-lg shadow-xl w-full max-w-md overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 border-b border-gray-700 flex justify-center items-center">
+              <h3 className="text-xl font-semibold text-white flex items-center">
+                AI-Enhanced Content Note
+              </h3>
+            </div>
+            <div className="p-2 text-gray-300 space-y-2">
+              <p>
+                This research station leverages AI to enhance content discovery and organization. The content titles and descriptions are AI-assisted.
+              </p>
+            </div>
+            <div className="p-2 bg-dark-300/50 flex justify-center">
+              <button
+                onClick={() => setShowCardInfoModal(false)}
+                className="px-2 py-2 bg-data/20 hover:bg-data/30 text-data rounded-md transition-colors"
+              >
+                Got it
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </>
   );
 };

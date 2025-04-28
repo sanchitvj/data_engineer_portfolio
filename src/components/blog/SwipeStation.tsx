@@ -131,10 +131,19 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
 
   // Update the setCurrentIndex calls to properly handle both controlled and uncontrolled mode
   const updateCurrentIndex = (newIndex: number) => {
+    // Set animating to true to show transition cards
+    setAnimating(true);
+    
+    // Update the index
     setInternalIndex(newIndex);
     if (onIndexChange) {
       onIndexChange(newIndex);
     }
+    
+    // Reset animating flag after animation completes
+    setTimeout(() => {
+      setAnimating(false);
+    }, 300); // Match this with animation duration
   }
   
   // Reset index and update width when posts change, but only if not controlled externally
@@ -261,12 +270,43 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
     : 0;
     
   // Drag handler functions - Simplified
-  const handleDragStart = () => {
+  const handleDragStart = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    // Check if the event came from a scrollable element
+    if (event.target instanceof Element) {
+      const scrollableParent = findScrollableParent(event.target);
+      // If the event target has a scrollable parent that's not the main swipe container,
+      // prevent drag from starting
+      if (scrollableParent && 
+          scrollableParent !== containerRef.current && 
+          !scrollableParent.contains(containerRef.current)) {
+        return;
+      }
+    }
+    
     setIsDragging(true);
   };
+  
+  // Helper function to find scrollable parent
+  const findScrollableParent = (element: Element): Element | null => {
+    if (!element || element === document.body) return null;
+    
+    const style = window.getComputedStyle(element);
+    const overflowX = style.getPropertyValue('overflow-x');
+    const overflowY = style.getPropertyValue('overflow-y');
+    
+    if (overflowX === 'auto' || overflowX === 'scroll' || 
+        overflowY === 'auto' || overflowY === 'scroll') {
+      return element;
+    }
+    
+    return element.parentElement ? findScrollableParent(element.parentElement) : null;
+  };
 
-  // Modify handleDragEnd to use updateCurrentIndex
+  // Modify handleDragEnd to also check if we should process the drag
   const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    // If we weren't dragging (due to interaction with a scrollable element), just exit
+    if (!isDragging) return;
+    
     setIsDragging(false);
 
     const cardAndGapWidth = singleCardWidth + gapSize;
@@ -278,6 +318,16 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
     const velocity = info.velocity.x;
     const velocityFactor = 0.1; // Adjust sensitivity to velocity
     const projectedOffset = offset + velocity * velocityFactor;
+
+    // Add a minimum drag threshold (20% of card width)
+    const dragThreshold = cardAndGapWidth * 0.2;
+    
+    // If the drag was very small and slow, snap back to the current position
+    if (Math.abs(projectedOffset) < dragThreshold && Math.abs(velocity) < 300) {
+      // Just return to current index - no change
+      updateCurrentIndex(currentIndex);
+      return;
+    }
 
     // Calculate the fractional index based on the projected final position
     const targetFractionalIndex = currentIndex - (projectedOffset / cardAndGapWidth);
@@ -316,14 +366,15 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
     // This prevents empty space during drag operations
     if (isDragging) {
       // Show cards in an extended window (current + next + previous)
-      const extendedRange = 2; // Number of additional cards to show
+      const extendedRange = 3; // Increased from 2 to 3 for smoother transitions
       return index >= currentIndex - extendedRange && 
              index < currentIndex + responsiveVisibleCards + extendedRange &&
              index < totalItems; // Don't go beyond total items
     }
     
-    // Otherwise, show the current window of posts
-    return index >= currentIndex && index < currentIndex + responsiveVisibleCards;
+    // Otherwise, show the current window of posts plus one extra on each side to prevent empty space
+    return (index >= currentIndex - 1 && index < currentIndex + responsiveVisibleCards + 1) && 
+           index < totalItems;
   };
 
   // Determine card appearance state (fully visible, partially visible placeholder, or hidden)
@@ -333,12 +384,17 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
       return 'visible';
     }
     
-    // During dragging, show placeholders for cards just outside the visible window
-    if (isDragging) {
-      const extendedRange = 2; // Should match the value in getCardVisibility
+    // During dragging or right after (transition phase), show placeholders for cards just outside the visible window
+    if (isDragging || animating) {
+      const extendedRange = 3; // Match the value in getCardVisibility
       if ((index >= currentIndex - extendedRange && index < currentIndex) || 
           (index >= currentIndex + responsiveVisibleCards && index < currentIndex + responsiveVisibleCards + extendedRange) &&
            index < totalItems) {
+        return 'placeholder';
+      }
+    } else {
+      // When not dragging, still show adjacent cards as placeholders for smoother transitions
+      if ((index === currentIndex - 1) || (index === currentIndex + responsiveVisibleCards) && index < totalItems) {
         return 'placeholder';
       }
     }
@@ -409,7 +465,7 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
           className={`overflow-hidden ${isMobile ? 'px-7' : 'px-16'}`}
         >
           <motion.div 
-            className="flex gap-4 pb-4 cursor-grab active:cursor-grabbing"
+            className="flex gap-4 pb-4 cursor-grab active:cursor-grabbing relative"
             drag="x" // Always allow dragging on x-axis
             dragConstraints={{ left: -totalContentWidth + availableWidth, right: 0 }} // Set stricter constraints
             dragElastic={0.15} // Adjust elasticity
@@ -422,9 +478,21 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
               type: "spring",
               stiffness: 350, // Slightly adjusted stiffness/damping
               damping: 35,
+              restDelta: 0.001, // More precise resting point
+              restSpeed: 0.001, // Slower rest speed for smoother ending
             }}
             style={{ width: totalContentWidth }} // Explicitly set width for constraints
           >
+            {/* Add non-scrollable edges for swiping */}
+            <div 
+              className="absolute inset-y-0 left-0 w-[20%] cursor-grab active:cursor-grabbing z-0" 
+              aria-hidden="true"
+            />
+            <div 
+              className="absolute inset-y-0 right-0 w-[20%] cursor-grab active:cursor-grabbing z-0" 
+              aria-hidden="true"
+            />
+            
             {posts.map((post, index) => {
               // Debug logging in development
               if (process.env.NODE_ENV === 'development' && index >= posts.length - 3) {
