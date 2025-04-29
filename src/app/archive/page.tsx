@@ -14,8 +14,23 @@ import { getAllContentItems } from '@/lib/dynamodb';
 
 // Set metadata for SEO
 export const metadata: Metadata = {
-  title: 'Archive | Sanchit Vijay',
-  description: 'Explore my collection of technical articles and insights.',
+  title: 'Archive | Technical Articles by Sanchit Vijay',
+  description: 'Explore my collection of technical articles, posts, and insights on data engineering, machine learning, and cloud technologies.',
+  keywords: ['Data Engineering Articles', 'Technical Archive', 'Data Blog', 'Machine Learning Insights', 'AWS Tutorials', 'Spark Tips'],
+  openGraph: {
+    title: 'Archive of Technical Content - Sanchit Vijay',
+    description: 'A curated collection of articles, videos, and technical content on data engineering, cloud technologies, and machine learning',
+    type: 'website',
+    url: 'https://penguindb.me/archive',
+    images: [
+      {
+        url: '/images/penguin_right_mac.png',
+        width: 1200,
+        height: 630,
+        alt: 'Sanchit Vijay - Technical Content Archive',
+      },
+    ],
+  }
 };
 
 // This enables ISR - Incremental Static Regeneration

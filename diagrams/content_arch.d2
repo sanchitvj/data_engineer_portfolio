@@ -1,0 +1,229 @@
+title: "Content Processing Pipeline" {
+  near: top-center
+  shape: text
+  style.font-size: 40
+  style.bold: true
+  style.underline: true
+}
+
+direction: right
+
+# Google Sheet component
+google_sheet: {
+  label: "Google Sheet"
+  icon: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Google_Sheets_logo_%282014-2020%29.svg/1200px-Google_Sheets_logo_%282014-2020%29.svg.png"
+  shape: image
+  width: 100
+  height: 100
+  style.fill: "#4285F4"
+  style.stroke: "#0F9D58"
+  style.stroke-width: 2
+  style.border-radius: 10
+}
+
+# Apps Script component
+apps_script: {
+  label: "Apps Script\n(Change Trigger)"
+  icon: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Google_Apps_Script.svg/2048px-Google_Apps_Script.svg.png"
+  shape: image
+  width: 80
+  height: 80
+  style.fill: "#4285F4"
+  style.stroke: "#0F9D58"
+  style.stroke-width: 2
+  style.border-radius: 10
+}
+
+# API Gateway
+api_gateway: {
+  label: "API Gateway"
+  icon: "https://icons.terrastruct.com/aws%2FMobile%2FAmazon-API-Gateway.svg"
+  shape: image
+  width: 80
+  height: 80
+  style.fill: "#FF9900"
+  style.stroke: "#232F3E"
+  style.stroke-width: 2
+  style.border-radius: 2
+}
+
+# SQS
+sqs: {
+  label: "SQS Queue"
+  icon: "https://icons.terrastruct.com/aws%2FApplication%20Integration%2FAmazon-Simple-Queue-Service-SQS.svg"
+  shape: image
+  width: 80
+  height: 80
+  style.fill: "#FF9900"
+  style.stroke: "#232F3E"
+  style.stroke-width: 2
+  style.border-radius: 2
+}
+
+# Lambda Functions
+lambda_ingestion: {
+  label: "Lambda\n(Ingestion)"
+  icon: "https://icons.terrastruct.com/aws%2FCompute%2FAWS-Lambda.svg"
+  shape: image
+  width: 80
+  height: 80
+  style.fill: "#FF9900"
+  style.stroke: "#232F3E"
+  style.stroke-width: 2
+  style.border-radius: 2
+}
+
+lambda_processing: {
+  label: "Lambda\n(LLM Processing)"
+  icon: "https://icons.terrastruct.com/aws%2FCompute%2FAWS-Lambda.svg"
+  shape: image
+  width: 80
+  height: 80
+  style.fill: "#FF9900"
+  style.stroke: "#232F3E"
+  style.stroke-width: 2
+  style.border-radius: 2
+}
+
+# DynamoDB
+dynamodb: {
+  label: "DynamoDB"
+  icon: "https://icons.terrastruct.com/aws%2FDatabase%2FAmazon-DynamoDB.svg"
+  shape: image
+  width: 80
+  height: 80
+  style.fill: "#3B48CC"
+  style.stroke: "#232F3E"
+  style.stroke-width: 2
+  style.border-radius: 2
+}
+
+# Amazon Bedrock
+bedrock: {
+  label: "Amazon Bedrock\n(LLM)"
+  icon: "https://registry.npmmirror.com/@lobehub/icons-static-png/latest/files/dark/bedrock-color.png"
+  shape: image
+  width: 80
+  height: 80
+  style.fill: "#FF9900"
+  style.stroke: "#232F3E"
+  style.stroke-width: 2
+}
+
+# CloudWatch
+cloudwatch: {
+  label: "CloudWatch\n(Logs)"
+  icon: "https://icons.terrastruct.com/aws%2FManagement%20&%20Governance%2FAmazon-CloudWatch.svg"
+  shape: image
+  width: 80
+  height: 80
+  style.fill: "#FF9900"
+  style.stroke: "#232F3E"
+  style.stroke-width: 2
+}
+
+# AWS Amplify
+amplify: {
+  label: "AWS Amplify\n(Frontend)"
+  icon: "https://icons.terrastruct.com/aws%2FMobile%2FAWS-Amplify.svg"
+  shape: image
+  width: 80 
+  height: 80
+  style.fill: "#FF9900"
+  style.stroke: "#232F3E"
+  style.stroke-width: 2
+  style.border-radius: 2
+}
+
+# Connections
+google_sheet <-> apps_script: "Data changes" {
+  style.stroke: "#333333"
+  style.stroke-width: 3
+  style.animated: true
+}
+
+apps_script -> api_gateway: "Send data" {
+  style.stroke: "#333333"
+  style.stroke-width: 3
+  style.animated: true
+}
+
+api_gateway -> sqs: "Queue message" {
+  style.stroke: "#333333"
+  style.stroke-width: 3
+  style.animated: true
+}
+
+sqs -> lambda_ingestion: "Trigger" {
+  style.stroke: "#333333"
+  style.stroke-width: 3
+  style.animated: true
+}
+
+lambda_ingestion -> dynamodb: "Store data" {
+  style.stroke: "#333333"
+  style.stroke-width: 3
+  style.animated: true
+}
+
+lambda_ingestion -> apps_script: "Update status\n(INGESTED)" {
+  style.stroke: "#00AA00"
+  style.stroke-width: 2
+  style.animated: true
+}
+
+dynamodb -> lambda_processing: "DynamoDB\nStreams" {
+  style.stroke: "#333333"
+  style.stroke-width: 3
+  style.animated: true
+}
+
+lambda_processing -> bedrock: "Generate text" {
+  style.stroke: "#333333"
+  style.stroke-width: 3
+  style.animated: true
+}
+
+bedrock -> lambda_processing: "Return generated\ncontent" {
+  style.stroke: "#333333"
+  style.stroke-width: 3
+  style.animated: true
+}
+
+lambda_processing -> dynamodb: "Update table" {
+  style.stroke: "#333333"
+  style.stroke-width: 3
+  style.animated: true
+}
+
+lambda_processing -> apps_script: "Update status\n(PROCESSED)" {
+  style.stroke: "#00AA00"
+  style.stroke-width: 2
+  style.animated: true
+}
+
+lambda_ingestion -> cloudwatch: "Logs" {
+  style.stroke: "#999999"
+  style.stroke-width: 2
+  style.stroke-dash: 5
+}
+
+lambda_processing -> cloudwatch: "Logs" {
+  style.stroke: "#999999"
+  style.stroke-width: 2
+  style.stroke-dash: 5
+}
+
+dynamodb -> amplify: "Fetch data" {
+  style.stroke: "#0066CC"
+  style.stroke-width: 3
+  style.animated: true
+}
+
+# Simple explanation
+explanation: "Content Processing Pipeline: Google Sheet ↔ Apps Script → API Gateway → SQS → Lambda → DynamoDB → Lambda → Bedrock → DynamoDB ← Amplify" {
+  near: bottom-center
+  shape: text
+  style.font-size: 14
+  style.italic: true
+} 

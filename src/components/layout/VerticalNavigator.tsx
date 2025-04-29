@@ -405,7 +405,7 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
           {filteredSections.map((_, index) => (
             <div
               key={index}
-              className="absolute left-1/2 w-4 h-4 rounded-full bg-dark-400 transform -translate-x-1/2 -translate-y-1/2"
+              className="absolute left-1/2 w-3 h-3 rounded-full bg-dark-400 transform -translate-x-1/2 -translate-y-1/2"
               style={{
                 top: `${index * nodeSpacing}vh`
               }}
@@ -418,18 +418,19 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
           className="absolute left-1/2 w-8 h-8 transform -translate-x-1/2"
           style={{
             transform: `translate(-50%, -50%)`,
+            opacity: 1,
           }}
           animate={{
             top: `${indicatorPosition}vh`,
-            opacity: [0.7, 1, 0.7],
+            // opacity: [1.7, 1, 0.7],
           }}
           transition={{
             top: { duration: 0.3, ease: "easeInOut" },
-            opacity: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+            // opacity: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
           }}
         >
           <img 
-            src="/icons/school_penguin.svg" 
+            src="/images/school_penguin.png" 
             alt="Section Indicator" 
             className="w-full h-full"
           />

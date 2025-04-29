@@ -288,7 +288,7 @@ const TimelineSection: React.FC = () => {
             whileTap={{ cursor: "grabbing" }}
           >
             <Image 
-              src="/icons/laptop_penguin.svg"
+              src="/images/penguin_front_mac.png"
               alt="Timeline marker"
               width={penguinDimensions.width}
               height={penguinDimensions.height}

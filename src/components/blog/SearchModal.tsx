@@ -260,7 +260,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
                       {/* Penguin Icon */}
                       <div className={`${searchDisabled ? 'bg-gray-500/30' : 'bg-dark-300/70'} rounded-full p-1 ml-1`}>
                         <Image
-                          src="/images/blog/search_penguin.png"
+                          src="/images/search_penguin.png"
                           alt=""
                           width={24}
                           height={24}
