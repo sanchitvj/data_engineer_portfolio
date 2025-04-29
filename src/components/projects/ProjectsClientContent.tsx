@@ -59,7 +59,7 @@ const ProjectsClientContent: React.FC<ProjectsClientContentProps> = ({
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Project <span className="text-data">Island</span>
             <Image 
-              src="/images/right_mac_penguin.png" 
+              src="/images/penguin_right_mac.png" 
               alt="Penguin" 
               width={50} 
               height={50}
