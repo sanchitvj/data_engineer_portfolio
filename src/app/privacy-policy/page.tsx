@@ -2,8 +2,16 @@ import { Metadata } from 'next';
 import Header from '@/components/layout/Header';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | Sanchit Vijay',
-  description: 'Privacy policy for Sanchit Vijay\'s personal website',
+  title: 'Privacy Policy | Sanchit Vijay Portfolio',
+  description: 'Privacy policy for Sanchit Vijay\'s personal website and data engineering portfolio.',
+  robots: {
+    index: false,
+    follow: true,
+  },
+  openGraph: {
+    title: 'Privacy Policy | Sanchit Vijay Portfolio',
+    description: 'Privacy policy information for Sanchit Vijay\'s personal website',
+  }
 };
 
 export default function PrivacyPolicy() {

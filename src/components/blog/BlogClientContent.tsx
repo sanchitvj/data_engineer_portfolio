@@ -979,7 +979,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Research <span className="text-data">Station</span>
             <Image 
-              src="/images/right_mac_penguin.png" 
+              src="/images/penguin_right_mac.png" 
               alt="Penguin" 
               width={50} 
               height={50}
@@ -989,7 +989,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
           </h1>
           <p className="text-gray-300 max-w-2xl mx-auto">
             Welcome to my Antarctic Research Station, where I document insights and discoveries from my data engineering expeditions.
-            Explore these content cards with a gentle swipe — they float freely in the digital waters, just like the real ones!
+            Explore these content iceberg cards with a gentle swipe — they float freely in the water, just like the real ones!
             {/* Swipe through our Arctic Archives — like penguins on ice, they might slide a bit during navigation! */}
             <br />
             <button 
@@ -1061,7 +1061,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
 
             <div className="ml-auto">
               <Image 
-                src="/images/blog/search_penguin.png" 
+                src="/images/search_penguin.png" 
                 alt="Search Penguin" 
                 width={24} 
                 height={24}

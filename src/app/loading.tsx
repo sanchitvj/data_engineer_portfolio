@@ -30,8 +30,8 @@ export default function Loading() {
         <Image 
           src="/images/loading_penguin.png" 
           alt="Loading..." 
-          width={220} 
-          height={220}
+          width={190} 
+          height={190}
           className="animate-pulse mb-4"
           priority
         />

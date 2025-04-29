@@ -349,7 +349,7 @@ const Header = () => {
                       </button>
                       <div className="flex flex-col items-center w-full max-w-sm h-full pt-[25vh]">
                         <Image 
-                          src="/images/penguin_envelope.png" 
+                          src="/images/envelope_penguin.png" 
                           alt="Contact Penguin" 
                           width={100} 
                           height={100}

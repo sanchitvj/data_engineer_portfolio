@@ -137,7 +137,7 @@ const FloatingContact: React.FC<FloatingContactProps> = ({ hideWhenMenuOpen = fa
         onClick={handleContactClick}
       >
         <Image 
-          src="/images/penguin_envelope.png" 
+          src="/images/envelope_penguin.png" 
           alt="Contact Penguin" 
           width={64} 
           height={64}
