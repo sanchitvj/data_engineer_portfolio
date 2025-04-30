@@ -14,11 +14,11 @@ import { getAllContentItems } from '@/lib/dynamodb';
 
 // Set metadata for SEO
 export const metadata: Metadata = {
-  title: 'Archive | Technical Articles by Sanchit Vijay',
+  title: 'Archive | Technical Insights by Sanchit Vijay',
   description: 'Explore my collection of technical articles, posts, and insights on data engineering, machine learning, and cloud technologies.',
-  keywords: ['Data Engineering Articles', 'Technical Archive', 'Data Blog', 'Machine Learning Insights', 'AWS Tutorials', 'Spark Tips'],
+  keywords: ['Data Engineering Articles', 'Technical Archive', 'Data Blog', 'Machine Learning Insights', 'Substack', 'YouTube'],
   openGraph: {
-    title: 'Archive of Technical Content - Sanchit Vijay',
+    title: 'Archive of Technical Insights - Sanchit Vijay',
     description: 'A curated collection of articles, videos, and technical content on data engineering, cloud technologies, and machine learning',
     type: 'website',
     url: 'https://penguindb.me/archive',
