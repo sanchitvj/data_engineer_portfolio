@@ -36,6 +36,21 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
     }
   };
 
+  // Automatically toggle visibility on window resize or orientation change
+  useEffect(() => {
+    const onResize = () => {
+      setIsVisible(window.innerWidth >= 1024);
+    };
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    // Initialize visibility
+    onResize();
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+    };
+  }, []);
+
   // Calculate slider dimensions based on viewport and number of sections
   useEffect(() => {
     const calculateSliderDimensions = () => {
@@ -123,7 +138,7 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
       if (window.innerWidth >= 1500) {
         setIsVisible(true);
       }
-    }, 3000); // 3 second delay
+    }, 1500); // 3 second delay
     
     return () => clearTimeout(showTimer);
   }, [page, sections]);
@@ -295,11 +310,13 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.innerWidth < 1500) {
+      if (window.innerWidth >= 1500) {
+        setIsVisible(true);
+      } else {
         setIsVisible(false);
         return;
       }
-
+      
       // Skip activity detection during manual scrolling
       if (isScrolling) return;
 
@@ -310,7 +327,7 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
           // Try all possible ways to find the element
           const element = findElementById(section.id);
           return {
-          id: section.id,
+            id: section.id,
             element: element,
             position: element?.getBoundingClientRect().top || Infinity
           };

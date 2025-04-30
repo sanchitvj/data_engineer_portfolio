@@ -6,7 +6,7 @@ import ServiceWorkerHandler from '@/components/ServiceWorkerHandler';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://penguindb.me'),
-  title: 'Sanchit Vijay - Data Engineer Portfolio',
+  title: 'Sanchit Vijay - Data Engineer',
   description: 'Explore the portfolio of Sanchit Vijay, a Data Analytics engineer specializing in building scalable pipelines, real-time analytics, and cloud data infrastructure solutions with expertise in AWS services.',
   keywords: ['penguindb', 'Data Engineer', 'AWS', 'Spark', 'Databricks', 'Snowflake', 'Open Source', 'Machine Learning', 'Portfolio', 'Sanchit Vijay', 'sanchitvj'],
   authors: [{ name: 'Sanchit Vijay' }],
@@ -37,25 +37,21 @@ export const metadata: Metadata = {
   // },
   icons: {
     icon: [
-      {
-        url: '/images/penguindb_main_logo.png',
-        sizes: '32x32',
-      },
-      {
-        url: '/images/penguindb_main_logo.png',
-        sizes: '48x48',
-      },
-      {
-        url: '/images/penguindb_main_logo.png',
-        sizes: '96x96',
-      }
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon_io/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon_io/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon_io/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/favicon_io/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' }
     ],
     apple: [
-      {
-        url: '/images/penguindb_main_logo.png',
-        sizes: '180x180',
-      }
+      { url: '/favicon_io/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
     ],
+    other: [
+      {
+        rel: 'manifest',
+        url: '/favicon_io/site.webmanifest'
+      }
+    ]
   },
 };
 
