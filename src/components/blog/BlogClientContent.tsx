@@ -770,6 +770,14 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
         index === self.findIndex(p => p.id === post.id)
       );
       
+    // Add debug logging for LOL Hub section
+    if (type === 'quick-note') {
+      console.log(`[LOL Hub Debug] Found ${postsOfType.length} posts of type ${type}`);
+      if (postsOfType.length > 0) {
+        console.log(`[LOL Hub Debug] First post title: "${postsOfType[0].title}"`);
+      }
+    }
+      
     const isLoading = loadingPosts[type] || false;
     const hasMore = hasMorePosts[type] && postsOfType.length < (postCounts[type] || 0);
     

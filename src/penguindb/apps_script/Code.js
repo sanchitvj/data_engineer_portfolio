@@ -279,7 +279,9 @@ function sendToAWS(data) {
       
       // Now handle based on the actualResponseCode, which might be from the inner response
       if (actualResponseCode === 202 || 
-          (actualResponseCode === 200 && parsedResponse && parsedResponse.statusCode === 202)) {
+          (actualResponseCode === 200 && parsedResponse && parsedResponse.statusCode === 202) ||
+          // Handle SQS success responses
+          (actualResponseCode === 200 && parsedResponse && parsedResponse.SendMessageResponse)) {
         Logger.log(`Request accepted by API Gateway for content_id: ${data.content_id}.`);
         success = true;
         
@@ -330,6 +332,16 @@ function sendToAWS(data) {
         }
       } else {
         // Non-retryable error (e.g., 400 Bad Request, 403 Forbidden)
+        // Special handling for SQS success responses that might be misinterpreted as errors
+        if (actualResponseCode === 200 && responseBody.includes("SendMessageResponse")) {
+          Logger.log(`SQS success response detected for content_id: ${data.content_id}`);
+          success = true;
+          return {
+            success: true,
+            data: parsedResponse || responseBody
+          };
+        }
+        
         Logger.log(`Received non-retryable error code: ${actualResponseCode} for content_id: ${data.content_id}.`);
         
         if (typeof actualResponseBody === 'object') {

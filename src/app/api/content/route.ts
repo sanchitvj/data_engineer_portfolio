@@ -52,9 +52,23 @@ export async function GET() {
       // Set type based on content_type
       let type = 'research-report';
       if (item.content_type === 'post') {
-        // Check if it has humor tag
+        // Enhanced humor detection - check tags, generated_tags, and description for humor indicators
         const hasHumorTag = tags.includes('humor');
-        type = hasHumorTag ? 'quick-note' : 'linkedin-post';
+        const hasHumorGeneratedTag = generatedTags.includes('humor');
+        const hasHumorInTitle = (item.title || '').toLowerCase().includes('humor') || 
+                              (item.generated_title || '').toLowerCase().includes('humor');
+        const hasLOLInTitle = (item.title || '').toLowerCase().includes('lol') || 
+                            (item.generated_title || '').toLowerCase().includes('lol');
+        
+        // More aggressive detection for humor posts
+        const isHumorContent = hasHumorTag || hasHumorGeneratedTag || hasHumorInTitle || hasLOLInTitle;
+        
+        // Debug info for humor detection
+        if (isHumorContent || item.title?.toLowerCase().includes('fun') || item.description?.toLowerCase().includes('fun')) {
+          console.log(`[Humor Debug] Post "${item.title}" - hasHumorTag: ${hasHumorTag}, generatedTags:`, generatedTags);
+        }
+        
+        type = isHumorContent ? 'quick-note' : 'linkedin-post';
       } else if (item.content_type === 'article') {
         type = 'research-report';
       } else if (item.content_type === 'substack') {
