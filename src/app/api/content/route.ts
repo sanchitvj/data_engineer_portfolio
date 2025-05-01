@@ -35,6 +35,7 @@ function parseTagsField(tags: any): string[] {
 export async function GET() {
   try {
     const items = await getAllContentItems();
+    console.log(`Retrieved ${items.length} total items from DynamoDB`);
     
     // Map DynamoDB items to a structure matching your BlogPost type
     const posts = items.map(item => {
@@ -143,6 +144,19 @@ export async function GET() {
         generated_tags: generatedTags
       };
     });
+
+    // Log counts of each content type to debug production issues
+    const typeCounts = posts.reduce((acc: Record<string, number>, post) => {
+      acc[post.type] = (acc[post.type] || 0) + 1;
+      return acc;
+    }, {});
+    
+    console.log('Content type counts:', typeCounts);
+    
+    // Sort posts by date (newest first) - but don't limit them
+    posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    console.log(`Returning ${posts.length} total posts, including ${typeCounts['linkedin-post']} LinkedIn posts and ${typeCounts['quick-note']} LOL Hub posts`);
 
     return NextResponse.json({ 
       posts,

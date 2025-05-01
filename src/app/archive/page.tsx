@@ -196,5 +196,29 @@ export default async function ArchivePage() {
   );
 }
 
+// Add debug logging in getStaticProps
+export async function generateStaticParams() {
+  // This function is only used to generate static params, but we'll
+  // use it to prefetch content for the page component
+  try {
+    const items = await getAllContentItems();
+    console.log(`Archive page: Retrieved ${items.length} items from DynamoDB`);
+
+    // Log content type counts
+    const typeCounts = items.reduce((acc: Record<string, number>, item: any) => {
+      const type = item.content_type || 'unknown';
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {});
+    
+    console.log('Archive page: Content type counts:', typeCounts);
+    
+    return [];
+  } catch (error) {
+    console.error('Error in generateStaticParams:', error);
+    return [];
+  }
+}
+
 // Remove the entire getStaticProps function
 // export async function getStaticProps() { ... } 
