@@ -29,7 +29,7 @@ var COLUMNS = typeof COLUMNS !== 'undefined' ? COLUMNS : {
 // Configuration
 const CONFIG = {
   MAX_RETRY_ATTEMPTS: 3,
-  API_GATEWAY_URL: "https://ngcfdfcplh.execute-api.us-east-1.amazonaws.com/prod/content",
+  API_GATEWAY_URL: "https://nksl4ooqzg.execute-api.us-east-1.amazonaws.com/prod/",
   SHEET_NAME: "prod",
   REQUEST_TIMEOUT: 30000, // 30 seconds timeout
   STATUS_CHECK_API: "" // Optional: API endpoint for status checking (if you create one)
