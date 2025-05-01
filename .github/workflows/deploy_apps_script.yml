@@ -5,6 +5,7 @@ on:
     branches:
       - content
       - optimize
+      - dev
     paths:
       - src/penguindb/apps_script/**
       - .github/workflows/deploy_apps_script.yml
