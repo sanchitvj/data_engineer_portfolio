@@ -138,7 +138,7 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
       if (window.innerWidth >= 1500) {
         setIsVisible(true);
       }
-    }, 1500); // 3 second delay
+    }, 3000); // 3 second delay
     
     return () => clearTimeout(showTimer);
   }, [page, sections]);
@@ -280,7 +280,7 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
             debugLog(`Still couldn't find element with id "${id}" after delay`);
           }
           setIsScrolling(false);
-        }, 1500); // Longer delay to allow for content to load
+        }, 3000); // Longer delay to allow for content to load
       } else {
         setIsScrolling(false);
       }
