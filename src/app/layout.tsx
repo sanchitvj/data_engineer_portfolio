@@ -28,13 +28,6 @@ export const metadata: Metadata = {
       },
     ],
   },
-  // twitter: {
-  //   card: 'summary_large_image',
-  //   title: 'Sanchit Vijay - Data Engineer Portfolio',
-  //   description: 'Expert Data Engineer specializing in AWS, Spark, and ML solutions',
-  //   creator: '@sanchitvj', // Replace with your Twitter handle if applicable
-  //   images: ['/images/penguindb_main_logo.png'], // Replace with your actual Twitter card image
-  // },
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
@@ -69,6 +62,13 @@ export default function RootLayout({
         />
         <meta property="article:author" content="https://www.linkedin.com/in/sanchit-vijay" />
         <meta property="article:publisher" content="https://penguindb.me" />
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon_io/favicon-16x16.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon_io/favicon-32x32.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/favicon_io/apple-touch-icon.png" />
+        <link rel="manifest" href="/favicon_io/site.webmanifest" />
+        <meta name="theme-color" content="#0f172a" />
       </head>
       <body 
         className="bg-gray-900 text-white antialiased"
