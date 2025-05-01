@@ -35,6 +35,7 @@ function parseTagsField(tags: any): string[] {
 export async function GET() {
   try {
     const items = await getAllContentItems();
+    console.log(`Retrieved ${items.length} total items from DynamoDB`);
     
     // Map DynamoDB items to a structure matching your BlogPost type
     const posts = items.map(item => {
@@ -52,9 +53,23 @@ export async function GET() {
       // Set type based on content_type
       let type = 'research-report';
       if (item.content_type === 'post') {
-        // Check if it has humor tag
+        // Enhanced humor detection - check tags, generated_tags, and description for humor indicators
         const hasHumorTag = tags.includes('humor');
-        type = hasHumorTag ? 'quick-note' : 'linkedin-post';
+        const hasHumorGeneratedTag = generatedTags.includes('humor');
+        const hasHumorInTitle = (item.title || '').toLowerCase().includes('humor') || 
+                              (item.generated_title || '').toLowerCase().includes('humor');
+        const hasLOLInTitle = (item.title || '').toLowerCase().includes('lol') || 
+                            (item.generated_title || '').toLowerCase().includes('lol');
+        
+        // More aggressive detection for humor posts
+        const isHumorContent = hasHumorTag || hasHumorGeneratedTag || hasHumorInTitle || hasLOLInTitle;
+        
+        // Debug info for humor detection
+        if (isHumorContent || item.title?.toLowerCase().includes('fun') || item.description?.toLowerCase().includes('fun')) {
+          console.log(`[Humor Debug] Post "${item.title}" - hasHumorTag: ${hasHumorTag}, generatedTags:`, generatedTags);
+        }
+        
+        type = isHumorContent ? 'quick-note' : 'linkedin-post';
       } else if (item.content_type === 'article') {
         type = 'research-report';
       } else if (item.content_type === 'substack') {
@@ -129,6 +144,19 @@ export async function GET() {
         generated_tags: generatedTags
       };
     });
+
+    // Log counts of each content type to debug production issues
+    const typeCounts = posts.reduce((acc: Record<string, number>, post) => {
+      acc[post.type] = (acc[post.type] || 0) + 1;
+      return acc;
+    }, {});
+    
+    console.log('Content type counts:', typeCounts);
+    
+    // Sort posts by date (newest first) - but don't limit them
+    posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    console.log(`Returning ${posts.length} total posts, including ${typeCounts['linkedin-post']} LinkedIn posts and ${typeCounts['quick-note']} LOL Hub posts`);
 
     return NextResponse.json({ 
       posts,

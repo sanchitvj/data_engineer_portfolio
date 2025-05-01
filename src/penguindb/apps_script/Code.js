@@ -29,8 +29,8 @@ var COLUMNS = typeof COLUMNS !== 'undefined' ? COLUMNS : {
 // Configuration
 const CONFIG = {
   MAX_RETRY_ATTEMPTS: 3,
-  API_GATEWAY_URL: "https://ngcfdfcplh.execute-api.us-east-1.amazonaws.com/prod/content",
-  SHEET_NAME: "Sheet1",
+  API_GATEWAY_URL: "https://nksl4ooqzg.execute-api.us-east-1.amazonaws.com/prod/",
+  SHEET_NAME: "prod",
   REQUEST_TIMEOUT: 30000, // 30 seconds timeout
   STATUS_CHECK_API: "" // Optional: API endpoint for status checking (if you create one)
 };
@@ -279,7 +279,9 @@ function sendToAWS(data) {
       
       // Now handle based on the actualResponseCode, which might be from the inner response
       if (actualResponseCode === 202 || 
-          (actualResponseCode === 200 && parsedResponse && parsedResponse.statusCode === 202)) {
+          (actualResponseCode === 200 && parsedResponse && parsedResponse.statusCode === 202) ||
+          // Handle SQS success responses
+          (actualResponseCode === 200 && parsedResponse && parsedResponse.SendMessageResponse)) {
         Logger.log(`Request accepted by API Gateway for content_id: ${data.content_id}.`);
         success = true;
         
@@ -330,6 +332,16 @@ function sendToAWS(data) {
         }
       } else {
         // Non-retryable error (e.g., 400 Bad Request, 403 Forbidden)
+        // Special handling for SQS success responses that might be misinterpreted as errors
+        if (actualResponseCode === 200 && responseBody.includes("SendMessageResponse")) {
+          Logger.log(`SQS success response detected for content_id: ${data.content_id}`);
+          success = true;
+          return {
+            success: true,
+            data: parsedResponse || responseBody
+          };
+        }
+        
         Logger.log(`Received non-retryable error code: ${actualResponseCode} for content_id: ${data.content_id}.`);
         
         if (typeof actualResponseBody === 'object') {
@@ -430,21 +442,23 @@ function doPost(e) {
     // Handle different actions
     switch (requestData.action.toLowerCase()) {
       case "updatestatus":
-        Logger.log(`Processing status update for content_id: ${requestData.content_id}`);
+        Logger.log(`Processing status update for content_id: ${requestData.content_id}, status: ${requestData.status}`);
         
         // Map status to proper format if needed (allow for case differences)
         let newStatus;
         if (requestData.status) {
-          const statusUpper = requestData.status.toUpperCase();
-          if (statusUpper === "PROCESSED") {
-            newStatus = STATUS.PROCESSED;
-          } else if (statusUpper === "ERROR") {
-            newStatus = STATUS.ERROR;
-          } else if (statusUpper === "PENDING") {
-            newStatus = STATUS.PENDING;
-          } else {
-            // Use raw status if not one of the expected values
+          // Use raw status directly without any case manipulation, since Lambda is 
+          // already sending normalized lowercase status that matches our STATUS constants
+          if (requestData.status === "processed" || 
+              requestData.status === "error" || 
+              requestData.status === "pending" || 
+              requestData.status === "new") {
+            // Use the status as-is since it already matches our expected format
             newStatus = requestData.status;
+          } else {
+            // For any other status (like DB_UPDATE_ERROR or LLM_ERROR), convert to error
+            Logger.log(`Non-standard status received: ${requestData.status}, mapping to error`);
+            newStatus = STATUS.ERROR;
           }
         } else {
           // Default to PROCESSED if status not specified but we're getting an update
@@ -603,7 +617,13 @@ function updateItemStatus(contentId, status, processedAt, generatedTitle, genera
     throw new Error(`Content ID not found: ${contentId}`);
   }
   
-  Logger.log(`Found content_id ${contentId} at row ${rowIndex}`);
+  Logger.log(`Found content_id ${contentId} at row ${rowIndex}, setting status to "${status}"`);
+  
+  // Verify that status is a valid value
+  const validStatusValues = [STATUS.NEW, STATUS.PENDING, STATUS.PROCESSED, STATUS.ERROR];
+  if (!validStatusValues.includes(status)) {
+    Logger.log(`WARNING: Status "${status}" is not one of the standard values: ${JSON.stringify(validStatusValues)}`);
+  }
   
   // Update the status and timestamp
   sheet.getRange(rowIndex, COLUMNS.STATUS + 1).setValue(status);

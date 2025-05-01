@@ -37,10 +37,14 @@ def update_sheet_final_status(content_id, status, llm_result=None, error_message
         return False
 
     try:
+        # Convert status to lowercase to match what the Apps Script expects
+        # Apps Script expects "processed" but Lambda sends "PROCESSED"
+        normalized_status = status.lower() if isinstance(status, str) else status
+        
         payload = {
             'action': 'updateStatus',
             'content_id': content_id,
-            'status': status, # PROCESSED or LLM_ERROR
+            'status': normalized_status, # Now using lowercase status
             'processed_at': datetime.now().isoformat()
         }
         # Add generated content details if successful
@@ -58,10 +62,12 @@ def update_sheet_final_status(content_id, status, llm_result=None, error_message
         timeout = 15 # Longer timeout as it might do more work
 
         logger.info(f"Sending final status '{status}' update to Google Sheet for {content_id}")
+        logger.info(f"Payload: {json.dumps(payload)}")
         response = requests.post(GOOGLE_SHEET_URL, json=payload, headers=headers, timeout=timeout)
 
         if response.status_code == 200:
             response_data = response.json()
+            logger.info(f"Sheet update response: {response.text}")
             if response_data.get('status') == 'success':
                 logger.info(f"Sheet status updated to {status} for {content_id}")
                 return True

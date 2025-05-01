@@ -770,6 +770,20 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
         index === self.findIndex(p => p.id === post.id)
       );
       
+    // Add debug logging for LOL Hub section
+    if (type === 'quick-note') {
+      console.log(`[LOL Hub Debug] Found ${postsOfType.length} posts of type ${type}`);
+      if (postsOfType.length > 0) {
+        console.log(`[LOL Hub Debug] First post title: "${postsOfType[0].title}"`);
+      }
+    }
+    
+    // Debug LinkedIn posts too
+    if (type === 'linkedin-post') {
+      console.log(`[LinkedIn Debug] Found ${postsOfType.length} posts of type ${type}`);
+      console.log(`[LinkedIn Debug] Post IDs: ${postsOfType.map(p => p.id).join(', ')}`);
+    }
+      
     const isLoading = loadingPosts[type] || false;
     const hasMore = hasMorePosts[type] && postsOfType.length < (postCounts[type] || 0);
     
@@ -785,6 +799,9 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
     
     // Create an array with posts and loading placeholders if needed
     let displayPosts = [...postsOfType];
+    
+    // Critical: Make sure we're not limiting the posts here - we're showing ALL posts
+    console.log(`[${type}] Displaying ${displayPosts.length} posts (total: ${totalPosts})`);
     
     // If loading and fewer posts than minimum to show, add loading placeholders
     if (isLoading && displayPosts.length < visibleCards) {
