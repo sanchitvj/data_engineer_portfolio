@@ -18,7 +18,7 @@ const CONTENT_TABLE = process.env.DDB_TABLE || 'content_data';
 export async function getAllContentItems() {
   try {
     // Log environment information to help debug prod vs. dev differences
-    console.log(`DynamoDB Table: ${CONTENT_TABLE}, Region: ${process.env.AWS_REGION || 'us-east-1'}, NODE_ENV: ${process.env.NODE_ENV}`);
+    // console.log(`DynamoDB Table: ${CONTENT_TABLE}, Region: ${process.env.AWS_REGION || 'us-east-1'}, NODE_ENV: ${process.env.NODE_ENV}`);
     
     let allItems: any[] = [];
     let lastEvaluatedKey: Record<string, any> | undefined = undefined;
@@ -27,22 +27,22 @@ export async function getAllContentItems() {
     // Use pagination to get all items, even if there are more than the limit
     do {
       requestCount++;
-      console.log(`Making DynamoDB request #${requestCount}, items so far: ${allItems.length}`);
+      // console.log(`Making DynamoDB request #${requestCount}, items so far: ${allItems.length}`);
       
-      const command = new ScanCommand({
-        TableName: CONTENT_TABLE,
+    const command = new ScanCommand({
+      TableName: CONTENT_TABLE,
         Limit: 1000, // Increase limit to 1000 to get more items per request
         ExclusiveStartKey: lastEvaluatedKey,
-      });
+    });
 
       const response: ScanCommandOutput = await docClient.send(command);
       
       // Add items from this page to our collection
       if (response.Items && response.Items.length > 0) {
-        console.log(`Request #${requestCount} returned ${response.Items.length} items`);
+        // console.log(`Request #${requestCount} returned ${response.Items.length} items`);
         allItems = [...allItems, ...response.Items];
       } else {
-        console.log(`Request #${requestCount} returned no items`);
+        // console.log(`Request #${requestCount} returned no items`);
       }
       
       // Get the key for the next page
@@ -50,12 +50,12 @@ export async function getAllContentItems() {
       
       // Log the continuation token if present
       if (lastEvaluatedKey) {
-        console.log(`More items available, continuation token present: ${JSON.stringify(lastEvaluatedKey)}`);
+        // console.log(`More items available, continuation token present: ${JSON.stringify(lastEvaluatedKey)}`);
       }
       
     } while (lastEvaluatedKey);
     
-    console.log(`Retrieved ${allItems.length} total items from DynamoDB after ${requestCount} requests`);
+    // console.log(`Retrieved ${allItems.length} total items from DynamoDB after ${requestCount} requests`);
     
     // Sort the items by date_published (newest first) to ensure consistent order
     allItems.sort((a, b) => {

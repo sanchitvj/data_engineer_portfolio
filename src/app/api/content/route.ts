@@ -4,6 +4,41 @@ import { getAllContentItems } from '@/lib/dynamodb';
 export const dynamic = 'force-dynamic'; // Make this API route dynamic
 
 /**
+ * Process a Substack CDN URL to make it more compatible with Next.js Image component
+ * @param url Substack CDN URL
+ * @returns Processed URL that works with Next.js Image
+ */
+function processSubstackImageUrl(url: string): string {
+  if (!url) return url;
+  
+  // Verify URL completeness - Substack URLs should have these components
+  if (url.includes('substackcdn.com/image/fetch/')) {
+    // Check if URL is truncated (common issue with long URLs)
+    if (!url.includes('substack-post-media.s3.amazonaws.com')) {
+      console.warn(`[MediaLinkWarning] Truncated Substack URL detected: "${url}"`);
+      
+      // If the URL is truncated, attempt to use a fixed URL template instead
+      // Example of complete Substack URL format
+      const fullTemplateUrl = "https://substackcdn.com/image/fetch/w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb4ccc3ef-8f65-4eb5-a28f-0d3927c4b1f5_2691x954.png";
+      
+      console.warn(`[MediaLinkFix] Using fallback template URL: "${fullTemplateUrl}"`);
+      return fullTemplateUrl;
+    }
+    
+    // Sanity check: Ensure the URL ends with proper extension
+    const hasProperEnding = /.+\.(png|jpg|jpeg|gif|webp)/i.test(url);
+    if (!hasProperEnding) {
+      console.warn(`[MediaLinkWarning] Substack URL missing extension: ${url}`);
+    }
+  }
+  
+  // Log every URL for debugging
+  // console.log(`[ProcessSubstackImage] Final URL: ${url}`);
+  
+  return url;
+}
+
+/**
  * Parse DynamoDB StringSet format to regular array
  * Handles both raw DynamoDB format and SDK converted format
  */
@@ -35,7 +70,7 @@ function parseTagsField(tags: any): string[] {
 export async function GET() {
   try {
     const items = await getAllContentItems();
-    console.log(`Retrieved ${items.length} total items from DynamoDB`);
+    // console.log(`Retrieved ${items.length} total items from DynamoDB`);
     
     // Map DynamoDB items to a structure matching your BlogPost type
     const posts = items.map(item => {
@@ -43,11 +78,24 @@ export async function GET() {
       const tags = parseTagsField(item.tags);
       const generatedTags = parseTagsField(item.generated_tags);
       
-      // Handle media links (may be comma-separated)
+      // Handle media links (now separated by !.!)
       let mediaLink = '';
+      let allMediaLinks: string[] = [];
       if (item.media_link) {
-        const links = item.media_link.split(',');
-        mediaLink = links[0].trim(); // Get first image if multiple
+        // Split on !.! to get all image links
+        const links = item.media_link.split('!.!')
+          .map((link: string) => link.trim())
+          .filter(Boolean);
+        
+        if (links.length > 0 && links[0]) {
+          mediaLink = processSubstackImageUrl(links[0]);
+          allMediaLinks = links.map((link: string) => processSubstackImageUrl(link));
+          // console.log(`[MediaLinkParse] Processed ${links.length} media links for item ${item.content_id}. Main link: ${mediaLink}`);
+        } else {
+          console.warn('[MediaLinkParse] No valid links found after parsing media_link:', item.media_link);
+        }
+      } else {
+        // console.log('[MediaLinkParse] media_link field is empty or undefined for item:', item.content_id);
       }
       
       // Set type based on content_type
@@ -66,7 +114,7 @@ export async function GET() {
         
         // Debug info for humor detection
         if (isHumorContent || item.title?.toLowerCase().includes('fun') || item.description?.toLowerCase().includes('fun')) {
-          console.log(`[Humor Debug] Post "${item.title}" - hasHumorTag: ${hasHumorTag}, generatedTags:`, generatedTags);
+          // console.log(`[Humor Debug] Post "${item.title}" - hasHumorTag: ${hasHumorTag}, generatedTags:`, generatedTags);
         }
         
         type = isHumorContent ? 'quick-note' : 'linkedin-post';
@@ -139,6 +187,8 @@ export async function GET() {
         featured: false,
         readTime: '3 min read',
         embed_link: item.embed_link || null, // Preserve the embed_link for iframe display
+        // Store all media links for access in components
+        media_link: allMediaLinks.length > 0 ? allMediaLinks : undefined,
         // Add raw tags for better searching
         raw_tags: tags,
         generated_tags: generatedTags
@@ -151,12 +201,12 @@ export async function GET() {
       return acc;
     }, {});
     
-    console.log('Content type counts:', typeCounts);
+    // console.log('Content type counts:', typeCounts);
     
     // Sort posts by date (newest first) - but don't limit them
     posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     
-    console.log(`Returning ${posts.length} total posts, including ${typeCounts['linkedin-post']} LinkedIn posts and ${typeCounts['quick-note']} LOL Hub posts`);
+    // console.log(`Returning ${posts.length} total posts, including ${typeCounts['linkedin-post']} LinkedIn posts and ${typeCounts['quick-note']} LOL Hub posts`);
 
     return NextResponse.json({ 
       posts,

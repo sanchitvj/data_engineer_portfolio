@@ -3,7 +3,22 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   images: {
-    domains: ['images.unsplash.com', 'media.licdn.com', 'img.youtube.com'],
+    domains: ['images.unsplash.com', 'media.licdn.com', 'img.youtube.com', 'substackcdn.com', 'substack-post-media.s3.amazonaws.com'],
+    formats: ['image/avif', 'image/webp'],
+    dangerouslyAllowSVG: true,
+    unoptimized: true, // Allow direct loading of external images without optimization
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'substackcdn.com',
+        pathname: '/image/fetch/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'substack-post-media.s3.amazonaws.com',
+        pathname: '/public/images/**',
+      }
+    ],
   },
   async rewrites() {
     return [

@@ -32,7 +32,7 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
   // Helper to log debug info only in development
   const debugLog = (...args: any[]) => {
     if (debugMode) {
-      console.log('[VerticalNavigator]', ...args);
+      // console.log('[VerticalNavigator]', ...args);
     }
   };
 

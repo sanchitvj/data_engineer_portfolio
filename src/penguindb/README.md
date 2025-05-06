@@ -97,3 +97,59 @@ graph TD
     class SQS,DLQ queue;
     class BDB ai;
 ```
+
+```mermaid
+flowchart TB
+    subgraph "Data Collection Layer"
+        style DataCollection fill:#e1f5fe,stroke:#01579b
+        UserInteractions([User Interactions]) --> EventLogging[Event Logging System]
+        VideoMetrics([Video Metrics]) --> EventLogging
+        Replay([Replay Detection]) --> EventLogging
+        ClickEvents([Click Events]) --> EventLogging
+    end
+
+    subgraph "Storage Layer"
+        style StorageLayer fill:#e8f5e9,stroke:#1b5e20
+        EventLogging --> RawStorage[(Cloud Object Storage)]
+        RawStorage --> HDFS[(HDFS)]
+        PostgreSQL[(PostgreSQL)]
+    end
+
+    subgraph "Processing Pipeline"
+        style ProcessingPipeline fill:#fff8e1,stroke:#ff6f00
+        HDFS --> IngestLayer[Ingest Layer]
+        IngestLayer --> MappingLayer[Mapping Layer]
+        MappingLayer --> TransformationLayer[Transformation Layer]
+        TransformationLayer --> SparkProcessing[Apache Spark]
+        Airflow{Apache Airflow} --> |Orchestrates| SparkProcessing
+    end
+
+    subgraph "ML & Analytics Layer"
+        style MLLayer fill:#f3e5f5,stroke:#4a148c
+        SparkProcessing --> FeatureEngineering[Feature Engineering]
+        FeatureEngineering --> EngagementModels[Engagement Prediction Models]
+        FeatureEngineering --> HeatmapGeneration[Video Heatmap Generation]
+        HeatmapGeneration --> PeakDetection[Peak Moment Detection]
+    end
+
+    subgraph "Ad Serving System"
+        style AdSystem fill:#ffebee,stroke:#b71c1c
+        PeakDetection --> AdDecisionSystem[Ad Decision System] 
+        AdInventory[(Ad Inventory)] --> AdDecisionSystem
+        UserSegments[(User Segments)] --> AdDecisionSystem
+        AdDecisionSystem --> SSAI[Server-Side Ad Insertion]
+    end
+
+    subgraph "Content Delivery"
+        style ContentDelivery fill:#e0f7fa,stroke:#006064
+        VideoContent([Video Content]) --> SSAI
+        SSAI --> UnifiedStream[Unified Video+Ad Stream]
+        UnifiedStream --> CDN[Content Delivery Network]
+        CDN --> UserDevice[User Device]
+    end
+
+    %% Cross-connections
+    PostgreSQL <--> TransformationLayer
+    RawStorage <--> SparkProcessing
+    EngagementModels --> PeakDetection
+```
