@@ -1,5 +1,7 @@
 # Data Engineer Portfolio Website
 
+[![Build Check](https://github.com/sanchitvj/data_engineer_portfolio/actions/workflows/build_check.yml/badge.svg)](https://github.com/sanchitvj/data_engineer_portfolio/actions/workflows/build_check.yml)
+
 A modern, high-performance portfolio website built with Next.js 14 and AWS, showcasing data engineering projects and technical expertise.
 
 ## Tech Stack
