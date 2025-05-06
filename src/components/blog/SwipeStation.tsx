@@ -496,7 +496,7 @@ const SwipeStation: React.FC<SwipeStationProps> = ({
             {posts.map((post, index) => {
               // Debug logging in development
               if (process.env.NODE_ENV === 'development' && index >= posts.length - 3) {
-                console.log(`Card ${index} (${post.id}): currentIndex=${currentIndex}, visible=${getCardVisibility(index)}`);
+                // console.log(`Card ${index} (${post.id}): currentIndex=${currentIndex}, visible=${getCardVisibility(index)}`);
               }
               
               const isVisible = getCardVisibility(index);

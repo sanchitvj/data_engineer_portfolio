@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, Suspense, useMemo, useCallback, CSSProperties, Dispatch, SetStateAction, RefObject, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import LegacyImage from 'next/legacy/image';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { FaSearch, FaStar, FaExternalLinkAlt, FaChevronRight, FaMicroscope, FaNewspaper, FaPlay, FaExpandAlt, FaArrowUp } from 'react-icons/fa';
@@ -161,8 +162,8 @@ const LoadingCard = ({ type, style }: { type: string, style?: CSSProperties }) =
       
     case 'comprehensive-study':
       return (
-        <div className="bg-dark-200/60 backdrop-blur-sm rounded-lg animate-pulse h-[450px] flex flex-col" style={style}>
-          <div className="h-60 mb-4 bg-dark-300/80 rounded-lg"></div>
+        <div className="bg-dark-200/60 backdrop-blur-sm rounded-lg animate-pulse h-[580px] flex flex-col" style={style}>
+          <div className="h-80 mb-4 bg-dark-300/80 rounded-lg"></div>
           <div className="h-6 bg-dark-300/80 rounded mb-3 w-4/5"></div>
           <div className="h-4 bg-dark-300/80 rounded mb-2 w-full"></div>
           <div className="h-4 bg-dark-300/80 rounded mb-2 w-11/12"></div>
@@ -258,7 +259,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
     title: string; 
     content: string; 
     link?: string; 
-    date?: string;
+    date?: string; 
     mediaLinks?: string | string[]; 
     postIndex?: number; // Add post index to remember position
     stationType?: string; // Add station type to remember context
@@ -402,7 +403,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
   // Load more posts when the user reaches the end of a section
   const handleLoadMoreForType = useCallback((type: string) => {
     if (hasMorePosts[type] && !loadingPosts[type]) {
-      console.log(`Loading more posts for ${type}`);
+      // console.log(`Loading more posts for ${type}`);
       loadMorePosts(type);
     }
   }, [hasMorePosts, loadingPosts, loadMorePosts]);
@@ -479,7 +480,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
         type: 'keyword' as const 
       }))
       .slice(0, 3); // Limit to top 3 matching keywords
-    
+
     // Combine all suggestions with priority
     const allSuggestions = [
       ...prefixSuggestions, // Fixed keywords first
@@ -580,7 +581,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
 
   // Memoize filtered posts calculation with optimized tag-based search
   const filteredPostsResult = useMemo(() => {
-    console.log("Recalculating filtered posts");
+    // console.log("Recalculating filtered posts");
     
     // First deduplicate posts by ID (keep only the first occurrence of each ID)
     const uniquePosts = blogPosts
@@ -730,7 +731,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
   }, [activeSearchTerms, searchQuery, activeFilter, setActiveFilter]);
 
   const handleFilterButtonClick = useCallback((categoryId: string) => {
-     setActiveFilter(categoryId);
+    setActiveFilter(categoryId);
     // Clear any active search terms when selecting a category
     if (activeSearchTerms.length > 0) {
       setActiveSearchTerms([]);
@@ -772,16 +773,16 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
       
     // Add debug logging for LOL Hub section
     if (type === 'quick-note') {
-      console.log(`[LOL Hub Debug] Found ${postsOfType.length} posts of type ${type}`);
+      // console.log(`[LOL Hub Debug] Found ${postsOfType.length} posts of type ${type}`);
       if (postsOfType.length > 0) {
-        console.log(`[LOL Hub Debug] First post title: "${postsOfType[0].title}"`);
+        // console.log(`[LOL Hub Debug] First post title: "${postsOfType[0].title}"`);
       }
     }
     
     // Debug LinkedIn posts too
     if (type === 'linkedin-post') {
-      console.log(`[LinkedIn Debug] Found ${postsOfType.length} posts of type ${type}`);
-      console.log(`[LinkedIn Debug] Post IDs: ${postsOfType.map(p => p.id).join(', ')}`);
+      // console.log(`[LinkedIn Debug] Found ${postsOfType.length} posts of type ${type}`);
+      // console.log(`[LinkedIn Debug] Post IDs: ${postsOfType.map(p => p.id).join(', ')}`);
     }
       
     const isLoading = loadingPosts[type] || false;
@@ -801,7 +802,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
     let displayPosts = [...postsOfType];
     
     // Critical: Make sure we're not limiting the posts here - we're showing ALL posts
-    console.log(`[${type}] Displaying ${displayPosts.length} posts (total: ${totalPosts})`);
+    // console.log(`[${type}] Displaying ${displayPosts.length} posts (total: ${totalPosts})`);
     
     // If loading and fewer posts than minimum to show, add loading placeholders
     if (isLoading && displayPosts.length < visibleCards) {
@@ -826,7 +827,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
     
     // Add debug logging in development
     if (process.env.NODE_ENV === 'development') {
-      console.log(`Rendering ${type} swipe station with ${displayPosts.length} posts, currentIndex=${currentIndex}`);
+      // console.log(`Rendering ${type} swipe station with ${displayPosts.length} posts, currentIndex=${currentIndex}`);
     }
     
     // Handle index change callback from SwipeStation
@@ -841,7 +842,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
       if (activeFilter === 'all' && activeSearchTerms.length === 0) {
         const maxIndex = Math.max(0, totalPosts - visibleCards);
         if (newIndex >= maxIndex - 1 && hasMore && !isLoading) {
-          console.log(`Near last slide for ${type}, loading more...`);
+          // console.log(`Near last slide for ${type}, loading more...`);
           handleLoadMoreForType(type);
         }
       }
@@ -1146,14 +1147,36 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
               <div className="flex flex-col lg:flex-row">
                 {featuredPost.image && (
                   <div className="lg:w-1/2 overflow-hidden relative">
-                    <Image 
-                      src={featuredPost.image} 
-                      alt={featuredPost.title}
-                      loading="lazy" 
-                      width={600} 
-                      height={400} 
-                      className="w-full h-64 lg:h-full object-cover transition-transform duration-300 hover:scale-105" 
-                    />
+                    {featuredPost.image.includes('substackcdn.com') ? (
+                      <>
+                        {/* Try the image proxy first */}
+                        {featuredPost.image.includes('substack-post-media.s3.amazonaws.com') ? (
+                          <img 
+                            src={`/api/image-proxy?url=${encodeURIComponent(featuredPost.image)}`}
+                            alt={featuredPost.title}
+                            className="w-full h-64 lg:h-full object-cover transition-transform duration-300 hover:scale-105"
+                            loading="lazy"
+                          />
+                        ) : (
+                          // Fallback to template image for truncated URLs
+                          <img 
+                            src="/api/image-proxy?url=https%3A%2F%2Fsubstackcdn.com%2Fimage%2Ffetch%2Fw_1456%2Cc_limit%2Cf_webp%2Cq_auto%3Agood%2Cfl_progressive%3Asteep%2Fhttps%253A%252F%252Fsubstack-post-media.s3.amazonaws.com%252Fpublic%252Fimages%252Fb4ccc3ef-8f65-4eb5-a28f-0d3927c4b1f5_2691x954.png"
+                            alt={featuredPost.title} 
+                            className="w-full h-64 lg:h-full object-cover transition-transform duration-300 hover:scale-105"
+                            loading="lazy"
+                          />
+                        )}
+                      </>
+                    ) : (
+                      <Image 
+                        src={featuredPost.image} 
+                        alt={featuredPost.title} 
+                        loading="lazy" 
+                        width={600} 
+                        height={400} 
+                        className="w-full h-64 lg:h-full object-cover transition-transform duration-300 hover:scale-105" 
+                      />
+                    )}
                   </div>
                 )}
                 <div className={`p-6 lg:p-8 ${featuredPost.image ? 'lg:w-1/2' : 'w-full'} flex flex-col`}>
@@ -1169,8 +1192,6 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                   </p>
                   <div className="flex items-center text-sm text-gray-400 mb-6">
                     <span>{formatDate(featuredPost.date)}</span>
-                    <span className="mx-2">•</span>
-                    <span>{featuredPost.readTime}</span>
                   </div>
                   {featuredPost.link && (
                     <Link 
@@ -1203,56 +1224,56 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                  'YouTube Videos',
                  3,
                  (post: BlogPost, index: number, isLoading: boolean) => (
-                   <motion.div 
-                     initial={{ opacity: 0, y: 20 }} 
-                     animate={{ opacity: 1, y: 0 }} 
-                     transition={{ duration: 0.5, delay: index * 0.1 }} 
-                     className="bg-dark-300 overflow-hidden h-[360px] rounded-xl flex flex-col"
-                     onClick={(e) => {
-                       // Only redirect if not clicking a specific button or link
-                       if (!(e.target as HTMLElement).closest('button')) {
+                         <motion.div 
+                           initial={{ opacity: 0, y: 20 }} 
+                           animate={{ opacity: 1, y: 0 }} 
+                           transition={{ duration: 0.5, delay: index * 0.1 }} 
+                           className="bg-dark-300 overflow-hidden h-[360px] rounded-xl flex flex-col"
+                           onClick={(e) => {
+                             // Only redirect if not clicking a specific button or link
+                             if (!(e.target as HTMLElement).closest('button')) {
                          window.open(post.url || post.link, '_blank', 'noopener,noreferrer');
-                       }
-                     }}
-                     style={{ cursor: 'pointer' }}
-                   > 
-                     <div className="relative h-[180px] overflow-hidden"> 
+                             }
+                           }}
+                           style={{ cursor: 'pointer' }}
+                         > 
+                           <div className="relative h-[180px] overflow-hidden"> 
                        {(post.image || post.thumbnail) ? (
-                         <Image 
+                             <Image 
                            src={post.image || post.thumbnail || '/images/oops_penguin.png'} 
-                           alt={post.title} 
-                           width={640} 
-                           height={360} 
-                           className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" 
-                         />
+                               alt={post.title} 
+                               width={640} 
+                               height={360} 
+                               className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" 
+                             /> 
                        ) : (
                          <div className="w-full h-full bg-dark-400/50 flex items-center justify-center">
                            <FaPlay size={30} className="text-data/70" />
                          </div>
                        )}
-                       <div className="absolute inset-0 bg-gradient-to-t from-dark-300/80 to-transparent" /> 
-                       <div className="absolute bottom-4 left-4 flex items-center justify-center w-10 h-10 rounded-full bg-data/90 text-white"> 
-                         <FaPlay size={14} className="ml-0.5" /> 
-                       </div> 
-                     </div> 
-                     <div className="px-4 py-4 flex flex-col flex-grow h-[180px]"> 
+                             <div className="absolute inset-0 bg-gradient-to-t from-dark-300/80 to-transparent" /> 
+                             <div className="absolute bottom-4 left-4 flex items-center justify-center w-10 h-10 rounded-full bg-data/90 text-white"> 
+                               <FaPlay size={14} className="ml-0.5" /> 
+                             </div> 
+                           </div> 
+                           <div className="px-4 py-4 flex flex-col flex-grow h-[180px]"> 
                        <h3 className="font-bold mb-3 text-white line-clamp-2 h-[52px]">{highlightText(post.title, activeSearchTerms)}</h3> 
                        <p className="text-gray-300 text-sm line-clamp-3 mb-4 h-[72px]">{highlightText(post.excerpt, activeSearchTerms)}</p> 
-                       <div className="mt-auto flex justify-between items-center"> 
-                         <a 
+                             <div className="mt-auto flex justify-between items-center"> 
+                               <a 
                            href={post.url || post.link || "#"} 
-                           target="_blank" 
-                           rel="noopener noreferrer" 
-                           className="text-data hover:text-data-light text-sm inline-flex items-center" 
-                         > 
-                           Watch Video <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70" /> 
-                         </a> 
-                         <span className="text-gray-400 text-xs"> 
-                           {formatDate(post.date)} 
-                         </span> 
-                       </div> 
-                     </div> 
-                   </motion.div> 
+                                 target="_blank" 
+                                 rel="noopener noreferrer" 
+                                 className="text-data hover:text-data-light text-sm inline-flex items-center" 
+                               > 
+                                 Watch Video <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70" /> 
+                               </a> 
+                               <span className="text-gray-400 text-xs"> 
+                                 {formatDate(post.date)} 
+                               </span> 
+                             </div> 
+                           </div> 
+                         </motion.div> 
                  )
                )}
               
@@ -1263,41 +1284,41 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                  'LinkedIn Posts',
                  3,
                  (post: BlogPost, index: number, isLoading: boolean) => (
-                   <motion.div 
-                     key={post.id} 
-                     initial={{ opacity: 0, y: 20 }} 
-                     animate={{ opacity: 1, y: 0 }} 
-                     transition={{ duration: 0.3, delay: index * 0.05 }} 
-                     className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-3 h-[230px] flex flex-col"
-                     onClick={(e) => {
-                       // Prevent any unwanted navigation
-                       if (!(e.target as HTMLElement).closest('a, button')) {
-                         e.preventDefault();
-                       }
-                     }}
-                   >
-                     <div className="flex items-center mb-2"> <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0"> <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"> <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"></path> </svg> </div> <span className="ml-1.5 text-xs text-gray-400">LinkedIn Post</span> </div> 
+                         <motion.div 
+                           key={post.id} 
+                           initial={{ opacity: 0, y: 20 }} 
+                           animate={{ opacity: 1, y: 0 }} 
+                           transition={{ duration: 0.3, delay: index * 0.05 }} 
+                           className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-3 h-[230px] flex flex-col"
+                           onClick={(e) => {
+                             // Prevent any unwanted navigation
+                             if (!(e.target as HTMLElement).closest('a, button')) {
+                               e.preventDefault();
+                             }
+                           }}
+                         >
+                           <div className="flex items-center mb-2"> <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0"> <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"> <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"></path> </svg> </div> <span className="ml-1.5 text-xs text-gray-400">LinkedIn Post</span> </div> 
                      <h4 className="font-semibold text-lg mb-2 text-white overflow-auto max-h-[60px]"
                         onMouseDown={(e) => e.stopPropagation()}
                         onTouchStart={(e) => e.stopPropagation()}>
                        {highlightText(post.title, activeSearchTerms)}
                      </h4>
-                     <p className="text-gray-300 text-xs mb-2 line-clamp-3 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt || '', 24), activeSearchTerms)} </p>
-                     <div className="mt-auto">
-                       <div className="flex justify-between items-center mb-2">
-                         <a 
-                           href={post.url || post.link || "#"}
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           className="text-data hover:text-data-light text-sm inline-flex items-center"
-                         >
-                           View Post <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70" />
-                         </a>
-                         <button 
-                           onClick={(e) => {
-                             e.preventDefault();
-                             e.stopPropagation();
-                             
+                           <p className="text-gray-300 text-xs mb-2 line-clamp-3 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt || '', 24), activeSearchTerms)} </p>
+                           <div className="mt-auto">
+                             <div className="flex justify-between items-center mb-2">
+                               <a 
+                                 href={post.url || post.link || "#"}
+                                 target="_blank"
+                                 rel="noopener noreferrer"
+                                 className="text-data hover:text-data-light text-sm inline-flex items-center"
+                               >
+                                 View Post <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70" />
+                               </a>
+                                 <button 
+                                   onClick={(e) => {
+                                     e.preventDefault();
+                                     e.stopPropagation();
+                                     
                              try {
                                // Pass the post index and station type to remember position
                                const stationType = 'linkedin-post';
@@ -1316,24 +1337,24 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                                    
                                    if (links.length > 0) {
                                      imageUrls = links;
-                                     console.log('Using multiple image URLs:', links);
+                                     // console.log('Using multiple image URLs:', links);
                                    }
                                } 
                                // If no multiple images, fallback to single image
                                else if (post.image && post.image !== '/images/oops_penguin.png') {
                                  imageUrls = post.image;
-                                 console.log('Using single image URL:', post.image);
+                                //  console.log('Using single image URL:', post.image);
                                }
                                
                                // Check if there's an embed_link to display
                                if (post.embed_link) {
-                                 const embedHtml = post.embed_link as string;
-                                 
-                                 setModalContent({
-                                   type: 'embed',
-                                   title: post.title,
-                                   content: embedHtml,
-                                   link: post.link || post.url || '#',
+                                     const embedHtml = post.embed_link as string;
+                                     
+                                     setModalContent({
+                                       type: 'embed',
+                                       title: post.title,
+                                       content: embedHtml,
+                                       link: post.link || post.url || '#',
                                    date: post.date,
                                    mediaLinks: imageUrls,
                                    postIndex,
@@ -1352,20 +1373,20 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                                    stationType
                                  });
                                }
-                               setShowModal(true);
+                                     setShowModal(true);
                              } catch (error) {
                                console.error('Error setting modal content:', error);
                              }
-                           }}
-                           className="w-7 h-7 bg-data/20 hover:bg-data/30 text-data rounded-full flex items-center justify-center transition-colors"
-                           aria-label="View in modal"
-                         >
+                                   }}
+                                   className="w-7 h-7 bg-data/20 hover:bg-data/30 text-data rounded-full flex items-center justify-center transition-colors"
+                                   aria-label="View in modal"
+                                 >
                            <FaExpandAlt className="w-3 h-3" />
-                         </button>
-                         <span className="text-xs text-gray-400">{formatDate(post.date)}</span>
-                       </div>
-                     </div>
-                   </motion.div> 
+                                 </button>
+                               <span className="text-xs text-gray-400">{formatDate(post.date)}</span>
+                             </div>
+                           </div>
+                         </motion.div> 
                  )
                )}
 
@@ -1376,48 +1397,48 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                  'LOL Hub',
                  3,
                  (post: BlogPost, index: number, isLoading: boolean) => (
-                   <motion.div 
-                     key={post.id} 
-                     initial={{ opacity: 0, y: 20 }} 
-                     animate={{ opacity: 1, y: 0 }} 
-                     transition={{ duration: 0.3, delay: index * 0.05 }} 
-                     className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-3 h-[230px] flex flex-col"
-                     onClick={(e) => {
-                       // Prevent any unwanted navigation
-                       if (!(e.target as HTMLElement).closest('a, button')) {
-                         e.preventDefault();
-                       }
-                     }}
-                   >
-                     <div className="flex items-center mb-2"> 
-                       <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0">
-                         <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                           <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"></path>
-                         </svg>
-                       </div> 
-                       <span className="ml-1.5 text-xs text-gray-400">LinkedIn Post</span> 
-                     </div> 
+                         <motion.div 
+                           key={post.id} 
+                           initial={{ opacity: 0, y: 20 }} 
+                           animate={{ opacity: 1, y: 0 }} 
+                           transition={{ duration: 0.3, delay: index * 0.05 }} 
+                           className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-3 h-[230px] flex flex-col"
+                           onClick={(e) => {
+                             // Prevent any unwanted navigation
+                             if (!(e.target as HTMLElement).closest('a, button')) {
+                               e.preventDefault();
+                             }
+                           }}
+                         >
+                           <div className="flex items-center mb-2"> 
+                             <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0">
+                               <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                 <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"></path>
+                               </svg>
+                             </div> 
+                             <span className="ml-1.5 text-xs text-gray-400">LinkedIn Post</span> 
+                           </div> 
                      <h4 className="font-semibold text-lg mb-2 text-white overflow-auto max-h-[60px]"
                         onMouseDown={(e) => e.stopPropagation()}
                         onTouchStart={(e) => e.stopPropagation()}>
                        {highlightText(post.title, activeSearchTerms)}
                      </h4>
-                     <p className="text-gray-300 text-xs mb-2 line-clamp-3 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt || '', 24), activeSearchTerms)} </p>
-                     <div className="mt-auto">
-                       <div className="flex justify-between items-center mb-2">
-                         <a 
-                           href={post.url || post.link || "#"}
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           className="text-data hover:text-data-light text-sm inline-flex items-center"
-                         >
-                           View Post <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70" />
-                         </a>
-                         <button 
-                           onClick={(e) => {
-                             e.preventDefault();
-                             e.stopPropagation();
-                             
+                           <p className="text-gray-300 text-xs mb-2 line-clamp-3 flex-grow overflow-hidden"> {highlightText(truncateToWords(post.excerpt || '', 24), activeSearchTerms)} </p>
+                           <div className="mt-auto">
+                             <div className="flex justify-between items-center mb-2">
+                               <a 
+                                 href={post.url || post.link || "#"}
+                                 target="_blank"
+                                 rel="noopener noreferrer"
+                                 className="text-data hover:text-data-light text-sm inline-flex items-center"
+                               >
+                                 View Post <FaExternalLinkAlt className="w-3 h-3 ml-1 opacity-70" />
+                               </a>
+                                 <button 
+                                   onClick={(e) => {
+                                     e.preventDefault();
+                                     e.stopPropagation();
+                                     
                              try {
                                // Pass the post index and station type to remember position
                                const stationType = 'quick-note';
@@ -1436,24 +1457,24 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                                    
                                    if (links.length > 0) {
                                      imageUrls = links;
-                                     console.log('Using multiple image URLs:', links);
+                                     // console.log('Using multiple image URLs:', links);
                                    }
                                } 
                                // If no multiple images, fallback to single image
                                else if (post.image && post.image !== '/images/oops_penguin.png') {
                                  imageUrls = post.image;
-                                 console.log('Using single image URL:', post.image);
+                                //  console.log('Using single image URL:', post.image);
                                }
                                
                                // Check if there's an embed_link to display
                                if (post.embed_link) {
-                                 const embedHtml = post.embed_link as string;
-                                 
-                                 setModalContent({
-                                   type: 'embed',
-                                   title: post.title,
-                                   content: embedHtml,
-                                   link: post.link || post.url || '#',
+                                     const embedHtml = post.embed_link as string;
+                                     
+                                     setModalContent({
+                                       type: 'embed',
+                                       title: post.title,
+                                       content: embedHtml,
+                                       link: post.link || post.url || '#',
                                    date: post.date,
                                    mediaLinks: imageUrls,
                                    postIndex,
@@ -1472,20 +1493,20 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                                    stationType
                                  });
                                }
-                               setShowModal(true);
+                                     setShowModal(true);
                              } catch (error) {
                                console.error('Error setting modal content:', error);
                              }
-                           }}
-                           className="w-7 h-7 bg-data/20 hover:bg-data/30 text-data rounded-full flex items-center justify-center transition-colors"
-                           aria-label="View in modal"
-                         >
+                                   }}
+                                   className="w-7 h-7 bg-data/20 hover:bg-data/30 text-data rounded-full flex items-center justify-center transition-colors"
+                                   aria-label="View in modal"
+                                 >
                            <FaExpandAlt className="w-3 h-3" />
-                         </button>
-                         <span className="text-xs text-gray-400">{formatDate(post.date)}</span>
-                       </div>
-                     </div>
-                   </motion.div> 
+                                 </button>
+                               <span className="text-xs text-gray-400">{formatDate(post.date)}</span>
+                             </div>
+                           </div>
+                         </motion.div> 
                  )
                )}
               
@@ -1496,29 +1517,30 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                  'LinkedIn Articles',
                  2,
                  (post: BlogPost, index: number, isLoading: boolean) => (
-                   <motion.div 
-                     key={post.id} 
-                     initial={{ opacity: 0, y: 20 }} 
-                     animate={{ opacity: 1, y: 0 }} 
-                     transition={{ duration: 0.3, delay: index * 0.05 }}
-                     className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-4 h-[410px] flex flex-col"
-                   >
-                     <div className="h-48 mb-4 overflow-hidden rounded-lg bg-dark-300/60 relative">
-                       {post.image ? (
-                         <Image 
-                           src={post.image} 
-                           alt={post.title} 
+                         <motion.div 
+                           key={post.id} 
+                           initial={{ opacity: 0, y: 20 }} 
+                           animate={{ opacity: 1, y: 0 }} 
+                           transition={{ duration: 0.3, delay: index * 0.05 }}
+                           className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-4 h-[410px] flex flex-col"
+                         >
+                           <div className="h-48 mb-4 overflow-hidden rounded-lg bg-dark-300/60 relative">
+                             {post.image ? (
+                               <Image 
+                                 src={post.image} 
+                                 alt={post.title} 
                            loading="lazy"
-                           width={600} 
-                           height={300}
-                           className="object-cover h-full w-full transition-transform hover:scale-105"
-                         />
-                       ) : (
-                         <div className="h-full w-full flex items-center justify-center bg-gradient-to-b from-dark-300 to-dark-200">
-                           <FaMicroscope className="text-3xl text-gray-400" />
-                         </div>
-                       )}
-                     </div>
+                                 width={600} 
+                                 height={300}
+                                 className="object-cover h-full w-full transition-transform hover:scale-105"
+                           unoptimized={post.image.includes('substackcdn.com')}
+                               />
+                             ) : (
+                               <div className="h-full w-full flex items-center justify-center bg-gradient-to-b from-dark-300 to-dark-200">
+                                 <FaMicroscope className="text-3xl text-gray-400" />
+                               </div>
+                             )}
+                           </div>
                      <h4 className="font-semibold text-lg mb-2 text-white overflow-auto max-h-[60px]"
                         onMouseDown={(e) => e.stopPropagation()}
                         onTouchStart={(e) => e.stopPropagation()}>
@@ -1527,23 +1549,22 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                      <p className="text-gray-300 text-sm mb-4 flex-grow overflow-auto"
                         onMouseDown={(e) => e.stopPropagation()}
                         onTouchStart={(e) => e.stopPropagation()}>
-                       {highlightText(post.excerpt || '', activeSearchTerms)}
-                     </p>
-                     <div className="mt-auto">
-                       <div className="flex justify-between text-xs text-gray-400 mb-2">
-                         <span>{formatDate(post.date)}</span>
-                         <span>{post.readTime}</span>
-                       </div>
-                       <a 
-                         href={post.link || post.url || '#'}
-                         target="_blank"
-                         rel="noopener noreferrer"
-                         className="py-1.5 px-4 bg-data/20 hover:bg-data/30 text-data rounded-md text-sm inline-flex items-center transition-colors"
-                       >
-                         Read Article <FaChevronRight className="ml-1 w-3 h-3" />
-                       </a>
-                     </div>
-                   </motion.div> 
+                             {highlightText(post.excerpt || '', activeSearchTerms)}
+                           </p>
+                           <div className="mt-auto">
+                             <div className="flex justify-between items-center">
+                               <a 
+                                 href={post.link || post.url || '#'}
+                                 target="_blank"
+                                 rel="noopener noreferrer"
+                                 className="py-1.5 px-4 bg-data/20 hover:bg-data/30 text-data rounded-md text-sm inline-flex items-center transition-colors"
+                               >
+                                 Read Article <FaChevronRight className="ml-1 w-3 h-3" />
+                               </a>
+                               <span className="text-s text-gray-400">{formatDate(post.date)}</span>
+                             </div>
+                           </div>
+                         </motion.div> 
                  )
                )}
               
@@ -1553,30 +1574,101 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                  'comprehensive-study',
                  'Substack Unpacked',
                  1,
-                 (post: BlogPost, index: number, isLoading: boolean) => (
-                   <motion.div 
-                     key={post.id} 
-                     initial={{ opacity: 0, y: 20 }} 
-                     animate={{ opacity: 1, y: 0 }} 
-                     transition={{ duration: 0.3, delay: index * 0.05 }} 
-                     className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-4 h-[520px] flex flex-col"
-                   >
-                     <div className="h-60 mb-4 overflow-hidden rounded-lg bg-dark-300/60 relative">
-                       {post.image ? (
-                         <Image 
-                           src={post.image} 
-                           alt={post.title} 
-                           loading="lazy"
-                           width={800} 
-                           height={400}
-                           className="object-cover h-full w-full transition-transform hover:scale-105"
-                         />
-                       ) : (
-                         <div className="h-full w-full flex items-center justify-center bg-gradient-to-b from-dark-300 to-dark-200">
-                           <FaNewspaper className="text-4xl text-gray-400" />
-                         </div>
-                       )}
-                     </div>
+                 (post: BlogPost, index: number, isLoading: boolean) => {
+                   // Enhanced debug logging
+                  //  console.log(`[Substack Debug] Post ${post.id}:`);
+                  //  console.log('- Image URL:', post.image);
+                  //  console.log('- Media links:', post.media_link);
+                  //  console.log('- Full post data:', post);
+                   
+                   return (
+                                 <motion.div 
+                                   key={post.id} 
+                                   initial={{ opacity: 0, y: 20 }} 
+                                   animate={{ opacity: 1, y: 0 }} 
+                                   transition={{ duration: 0.3, delay: index * 0.05 }} 
+                           className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-4 h-[560px] flex flex-col"
+                         >
+                           <div className="h-80 mb-4 overflow-hidden rounded-lg bg-dark-300/60 relative">
+                             {post.image ? (
+                               <>
+                                 {/* Version 1: Original img tag with improved error handling - now hidden */}
+                                 <img 
+                                   src={post.image}
+                                   alt={post.title}
+                                   className="w-full h-full object-cover"
+                                   loading="lazy"
+                                   crossOrigin="anonymous"
+                                   onLoad={() => console.log(`[Image Success] Successfully loaded image: ${post.image}`)}
+                                   onError={(e) => {
+                                     console.error(`[Image Error] Failed to load image: ${post.image}`);
+                                     console.error(e);
+                                   }}
+                                   style={{ display: 'none' }} // Hidden since it may fail due to CORS
+                                 />
+                                 
+                                 {/* Version 2: Using a server-side proxy for Substack images */}
+                                 {post.image && post.image.includes('substackcdn.com') ? (
+                                   <>
+                                     {/* Log detailed debugging info */}
+                                     {process.env.NODE_ENV === 'development' && post.image && (
+                                       <div style={{ display: 'none' }}>
+                                         {/* Using comments instead of console.log to avoid linter errors */}
+                                         {/* The logs will run but won't return a React node */}
+                                         <span className="hidden">
+                                           {(() => {
+                                            //  console.log(`[SubstackImg] Original URL: ${post.image}`);
+                                            //  console.log(`[SubstackImg] URL length: ${post.image.length}`);
+                                            //  console.log(`[SubstackImg] Encoded length: ${encodeURIComponent(post.image).length}`);
+                                            //  console.log(`[SubstackImg] Contains substack-post-media: ${post.image.includes('substack-post-media')}`);
+                                             return null;
+                                           })()}
+                                         </span>
+                                       </div>
+                                     )}
+                                     
+                                     {/* Try the image proxy first */}
+                                     {post.image.includes('substack-post-media.s3.amazonaws.com') ? (
+                                       <img 
+                                         src={`/api/image-proxy?url=${encodeURIComponent(post.image)}`}
+                                         alt={post.title || "Blog post image"}
+                                         className="w-full h-full object-cover"
+                                         loading="lazy"
+                                         onError={(e) => {
+                                           if (post.image) {
+                                            //  console.error(`[SubstackImg] Error loading: ${post.image.substring(0, 50)}...`);
+                                             // Try direct loading as fallback
+                                             const img = e.currentTarget;
+                                             img.onerror = null; // Prevent infinite error loop
+                                             img.src = post.image;
+                                           }
+                                         }}
+                                       />
+                                     ) : (
+                                       // Fallback to template image for truncated URLs
+                                       <img 
+                                         src="/api/image-proxy?url=https%3A%2F%2Fsubstackcdn.com%2Fimage%2Ffetch%2Fw_1456%2Cc_limit%2Cf_webp%2Cq_auto%3Agood%2Cfl_progressive%3Asteep%2Fhttps%253A%252F%252Fsubstack-post-media.s3.amazonaws.com%252Fpublic%252Fimages%252Fb4ccc3ef-8f65-4eb5-a28f-0d3927c4b1f5_2691x954.png"
+                                         alt={post.title || "Blog post image"}
+                                         className="w-full h-full object-cover"
+                                         loading="lazy"
+                                       />
+                                     )}
+                                   </>
+                                 ) : (
+                                   <img 
+                                     src={post.image}
+                                     alt={post.title}
+                                     className="w-full h-full object-cover"
+                                     loading="lazy"
+                                   />
+                                 )}
+                               </>
+                             ) : (
+                               <div className="h-full w-full flex items-center justify-center bg-gradient-to-b from-dark-300 to-dark-200">
+                                 <FaNewspaper className="text-4xl text-gray-400" />
+                               </div>
+                             )}
+                           </div>
                      <h4 className="font-semibold text-xl mb-2 text-white overflow-auto max-h-[60px]"
                         onMouseDown={(e) => e.stopPropagation()}
                         onTouchStart={(e) => e.stopPropagation()}>
@@ -1585,24 +1677,24 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                      <p className="text-gray-300 text-sm mb-4 flex-grow overflow-auto"
                         onMouseDown={(e) => e.stopPropagation()}
                         onTouchStart={(e) => e.stopPropagation()}>
-                       {highlightText(post.excerpt || '', activeSearchTerms)}
-                     </p>
-                     <div className="mt-auto">
-                       <div className="flex justify-between text-xs text-gray-400 mb-3">
-                         <span>{formatDate(post.date)}</span>
-                         <span>{post.readTime}</span>
-                       </div>
-                       <a 
-                         href={post.link || post.url || '#'}
-                         target="_blank"
-                         rel="noopener noreferrer"
-                         className="py-2 px-5 bg-data/20 hover:bg-data/30 text-data rounded-md inline-flex items-center justify-center transition-colors"
-                       >
-                         Read on Substack <FaExternalLinkAlt className="ml-2 w-3 h-3" />
-                       </a>
-                     </div>
-                   </motion.div> 
-                 )
+                             {highlightText(post.excerpt || '', activeSearchTerms)}
+                           </p>
+                           <div className="mt-auto">
+                             <div className="flex justify-between items-center">
+                               <a 
+                                 href={post.link || post.url || '#'}
+                                 target="_blank"
+                                 rel="noopener noreferrer"
+                                 className="py-2 px-5 bg-data/20 hover:bg-data/30 text-data rounded-md inline-flex items-center justify-center transition-colors"
+                               >
+                                 Read on Substack <FaExternalLinkAlt className="ml-2 w-3 h-3" />
+                               </a>
+                               <span className="text-s text-gray-400">{formatDate(post.date)}</span>
+                             </div>
+                           </div>
+                         </motion.div> 
+                   );
+                 }
                )}
 
              </Suspense>
@@ -1663,14 +1755,14 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                   <div className="flex justify-center mt-2">
                     <a 
                       href={modalContent.link} 
-                      target="_blank"
-                      rel="noopener noreferrer"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
                       className="py-2 px-4 bg-data/20 hover:bg-data/30 text-data rounded transition-colors inline-flex items-center"
-                    >
+                                     >
                       View on LinkedIn <FaExternalLinkAlt className="ml-2 h-3 w-3" />
-                    </a>
-                  </div>
-                </div>
+                                     </a>
+                                   </div>
+                                       </div>
               )}
               
               {modalContent?.type === 'no-embed' && (
@@ -1758,8 +1850,8 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                       {modalContent.link && (
                         <a 
                           href={modalContent.link} 
-                          target="_blank"
-                          rel="noopener noreferrer"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
                           className="mt-4 py-2 px-4 bg-data/20 hover:bg-data/30 text-data rounded inline-flex items-center"
                         >
                           View on LinkedIn <FaExternalLinkAlt className="ml-2 h-3 w-3" />

@@ -38,3 +38,7 @@ yarn-error.log*
 **portfolio_gcp.json
 **.docx
 .clasprc.json
+
+image-test
+proxy-debug
+test-image

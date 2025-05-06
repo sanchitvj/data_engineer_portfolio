@@ -24,7 +24,7 @@ module.exports = {
           light: '#a78bfa',
         },
         data: {
-          DEFAULT: '#0ea5e9', // Sky blue for data
+          DEFAULT: '#0ea5e9', // Sky blue for data and pipeline draw.io arrows
           dark: '#0284c7',
           light: '#38bdf8',
         },
@@ -36,7 +36,7 @@ module.exports = {
         dark: {
           DEFAULT: '#0f172a', // Dark blue-gray for background
           100: '#1e293b',
-          200: '#334155',
+          200: '#334155', // for draw.io pipeline background
           300: '#475569',
           400: '#64748b',
           500: '#94a3b8',

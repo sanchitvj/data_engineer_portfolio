@@ -146,11 +146,11 @@ const BlogIcebergBackground: React.FC = () => {
 
     // Set up wind gust timing - not needed on mobile
     if (!isMobile) {
-      const windInterval = setInterval(() => {
-        setWindGustTime(prev => prev + 0.05);
-      }, 50);
-      
-      return () => clearInterval(windInterval);
+    const windInterval = setInterval(() => {
+      setWindGustTime(prev => prev + 0.05);
+    }, 50);
+
+    return () => clearInterval(windInterval);
     }
   }, [isMobile]);
   
@@ -249,27 +249,27 @@ const BlogIcebergBackground: React.FC = () => {
       return () => clearInterval(regenerateInterval);
     } else {
       // Original desktop behavior
-      const regenerateInterval = setInterval(() => {
-        const useOffscreenStart = Math.random() > 0.3;
-        const startPoint = getRandomPoint(useOffscreenStart);
-        const endPoint = getRandomPoint(Math.random() > 0.5);
-        
-        const newIceberg = {
-          id: Date.now(),
-          startX: startPoint.x,
-          startY: startPoint.y,
-          endX: endPoint.x,
-          endY: endPoint.y,
-          size: Math.random() * 8 + 4,
-          rotation: Math.random() * 20 - 10,
-          shape: Math.floor(Math.random() * icebergShapes.length),
-          duration: Math.random() * 40 + 30,
-        };
-        
-        setIcebergs(prev => [...prev.slice(-14), newIceberg]);
-      }, 4000);
+    const regenerateInterval = setInterval(() => {
+      const useOffscreenStart = Math.random() > 0.3;
+      const startPoint = getRandomPoint(useOffscreenStart);
+      const endPoint = getRandomPoint(Math.random() > 0.5);
       
-      return () => clearInterval(regenerateInterval);
+      const newIceberg = {
+        id: Date.now(),
+        startX: startPoint.x,
+        startY: startPoint.y,
+        endX: endPoint.x,
+        endY: endPoint.y,
+        size: Math.random() * 8 + 4,
+        rotation: Math.random() * 20 - 10,
+        shape: Math.floor(Math.random() * icebergShapes.length),
+        duration: Math.random() * 40 + 30,
+      };
+      
+      setIcebergs(prev => [...prev.slice(-14), newIceberg]);
+    }, 4000);
+    
+    return () => clearInterval(regenerateInterval);
     }
   }, [isMobile]);
   
@@ -299,25 +299,25 @@ const BlogIcebergBackground: React.FC = () => {
       return () => clearInterval(regenerateCrystals);
     } else {
       // Original desktop behavior
-      const regenerateCrystals = setInterval(() => {
-        const newCrystal = {
-          id: Date.now(),
-          x: Math.random() * 100,
-          y: -20,
-          size: Math.random() * 15 + 10,
-          opacity: Math.random() * 0.3 + 0.4,
-          speed: Math.random() * 10 + 6,
-          delay: 0,
-          rotation: Math.random() * 360,
-          variant: Math.floor(Math.random() * crystalShapes.length),
-          gustFactor: Math.random() * 15 + 10,
-          gustPhase: Math.random() * Math.PI * 2,
-        };
-        
-        setIceCrystals(prev => [...prev.slice(-19), newCrystal]);
-      }, 2000);
+    const regenerateCrystals = setInterval(() => {
+      const newCrystal = {
+        id: Date.now(),
+        x: Math.random() * 100,
+        y: -20,
+        size: Math.random() * 15 + 10,
+        opacity: Math.random() * 0.3 + 0.4,
+        speed: Math.random() * 10 + 6,
+        delay: 0,
+        rotation: Math.random() * 360,
+        variant: Math.floor(Math.random() * crystalShapes.length),
+        gustFactor: Math.random() * 15 + 10,
+        gustPhase: Math.random() * Math.PI * 2,
+      };
       
-      return () => clearInterval(regenerateCrystals);
+      setIceCrystals(prev => [...prev.slice(-19), newCrystal]);
+    }, 2000);
+    
+    return () => clearInterval(regenerateCrystals);
     }
   }, [isMobile]);
   
@@ -345,23 +345,23 @@ const BlogIcebergBackground: React.FC = () => {
       return () => clearInterval(regenerateSnowflakes);
     } else {
       // Original desktop behavior
-      const regenerateSnowflakes = setInterval(() => {
-        const newSnowflake = {
-          id: Date.now(),
-          x: Math.random() * 100,
-          y: -10,
-          size: Math.random() * 4 + 1,
-          opacity: Math.random() * 0.6 + 0.2,
-          speed: Math.random() * 40 + 20,
-          delay: 0,
-          gustFactor: Math.random() * 10 + 5,
-          gustPhase: Math.random() * Math.PI * 2,
-        };
-        
-        setSnowflakes(prev => [...prev.slice(-59), newSnowflake]);
-      }, 500);
+    const regenerateSnowflakes = setInterval(() => {
+      const newSnowflake = {
+        id: Date.now(),
+        x: Math.random() * 100,
+        y: -10,
+        size: Math.random() * 4 + 1,
+        opacity: Math.random() * 0.6 + 0.2,
+        speed: Math.random() * 40 + 20,
+        delay: 0,
+        gustFactor: Math.random() * 10 + 5,
+        gustPhase: Math.random() * Math.PI * 2,
+      };
       
-      return () => clearInterval(regenerateSnowflakes);
+      setSnowflakes(prev => [...prev.slice(-59), newSnowflake]);
+    }, 500);
+    
+    return () => clearInterval(regenerateSnowflakes);
     }
   }, [isMobile]);
   
