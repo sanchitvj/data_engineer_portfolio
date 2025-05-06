@@ -39,7 +39,6 @@ yarn-error.log*
 **.docx
 .clasprc.json
 
-image-proxy
 image-test
 proxy-debug
 test-image
