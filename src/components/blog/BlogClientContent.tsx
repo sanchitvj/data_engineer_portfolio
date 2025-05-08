@@ -350,8 +350,11 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
       const loadedCount = loadedPostsByType[type] || 0;
       const limit = getPostsLimit(type);
       
+      // For LinkedIn posts, ensure we're loading enough to get all posts
+      const adjustedLimit = type === 'linkedin-post' ? Math.max(limit, 20) : limit;
+      
       // Construct API URL with parameters
-      let apiUrl = `/api/posts?type=${type}&offset=${loadedCount}&limit=${limit}`;
+      let apiUrl = `/api/posts?type=${type}&offset=${loadedCount}&limit=${adjustedLimit}`;
       
       // Add tags parameter if search terms are active
       if (activeFilter !== 'all') {
@@ -361,6 +364,9 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
         // If searching, pass all search terms as tags
         apiUrl += `&tags=${encodeURIComponent(activeSearchTerms.join(','))}`;
       }
+      
+      // Log the API URL in production to help diagnose issues
+      // console.log(`Loading more posts: ${apiUrl}`);
       
       // Fetch posts through API
       const response = await fetch(apiUrl);
@@ -372,6 +378,8 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
       const data = await response.json();
       const newPosts = data.posts as BlogPost[];
       const totalCount = data.total;
+      
+      // console.log(`API returned ${newPosts.length} posts of type ${type} (total: ${totalCount})`);
       
       // Update loaded count
       const newLoadedCount = loadedCount + newPosts.length;
@@ -390,6 +398,8 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
         
         // Filter out any new posts that already exist in the state
         const uniqueNewPosts = newPosts.filter(post => !existingIds.has(post.id));
+        
+        // console.log(`Adding ${uniqueNewPosts.length} unique posts to state (filtered out ${newPosts.length - uniqueNewPosts.length} duplicates)`);
         
         return [...prev, ...uniqueNewPosts];
       });
@@ -796,7 +806,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
     const totalPosts = 
       (activeFilter !== 'all' || activeSearchTerms.length > 0) 
         ? postsOfType.length 
-        : (postCounts[type] || postsOfType.length);
+        : Math.max(postCounts[type] || 0, postsOfType.length); // Use the greater of postCounts or actual length
     
     // Create an array with posts and loading placeholders if needed
     let displayPosts = [...postsOfType];

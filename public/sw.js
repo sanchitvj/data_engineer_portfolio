@@ -3,10 +3,9 @@ const CACHE_NAME = 'data-engineer-portfolio-v1';
 // Assets to cache immediately on service worker install
 const PRECACHE_ASSETS = [
   '/',
-  '/blog',
-  '/offline.html', // We'll create this fallback page next
-  '/images/profile.jpeg',
-  '/Sanchit_Vijay_Resume.pdf',
+  '/offline.html',
+  '/images/penguindb_main_logo.png',
+  '/images/oops_penguin.png',
 ];
 
 // Install event - precache key assets
@@ -14,10 +13,22 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        return cache.addAll(PRECACHE_ASSETS);
+        // Use individual cache.add() calls with error handling instead of cache.addAll()
+        return Promise.all(
+          PRECACHE_ASSETS.map(asset => {
+            return cache.add(asset).catch(error => {
+              console.error(`Failed to cache asset: ${asset}`, error);
+              // Continue with other assets even if one fails
+              return Promise.resolve();
+            });
+          })
+        );
       })
       .then(() => {
         return self.skipWaiting();
+      })
+      .catch(error => {
+        console.error('Service worker installation failed:', error);
       })
   );
 });

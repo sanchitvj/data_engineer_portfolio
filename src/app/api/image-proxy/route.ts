@@ -16,8 +16,8 @@ export async function GET(request: NextRequest) {
 
   try {
     // Log the full URL for debugging
-    console.log(`[ImageProxy] Full image URL parameter: ${imageUrl}`);
-    console.log(`[ImageProxy] URL length: ${imageUrl.length}`);
+    // console.log(`[ImageProxy] Full image URL parameter: ${imageUrl}`);
+    // console.log(`[ImageProxy] URL length: ${imageUrl.length}`);
     
     // If URL is truncated Substack URL, use fallback
     finalImageUrl = imageUrl;
@@ -27,10 +27,10 @@ export async function GET(request: NextRequest) {
       
       // Use the template URL instead of returning an error
       finalImageUrl = "https://substackcdn.com/image/fetch/w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb4ccc3ef-8f65-4eb5-a28f-0d3927c4b1f5_2691x954.png";
-      console.log(`[ImageProxy] Using fallback URL: ${finalImageUrl}`);
+    //   console.log(`[ImageProxy] Using fallback URL: ${finalImageUrl}`);
     }
 
-    console.log(`[ImageProxy] Attempting to fetch: ${finalImageUrl}`);
+    // console.log(`[ImageProxy] Attempting to fetch: ${finalImageUrl}`);
     
     const response = await fetch(finalImageUrl, { 
       headers: { 
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     const imageData = await response.arrayBuffer();
     let contentType = response.headers.get('content-type');
 
-    console.log(`[ImageProxy] Upstream content-type for ${finalImageUrl}: ${contentType}`);
+    // console.log(`[ImageProxy] Upstream content-type for ${finalImageUrl}: ${contentType}`);
 
     // If response type is octet-stream but URL indicates an image type, use appropriate content type
     if (!contentType || contentType === 'application/octet-stream') {
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       else if (finalImageUrl.includes('substackcdn.com')) contentType = 'image/webp'; // Default for Substack
       else contentType = 'image/jpeg'; // Safe default
       
-      console.log(`[ImageProxy] Inferred content-type: ${contentType}`);
+    //   console.log(`[ImageProxy] Inferred content-type: ${contentType}`);
     }
 
     return new NextResponse(imageData, {

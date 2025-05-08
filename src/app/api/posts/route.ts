@@ -46,12 +46,15 @@ export async function GET(request: NextRequest) {
     let safeLimit = Math.min(limit, 20); // Maximum 20 posts per request
     
     // Special handling for sections that tend to have display issues
-    if (postType === 'quick-note' || postType === 'research-report') {
+    if (postType === 'quick-note' || postType === 'research-report' || postType === 'linkedin-post') {
       safeLimit = Math.min(limit, 50); // Allow more posts for these sections
     }
     
     // Fetch all content items
     const items = await getAllContentItems();
+    
+    // Log the total items fetched from DynamoDB
+    // console.log(`API: Fetched ${items.length} total items from DynamoDB`);
     
     // Map DynamoDB items to match BlogPost structure
     let allPosts: BlogPost[] = items.map((item: any) => {
@@ -151,20 +154,30 @@ export async function GET(request: NextRequest) {
     
     // Deduplicate posts by ID (keep only the first occurrence of each ID)
     const idMap = new Map();
+    const duplicateIds: string[] = [];
+    
     allPosts = allPosts.filter(post => {
       if (idMap.has(post.id)) {
+        duplicateIds.push(post.id);
         return false; // Skip this post if its ID is already in the map
       }
       idMap.set(post.id, true); // Otherwise add it to the map and keep the post
       return true;
     });
     
+    // Log duplicate IDs for debugging
+    if (duplicateIds.length > 0) {
+      console.log(`API: Found ${duplicateIds.length} duplicate post IDs: ${duplicateIds.join(', ')}`);
+    }
+    
     // Sort by date (newest first)
     allPosts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     
     // Filter by type if provided
+    let typeFilteredPosts = allPosts;
     if (postType) {
-      allPosts = allPosts.filter(post => post.type === postType);
+      typeFilteredPosts = allPosts.filter(post => post.type === postType);
+      console.log(`API: Filtered to ${typeFilteredPosts.length} posts of type ${postType} (from ${allPosts.length} total posts)`);
     }
     
     // Apply tag search if provided
@@ -173,7 +186,7 @@ export async function GET(request: NextRequest) {
       const searchTagList = searchTags.split(',').map(tag => tag.trim().toLowerCase());
       
       // Filter posts that have at least one matching tag
-      allPosts = allPosts.filter(post => {
+      typeFilteredPosts = typeFilteredPosts.filter(post => {
         // Get combined tags and generated tags
         const postTags = [
           ...(post.tags || []),
@@ -188,18 +201,23 @@ export async function GET(request: NextRequest) {
           normalizedTags.some(tag => tag.includes(searchTag))
         );
       });
+      
+      // console.log(`API: After tag filtering, found ${typeFilteredPosts.length} matching posts`);
     }
     
     // Calculate total count before pagination
-    const totalCount = allPosts.length;
+    const totalCount = typeFilteredPosts.length;
     
     // Apply pagination
-    const paginatedPosts = allPosts.slice(offset, offset + safeLimit);
+    const paginatedPosts = typeFilteredPosts.slice(offset, offset + safeLimit);
     
     // Log in development environment
     if (process.env.NODE_ENV === 'development') {
       console.log(`API: Returning ${paginatedPosts.length} posts of type ${postType || 'all'} (offset: ${offset}, limit: ${safeLimit}, total: ${totalCount}, tags: ${searchTags || 'none'})`);
     }
+    
+    // Always log in production for debugging
+    // console.log(`API: Returning ${paginatedPosts.length} posts of type ${postType || 'all'} (offset: ${offset}, limit: ${safeLimit}, total: ${totalCount}, tags: ${searchTags || 'none'})`);
     
     // Return posts with metadata
     return NextResponse.json({

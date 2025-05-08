@@ -25,6 +25,8 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
   const attemptedScrollsRef = useRef<Set<string>>(new Set());
   const isInitialMount = useRef(true);
   const pageRef = useRef(page);
+  const pageReady = useRef(false);
+  const visibilityTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Each page now has its correct sections from MainLayout
   const filteredSections = sections;
@@ -39,12 +41,18 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
   // Automatically toggle visibility on window resize or orientation change
   useEffect(() => {
     const onResize = () => {
-      setIsVisible(window.innerWidth >= 1024);
+      // Only set visibility if the page is ready
+      if (pageReady.current) {
+        setIsVisible(window.innerWidth >= 1024);
+      }
     };
+    
     window.addEventListener('resize', onResize);
     window.addEventListener('orientationchange', onResize);
-    // Initialize visibility
-    onResize();
+    
+    // Don't immediately initialize visibility on mount
+    // Let the page-change effect handle initial visibility
+    
     return () => {
       window.removeEventListener('resize', onResize);
       window.removeEventListener('orientationchange', onResize);
@@ -131,16 +139,34 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
       // Reset penguin position to first node when page changes
       setActiveSection(sections[0]?.id || '');
       setIndicatorPosition(0);
+      
+      // Reset page ready state
+      pageReady.current = false;
+    }
+    
+    // Clear any existing timer
+    if (visibilityTimer.current) {
+      clearTimeout(visibilityTimer.current);
     }
     
     // Add delay before showing navigator when page loads or changes
-    const showTimer = setTimeout(() => {
+    visibilityTimer.current = setTimeout(() => {
+      // Mark the page as ready
+      pageReady.current = true;
+      
+      // Only make visible on wider screens
       if (window.innerWidth >= 1500) {
         setIsVisible(true);
       }
-    }, 3000); // 3 second delay
+      
+      visibilityTimer.current = null;
+    }, 2000); // 2 second delay for page load
     
-    return () => clearTimeout(showTimer);
+    return () => {
+      if (visibilityTimer.current) {
+        clearTimeout(visibilityTimer.current);
+      }
+    };
   }, [page, sections]);
 
   // Find an element by attempting multiple ID variants and selector strategies
@@ -310,6 +336,9 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
 
   useEffect(() => {
     const handleScroll = () => {
+      // Skip if page isn't ready yet
+      if (!pageReady.current) return;
+      
       if (window.innerWidth >= 1500) {
         setIsVisible(true);
       } else {
@@ -394,8 +423,20 @@ const VerticalNavigator: React.FC<VerticalNavigatorProps> = ({ sections, page })
     window.addEventListener('resize', handleScroll);
     
     // Also run the handler after content might have loaded
-    const initialCheckTimer = setTimeout(handleScroll, 1000);
-    const secondCheckTimer = setTimeout(handleScroll, 3000);
+    const initialCheckTimer = setTimeout(() => {
+      // Only run check if page is marked ready
+      if (pageReady.current) {
+        handleScroll();
+      }
+    }, 1000);
+    
+    const secondCheckTimer = setTimeout(() => {
+      // By this point, the page should definitely be ready
+      if (!pageReady.current) {
+        pageReady.current = true;
+      }
+      handleScroll();
+    }, 3000);
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
