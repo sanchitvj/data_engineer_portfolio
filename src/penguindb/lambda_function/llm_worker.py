@@ -220,7 +220,7 @@ def lambda_handler(event, context):
                         logger=logger,
                         timeout=240, # 4 minutes timeout per attempt
                         max_retries=10, # Retry up to 10 times inside the function
-                        original_title=raw_item.get('title')  # Pass original title from source
+                        # original_title=raw_item.get('title')  # Temporarily commented until deployment
                     )
                     logger.info(f"LLM generation successful for {content_id}")
                     # Debug: Log what the LLM actually returned
