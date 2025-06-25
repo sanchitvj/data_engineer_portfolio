@@ -196,8 +196,10 @@ def lambda_handler(event, context):
                 logger.info(f"Processing content_id: {content_id} from stream")
 
                 # Check if LLM fields already exist (e.g., from a previous partial run)
-                if raw_item.get('generated_title') and raw_item.get('generated_tags'):
-                     logger.info(f"LLM fields already exist for {content_id}, skipping LLM generation.")
+                if (raw_item.get('generated_title') and 
+                    raw_item.get('generated_description') and 
+                    raw_item.get('generated_tags')):
+                     logger.info(f"All LLM fields already exist for {content_id}, skipping LLM generation.")
                      # Optionally, ensure sheet status is correct
                      if GOOGLE_SHEET_URL:
                          # Use async update with retry for existing item
@@ -221,6 +223,8 @@ def lambda_handler(event, context):
                         original_title=raw_item.get('title')  # Pass original title from source
                     )
                     logger.info(f"LLM generation successful for {content_id}")
+                    # Debug: Log what the LLM actually returned
+                    logger.info(f"LLM result fields: title='{llm_result.get('title')}', description='{llm_result.get('description')}', tags={llm_result.get('tags')}")
 
                 except Exception as llm_error:
                     llm_error_message = f"LLM generation failed after retries: {str(llm_error)}"
@@ -261,6 +265,7 @@ def lambda_handler(event, context):
                         }
 
                         for i, (key, value) in enumerate(fields_to_update.items()):
+                             # Only skip truly None values, but allow empty strings and empty lists
                              if value is not None:
                                  # Handle potential reserved words
                                  name_placeholder = f"#k{i}"
@@ -268,6 +273,7 @@ def lambda_handler(event, context):
                                  expression_attribute_names[name_placeholder] = key
                                  update_expression_parts.append(f"{name_placeholder} = {value_placeholder}")
                                  expression_attribute_values[value_placeholder] = value
+                                 logger.info(f"Adding field to update: {key} = {value}")
 
 
                         if update_expression_parts:
