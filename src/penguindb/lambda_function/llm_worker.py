@@ -217,7 +217,8 @@ def lambda_handler(event, context):
                         tags=raw_item.get('tags', []), # Pass tags if they exist
                         logger=logger,
                         timeout=240, # 4 minutes timeout per attempt
-                        max_retries=10 # Retry up to 10 times inside the function
+                        max_retries=10, # Retry up to 10 times inside the function
+                        original_title=raw_item.get('title')  # Pass original title from source
                     )
                     logger.info(f"LLM generation successful for {content_id}")
 

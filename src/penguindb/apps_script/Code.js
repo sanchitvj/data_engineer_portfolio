@@ -15,15 +15,16 @@ var COLUMNS = typeof COLUMNS !== 'undefined' ? COLUMNS : {
   CONTENT_ID: 0,  // Column for unique identifier
   CONTENT_TYPE: 1,
   DATE_PUBLISHED: 2,
-  DESCRIPTION: 3,
-  URL: 4,
-  EMBED_LINK: 5,
-  TAGS: 6,
-  MEDIA_LINK: 7,
-  STATUS: 8,
-  ERROR_DETAILS: 9,
-  LAST_UPDATED: 10,
-  ATTEMPT_COUNT: 11
+  TITLE: 3,       // Original title from source content
+  DESCRIPTION: 4,
+  URL: 5,
+  EMBED_LINK: 6,
+  TAGS: 7,
+  MEDIA_LINK: 8,
+  STATUS: 9,
+  ERROR_DETAILS: 10,
+  LAST_UPDATED: 11,
+  ATTEMPT_COUNT: 12
 };
 
 // Configuration
@@ -645,7 +646,10 @@ function updateItemStatus(contentId, status, processedAt, generatedTitle, genera
   
   if (generatedTitle && generatedTitle.trim() !== "") {
     const statusCell = sheet.getRange(rowIndex, COLUMNS.STATUS + 1);
-    statusCell.setNote(`Generated title: ${generatedTitle}`);
+    const currentNote = statusCell.getNote() || "";
+    // Add generated title to notes, keeping any existing notes
+    const newNote = currentNote ? `${currentNote}\nGenerated title: ${generatedTitle}` : `Generated title: ${generatedTitle}`;
+    statusCell.setNote(newNote);
     notesUpdated = true;
   }
   
@@ -662,7 +666,9 @@ function updateItemStatus(contentId, status, processedAt, generatedTitle, genera
       // Add to the notes
       try {
         const tagsCell = sheet.getRange(rowIndex, COLUMNS.TAGS + 1);
-        tagsCell.setNote(`Generated tags: ${tagsStr}`);
+        const currentNote = tagsCell.getNote() || "";
+        const newNote = currentNote ? `${currentNote}\nGenerated tags: ${tagsStr}` : `Generated tags: ${tagsStr}`;
+        tagsCell.setNote(newNote);
       } catch (tagsError) {
         Logger.log(`Error setting tags note: ${tagsError.toString()}`);
       }

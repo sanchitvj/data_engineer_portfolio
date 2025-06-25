@@ -72,6 +72,8 @@ export async function GET(request: NextRequest) {
         type = 'research-report';
       } else if (item.content_type === 'substack') {
         type = 'comprehensive-study';
+      } else if (item.content_type === 'medium') {
+        type = 'medium-post';
       } else if (item.content_type === 'youtube') {
         // For YouTube content, use the 'youtube-video' type
         type = 'youtube-video';
@@ -126,7 +128,7 @@ export async function GET(request: NextRequest) {
       // Create a leaner post object with only the fields needed for display
       return {
         id: postId,
-        title: item.generated_title || item.title || 'Untitled Post',
+        title: item.title || item.generated_title || 'Untitled Post',
         excerpt: item.generated_description || item.description || '',
         description: item.generated_description || item.description || '',
         // Don't include full content until needed
@@ -148,7 +150,10 @@ export async function GET(request: NextRequest) {
         embed_link: item.embed_link || null, // Preserve the embed_link for iframe display
         // Add raw tags for better searching
         raw_tags: tags,
-        generated_tags: generatedTags
+        generated_tags: generatedTags,
+        // Keep both titles available for reference
+        original_title: item.title,
+        generated_title: item.generated_title
       };
     });
     

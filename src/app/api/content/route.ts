@@ -122,6 +122,8 @@ export async function GET() {
         type = 'research-report';
       } else if (item.content_type === 'substack') {
         type = 'comprehensive-study';
+      } else if (item.content_type === 'medium') {
+        type = 'medium-post';
       } else if (item.content_type === 'youtube') {
         // For YouTube content, use the 'youtube-video' type
         type = 'youtube-video';
@@ -168,7 +170,7 @@ export async function GET() {
       
       return {
         id: postId,
-        title: item.generated_title || item.title || 'Untitled Post',
+        title: item.title || item.generated_title || 'Untitled Post',
         excerpt: item.generated_description || item.description || '',
         description: item.generated_description || item.description || '',
         content: item.generated_content || '',
@@ -191,7 +193,10 @@ export async function GET() {
         media_link: allMediaLinks.length > 0 ? allMediaLinks : undefined,
         // Add raw tags for better searching
         raw_tags: tags,
-        generated_tags: generatedTags
+        generated_tags: generatedTags,
+        // Keep both titles available for reference
+        original_title: item.title,
+        generated_title: item.generated_title
       };
     });
 

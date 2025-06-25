@@ -159,7 +159,7 @@ def prepare_data_for_dynamodb(item):
     
     return dynamodb_item
 
-def generate_content_with_llm(content_type, model, description, tags, logger, timeout=180, max_retries=10):
+def generate_content_with_llm(content_type, model, description, tags, logger, timeout=180, max_retries=10, original_title=None):
     """
     Generate content using Claude LLM with aggressive timeout handling and persistent retries.
     Will retry until successful or until max_retries is reached.
@@ -171,6 +171,7 @@ def generate_content_with_llm(content_type, model, description, tags, logger, ti
         logger: Logger instance
         timeout: Timeout in seconds for each attempt
         max_retries: Maximum number of retry attempts for failure
+        original_title: Original title from the source content (optional)
     
     Returns:
         Dictionary with generated title, description, and tags
@@ -193,14 +194,19 @@ def generate_content_with_llm(content_type, model, description, tags, logger, ti
 
     title_word_count = "3-4" if content_type.lower() == "youtube" else "3-6"
     
+    # Include original title in prompt if available
+    title_context = ""
+    if original_title:
+        title_context = f"Original Title: {original_title}\n"
+    
     prompt = f"""
     Content Type: {content_type}
-    My Draft: {description}
+    {title_context}My Draft: {description}
     Current Tags: {tags_str}
 
     Hey, help me refine this {content_type} I'm working on. I need:
 
-    1. An attention-grabbing title ({title_word_count} words) - something that would make YOU want to click. Be intriguing but not clickbaity and not daramatic.
+    1. An attention-grabbing title ({title_word_count} words) - something that would make YOU want to click. Be intriguing but not clickbaity and not dramatic.{" Use the original title as reference if provided." if original_title else ""}
 
     2. A punchy description (around {desc_word_count} words) that sounds like a real person wrote it - conversational, occasionally using "I" statements, and avoiding perfectionist language or overly formal structure.
 

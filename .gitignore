@@ -42,3 +42,6 @@ yarn-error.log*
 image-test
 proxy-debug
 test-image
+
+**/*.gif
+**/*.mov
