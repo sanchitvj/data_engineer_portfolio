@@ -190,7 +190,7 @@ def generate_content_with_llm(content_type, model, description, tags, logger, ti
     elif content_type.lower() == "youtube":
         desc_word_count = "7-10"
     else:
-        desc_word_count = "20-25"
+        desc_word_count = "25-30"
 
     title_word_count = "3-4" if content_type.lower() == "youtube" else "3-6"
     

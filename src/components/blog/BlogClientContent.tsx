@@ -180,18 +180,22 @@ const LoadingCard = ({ type, style }: { type: string, style?: CSSProperties }) =
     
     case 'medium-post':
       return (
-        <div className="bg-dark-200/60 backdrop-blur-sm rounded-lg animate-pulse h-[560px] flex flex-col" style={style}>
-          <div className="h-80 mb-4 bg-dark-300/80 rounded-lg"></div>
-          <div className="h-6 bg-dark-300/80 rounded mb-3 w-4/5"></div>
-          <div className="h-4 bg-dark-300/80 rounded mb-2 w-full"></div>
-          <div className="h-4 bg-dark-300/80 rounded mb-2 w-11/12"></div>
-          <div className="h-4 bg-dark-300/80 rounded mb-4 w-4/5"></div>
-          <div className="mt-auto">
-            <div className="flex justify-between items-center mb-2">
-              <div className="h-3 bg-dark-300/80 rounded w-20"></div>
-              <div className="h-3 bg-dark-300/80 rounded w-16"></div>
+        <div className="bg-dark-200/60 backdrop-blur-sm rounded-lg animate-pulse h-[400px] md:h-[400px] flex flex-col md:flex-row gap-4 md:gap-6 p-4 md:p-6" style={style}>
+          {/* Image placeholder - full width on mobile, left side on desktop */}
+          <div className="flex-shrink-0 w-full md:w-auto h-56 md:h-full bg-dark-300/80 rounded-lg" style={{ aspectRatio: '16/9' }}></div>
+          
+          {/* Content placeholder - below image on mobile, right side on desktop */}
+          <div className="flex-1 flex flex-col">
+            <div className="h-5 md:h-6 bg-dark-300/80 rounded mb-2 md:mb-4 w-4/5"></div>
+            <div className="h-3 md:h-4 bg-dark-300/80 rounded mb-1 md:mb-2 w-full"></div>
+            <div className="h-3 md:h-4 bg-dark-300/80 rounded mb-3 md:mb-6 w-11/12"></div>
+            
+            <div className="mt-auto">
+              <div className="flex justify-between items-center">
+                <div className="h-6 bg-dark-300/80 rounded w-24"></div>
+                <div className="h-2.5 bg-dark-300/80 rounded w-16"></div>
+              </div>
             </div>
-            <div className="h-8 bg-dark-300/80 rounded w-32"></div>
           </div>
         </div>
       );
@@ -664,7 +668,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     
     return filteredPosts.find(post => 
-      post.type === 'comprehensive-study' && 
+      (post.type === 'comprehensive-study' || post.type === 'medium-post') && 
       new Date(post.date) > sevenDaysAgo
     );
   }, [filteredPosts]);
@@ -1197,6 +1201,14 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                           />
                         )}
                       </>
+                    ) : featuredPost.image.includes('miro.medium.com') || featuredPost.image.includes('medium.com') ? (
+                      // Medium images - use object-contain for better quality
+                      <img 
+                        src={featuredPost.image}
+                        alt={featuredPost.title}
+                        className="w-full h-64 lg:h-full object-contain bg-dark-300/60"
+                        loading="lazy"
+                      />
                     ) : (
                       <Image 
                         src={featuredPost.image} 
@@ -1212,7 +1224,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                 <div className={`p-6 lg:p-8 ${featuredPost.image ? 'lg:w-1/2' : 'w-full'} flex flex-col`}>
                   <div className="flex items-center mb-3">
                     <FaStar className="text-data mr-2 text-2xl" />
-                    <span className="text-data text-xl font-medium">Featured Research</span>
+                    <span className="text-data text-xl font-medium">Featured Article</span>
                   </div>
                   <h2 className="text-2xl md:text-3xl font-bold mb-3 text-white leading-tight">
                     {highlightText(featuredPost.title, activeSearchTerms)}
@@ -1230,7 +1242,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                       rel="noopener noreferrer" 
                       className="mt-auto inline-flex items-center px-4 py-2 bg-data hover:bg-data-dark text-dark-300 font-medium rounded-lg transition-colors"
                     >
-                      Read Full Report
+                      Read Full Article
                       <FaExternalLinkAlt className="ml-2" size={12}/>
                     </Link>
                   )}
@@ -1715,9 +1727,9 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                                  href={post.link || post.url || '#'}
                                  target="_blank"
                                  rel="noopener noreferrer"
-                                 className="py-2 px-5 bg-data/20 hover:bg-data/30 text-data rounded-md inline-flex items-center justify-center transition-colors"
+                                 className="py-1.5 px-3 md:py-2 md:px-5 bg-data/20 hover:bg-data/30 text-data rounded-md inline-flex items-center justify-center transition-colors text-xs md:text-sm"
                                >
-                                 Read on Substack <FaExternalLinkAlt className="ml-2 w-3 h-3" />
+                                 Read on Substack <FaExternalLinkAlt className="ml-1.5 md:ml-2 w-2.5 h-2.5 md:w-3 md:h-3" />
                                </a>
                                <span className="text-s text-gray-400">{formatDate(post.date)}</span>
                              </div>
@@ -1731,7 +1743,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                <div id="medium-insights-anchor" className="section-anchor"></div>
                {renderSwipeStation(
                  'medium-post',
-                 'Medium Insights',
+                 'Medium Notes',
                  1,
                  (post: BlogPost, index: number, isLoading: boolean) => {
                    return (
@@ -1740,9 +1752,10 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                        initial={{ opacity: 0, y: 20 }} 
                        animate={{ opacity: 1, y: 0 }} 
                        transition={{ duration: 0.3, delay: index * 0.05 }} 
-                       className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-4 h-[560px] flex flex-col"
+                       className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-4 md:p-6 h-[450px] md:h-[400px] flex flex-col md:flex-row gap-4 md:gap-6"
                      >
-                       <div className="h-80 mb-4 overflow-hidden rounded-lg bg-dark-300/60 relative">
+                       {/* Image - full width on mobile, left side on desktop */}
+                       <div className="flex-shrink-0 w-full md:w-auto overflow-hidden rounded-lg bg-dark-300/60 relative h-52 md:h-full" style={{ aspectRatio: '16/9' }}>
                          {post.image ? (
                            <>
                              {/* Medium images are typically from miro.medium.com CDN */}
@@ -1750,7 +1763,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                                <img 
                                  src={post.image}
                                  alt={post.title || "Medium post image"}
-                                 className="w-full h-full object-contain bg-dark-300/60 transition-transform duration-300 hover:scale-105"
+                                 className="w-full h-full object-contain bg-dark-300/60"
                                  loading="lazy"
                                  onError={(e) => {
                                    console.error(`[Medium Image] Error loading: ${post.image}`);
@@ -1767,7 +1780,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                                <img 
                                  src={post.image}
                                  alt={post.title}
-                                 className="w-full h-full object-contain bg-dark-300/60 transition-transform duration-300 hover:scale-105"
+                                 className="w-full h-full object-contain bg-dark-300/60"
                                  loading="lazy"
                                  onError={(e) => {
                                    console.error(`[Medium Image] Error loading non-Medium image: ${post.image}`);
@@ -1797,27 +1810,33 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                            </div>
                          )}
                        </div>
-                       <h4 className="font-semibold text-xl mb-2 text-white overflow-auto max-h-[60px]"
-                          onMouseDown={(e) => e.stopPropagation()}
-                          onTouchStart={(e) => e.stopPropagation()}>
-                         {highlightText(post.title, activeSearchTerms)}
-                       </h4>
-                       <p className="text-gray-300 text-sm mb-4 flex-grow overflow-auto"
-                          onMouseDown={(e) => e.stopPropagation()}
-                          onTouchStart={(e) => e.stopPropagation()}>
-                         {highlightText(post.excerpt || '', activeSearchTerms)}
-                       </p>
-                       <div className="mt-auto">
-                         <div className="flex justify-between items-center">
-                           <a 
-                             href={post.link || post.url || '#'}
-                             target="_blank"
-                             rel="noopener noreferrer"
-                             className="py-2 px-5 bg-data/20 hover:bg-data/30 text-data rounded-md inline-flex items-center justify-center transition-colors"
-                           >
-                             Read on Medium <FaExternalLinkAlt className="ml-2 w-3 h-3" />
-                           </a>
-                           <span className="text-s text-gray-400">{formatDate(post.date)}</span>
+
+                       {/* Content - below image on mobile, right side on desktop */}
+                       <div className="flex-1 flex flex-col">
+                         <h4 className="font-semibold text-lg md:text-xl mb-2 md:mb-4 text-white overflow-auto max-h-[60px]"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}>
+                           {highlightText(post.title, activeSearchTerms)}
+                         </h4>
+                         
+                         <p className="text-gray-300 text-xs md:text-sm mb-3 md:mb-6 flex-grow overflow-auto"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}>
+                           {highlightText(post.excerpt || '', activeSearchTerms)}
+                         </p>
+                         
+                         <div className="mt-auto">
+                           <div className="flex justify-between items-center">
+                             <a 
+                               href={post.link || post.url || '#'}
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               className="py-1.5 px-3 md:py-2 md:px-5 bg-data/20 hover:bg-data/30 text-data rounded-md inline-flex items-center justify-center transition-colors text-xs md:text-sm"
+                             >
+                               Read on Medium <FaExternalLinkAlt className="ml-1.5 md:ml-2 w-2.5 h-2.5 md:w-3 md:h-3" />
+                             </a>
+                             <span className="text-xs text-gray-400">{formatDate(post.date)}</span>
+                           </div>
                          </div>
                        </div>
                      </motion.div> 

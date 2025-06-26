@@ -52,27 +52,27 @@ const experiences: Experience[] = [
     },
     technologies: ["Apache Spark", "Databricks", "AWS", "Airflow", "GitHub Actions", "Terraform", "Iceberg", "Athena", "Glue", "DynamoDB", "EMR", "ECS Fargate"]
   },
-  {
-    title: "Creator",
-    company: <a href="https://github.com/sanchitvj/sports_betting_analytics_engine" target="_blank" rel="noopener noreferrer" className="text-data hover:text-data-light transition-colors">Betflow</a>,
-    period: "Nov 2024 - Present",
-    base_description: "Developed real-time sports analytics platform with Lambda architecture, processing sports, odds, and weather events through real-time and batch pipelines. Built analytics dashboard, reducing streaming latency by 95% while cutting infrastructure costs by 60%. Implemented scalable data processing with Kafka, Spark, and Snowflake for sub-second analysis across sports markets.",
-    detail_description: {
-      data_engineering: [
-        "Built Lambda architecture processing 400K+ daily records for sports betting platform.",
-        "Integrated Kafka and Spark Streaming for sub-second market analysis.",
-        "Engineered real-time data pipelines combining game, odds, and weather data.",
-        "Reduced analytics latency to 5 seconds for time-sensitive betting decisions.",
-        "Implemented SCD Type-2 and CDC patterns in DBT for historical trend analysis.",
-        "Decreased daily warehouse compute costs by 60% using incremental processing strategies.",
-        "Reduced storage costs by 90% while maintaining query performance on 100GB+ data.",
-        "Designed multi-sport Grafana dashboards visualizing 1M+ daily betting events.",
-        "Enabled sub-5 second dashboard refresh rates for real-time pattern detection."
-      ],
-      machine_learning: []
-    },
-    technologies: ["Spark", "AWS", "Airflow", "Glue", "Kafka", "Druid", "Snowflake", "DBT", "Grafana"]
-  },
+  // {
+  //   title: "Creator",
+  //   company: <a href="https://github.com/sanchitvj/sports_betting_analytics_engine" target="_blank" rel="noopener noreferrer" className="text-data hover:text-data-light transition-colors">Betflow</a>,
+  //   period: "Nov 2024 - Present",
+  //   base_description: "Developed real-time sports analytics platform with Lambda architecture, processing sports, odds, and weather events through real-time and batch pipelines. Built analytics dashboard, reducing streaming latency by 95% while cutting infrastructure costs by 60%. Implemented scalable data processing with Kafka, Spark, and Snowflake for sub-second analysis across sports markets.",
+  //   detail_description: {
+  //     data_engineering: [
+  //       "Built Lambda architecture processing 400K+ daily records for sports betting platform.",
+  //       "Integrated Kafka and Spark Streaming for sub-second market analysis.",
+  //       "Engineered real-time data pipelines combining game, odds, and weather data.",
+  //       "Reduced analytics latency to 5 seconds for time-sensitive betting decisions.",
+  //       "Implemented SCD Type-2 and CDC patterns in DBT for historical trend analysis.",
+  //       "Decreased daily warehouse compute costs by 60% using incremental processing strategies.",
+  //       "Reduced storage costs by 90% while maintaining query performance on 100GB+ data.",
+  //       "Designed multi-sport Grafana dashboards visualizing 1M+ daily betting events.",
+  //       "Enabled sub-5 second dashboard refresh rates for real-time pattern detection."
+  //     ],
+  //     machine_learning: []
+  //   },
+  //   technologies: ["Spark", "AWS", "Airflow", "Glue", "Kafka", "Druid", "Snowflake", "DBT", "Grafana"]
+  // },
   {
     title: "Data Engineer",
     company: <a href="https://www.bytelearn.com/" target="_blank" rel="noopener noreferrer" className="text-data hover:text-data-light transition-colors">Bytelearn</a>,
