@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { FaGithub, FaLinkedin } from 'react-icons/fa';
+import { FaGithub, FaLinkedin, FaMedium } from 'react-icons/fa';
 import { SiSubstack } from 'react-icons/si';
 
 const HeroSection: React.FC = () => {
@@ -108,6 +108,16 @@ const HeroSection: React.FC = () => {
               className="text-2xl text-dark-400 hover:text-data transition-colors"
             >
               <SiSubstack />
+            </motion.a>
+            <motion.a
+              href="https://medium.com/@sanchitvj"
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="text-2xl text-dark-400 hover:text-data transition-colors"
+            >
+              <FaMedium />
             </motion.a>
           </div>
         </div>

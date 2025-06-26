@@ -2,6 +2,30 @@ import { Project } from '../types/project';
 
 export const projects: Project[] = [
   {
+    id: 'dare',
+    title: 'DARE',
+    description: 'Data & AI Repository of Experiments - A collection of experiments and benchmarks for modern data engineering and AI tools.',
+    objective: 'Provide a comprehensive testing ground for evaluating and comparing modern data engineering tools, storage solutions, and AI integration patterns with focus on reproducibility and real-world scenarios.',
+    features: [
+      'Performance benchmarking across query engines',
+      'Cost-effective cloud storage strategies',
+      'Cross-platform compatibility testing',
+      'Real-world ETL/ELT pattern analysis',
+      'Data migration between storage systems'
+    ],
+    architecture: 'Multi-cloud architecture testing framework that evaluates data storage solutions (Iceberg, Delta Lake), query engines (Spark, DuckDB, Polars), and cloud platforms (AWS, Cloudflare R2) with focus on operational overhead analysis.',
+    challenges: 'Ensuring reproducibility across different environments, standardizing performance metrics across diverse tools, and maintaining cost-effectiveness while providing comprehensive benchmarking capabilities.',
+    technologies: ['AWS', 'Snowflake', 'Databricks', 'DuckDB', 'Spark', 'Iceberg', 'Delta Lake'],
+    metrics: [
+      { label: 'Query Engines Tested', value: '3+' },
+      { label: 'Storage Solutions', value: '5+' },
+      { label: 'Cloud Platforms', value: '2+' },
+    ],
+    imageUrl: '/images/projects/dare_1.png',
+    githubUrl: 'https://github.com/sanchitvj/DARE',
+    isExternal: true
+  },
+  {
     id: 'betflow',
     title: 'Betflow',
     description: 'A data and analytics engineering platform designed for sports analytics combining streaming & batch processing capabilities.',
@@ -23,7 +47,7 @@ export const projects: Project[] = [
     ],
     imageUrl: '/images/projects/betflow_2_0.png',
     githubUrl: 'https://github.com/sanchitvj/sports_betting_analytics_engine',
-    demoUrl: 'https://youtu.be/XD2b8V_RfFc?t=1493',
+    videoUrl: 'https://youtu.be/XD2b8V_RfFc?t=1493',
     isExternal: false
   },
   {
@@ -61,7 +85,7 @@ export const projects: Project[] = [
       'Attention-guided context fusion (combines local/global features)',
       'Configurable SPP blocks (tested 1 or 2 SPP layers for optimal performance)'
     ],
-    technologies: ['PyTorch', 'Deep Learning', 'Medical Imaging', 'Computer Vision', '3D Image Processing'],
+    technologies: ['PyTorch', 'Medical Imaging', 'Computer Vision', '3D Image Processing'],
     architecture: '3D U-Net with residual SPP and attention blocks, processing MRI images at 160×192×192 resolution, using group normalization and Adam optimization.',
     challenges: 'Handling tumor size variability, avoiding gradient explosion with batch size 1, and balancing context without extra parameters.',
     metrics: [

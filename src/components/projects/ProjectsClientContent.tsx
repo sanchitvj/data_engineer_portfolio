@@ -81,28 +81,13 @@ const ProjectsClientContent: React.FC<ProjectsClientContentProps> = ({
 
         {/* Data Lake Visualization */}
         <div className="relative w-full max-w-7xl mx-auto pb-16">
-          {/* Featured Project (Betflow) */}
-          <div className="mb-12">
-            {filteredProjects.find(p => p.id === 'betflow') && (
-              <div className="max-w-3xl mx-auto">
-                <DataIsland 
-                  project={filteredProjects.find(p => p.id === 'betflow')!} 
-                  index={0}
-                  isFeatured={true}
-                />
+          {/* All Projects Grid - 3 columns, centered layout */}
+          <div className="flex flex-wrap justify-center gap-6">
+            {filteredProjects.map((project, index) => (
+              <div key={project.id} className="w-full max-w-sm sm:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)] h-full">
+                <DataIsland project={project} index={index} />
               </div>
-            )}
-          </div>
-
-          {/* Other Projects Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProjects
-              .filter(p => p.id !== 'betflow')
-              .map((project, index) => (
-                <div key={project.id} className="h-full">
-                  <DataIsland project={project} index={index} />
-                </div>
-              ))}
+            ))}
           </div>
         </div>
       </div>

@@ -178,6 +178,28 @@ const LoadingCard = ({ type, style }: { type: string, style?: CSSProperties }) =
         </div>
       );
     
+    case 'medium-post':
+      return (
+        <div className="bg-dark-200/60 backdrop-blur-sm rounded-lg animate-pulse h-[400px] md:h-[400px] flex flex-col md:flex-row gap-4 md:gap-6 p-4 md:p-6" style={style}>
+          {/* Image placeholder - full width on mobile, left side on desktop */}
+          <div className="flex-shrink-0 w-full md:w-auto h-56 md:h-full bg-dark-300/80 rounded-lg" style={{ aspectRatio: '16/9' }}></div>
+          
+          {/* Content placeholder - below image on mobile, right side on desktop */}
+          <div className="flex-1 flex flex-col">
+            <div className="h-5 md:h-6 bg-dark-300/80 rounded mb-2 md:mb-4 w-4/5"></div>
+            <div className="h-3 md:h-4 bg-dark-300/80 rounded mb-1 md:mb-2 w-full"></div>
+            <div className="h-3 md:h-4 bg-dark-300/80 rounded mb-3 md:mb-6 w-11/12"></div>
+            
+            <div className="mt-auto">
+              <div className="flex justify-between items-center">
+                <div className="h-6 bg-dark-300/80 rounded w-24"></div>
+                <div className="h-2.5 bg-dark-300/80 rounded w-16"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    
     // Default card for linkedin-post and quick-note
     default:
       return (
@@ -646,7 +668,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     
     return filteredPosts.find(post => 
-      post.type === 'comprehensive-study' && 
+      (post.type === 'comprehensive-study' || post.type === 'medium-post') && 
       new Date(post.date) > sevenDaysAgo
     );
   }, [filteredPosts]);
@@ -866,6 +888,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
         case 'quick-note': return 'lol-hub';
         case 'research-report': return 'linkedin-articles';
         case 'comprehensive-study': return 'substack-unpacked';
+        case 'medium-post': return 'medium-insights';
         default: return contentType;
       }
     };
@@ -927,6 +950,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
       initialPagination['quick-note'] = 3;
       initialPagination['research-report'] = 2;
       initialPagination['comprehensive-study'] = 1;
+      initialPagination['medium-post'] = 1;
       
       setMobilePagination(initialPagination);
       
@@ -1177,6 +1201,14 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                           />
                         )}
                       </>
+                    ) : featuredPost.image.includes('miro.medium.com') || featuredPost.image.includes('medium.com') ? (
+                      // Medium images - use object-contain for better quality
+                      <img 
+                        src={featuredPost.image}
+                        alt={featuredPost.title}
+                        className="w-full h-64 lg:h-full object-contain bg-dark-300/60"
+                        loading="lazy"
+                      />
                     ) : (
                       <Image 
                         src={featuredPost.image} 
@@ -1192,7 +1224,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                 <div className={`p-6 lg:p-8 ${featuredPost.image ? 'lg:w-1/2' : 'w-full'} flex flex-col`}>
                   <div className="flex items-center mb-3">
                     <FaStar className="text-data mr-2 text-2xl" />
-                    <span className="text-data text-xl font-medium">Featured Research</span>
+                    <span className="text-data text-xl font-medium">Featured Article</span>
                   </div>
                   <h2 className="text-2xl md:text-3xl font-bold mb-3 text-white leading-tight">
                     {highlightText(featuredPost.title, activeSearchTerms)}
@@ -1210,7 +1242,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                       rel="noopener noreferrer" 
                       className="mt-auto inline-flex items-center px-4 py-2 bg-data hover:bg-data-dark text-dark-300 font-medium rounded-lg transition-colors"
                     >
-                      Read Full Report
+                      Read Full Article
                       <FaExternalLinkAlt className="ml-2" size={12}/>
                     </Link>
                   )}
@@ -1695,14 +1727,119 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                                  href={post.link || post.url || '#'}
                                  target="_blank"
                                  rel="noopener noreferrer"
-                                 className="py-2 px-5 bg-data/20 hover:bg-data/30 text-data rounded-md inline-flex items-center justify-center transition-colors"
+                                 className="py-1.5 px-3 md:py-2 md:px-5 bg-data/20 hover:bg-data/30 text-data rounded-md inline-flex items-center justify-center transition-colors text-xs md:text-sm"
                                >
-                                 Read on Substack <FaExternalLinkAlt className="ml-2 w-3 h-3" />
+                                 Read on Substack <FaExternalLinkAlt className="ml-1.5 md:ml-2 w-2.5 h-2.5 md:w-3 md:h-3" />
                                </a>
                                <span className="text-s text-gray-400">{formatDate(post.date)}</span>
                              </div>
                            </div>
                          </motion.div> 
+                   );
+                 }
+               )}
+
+               {/* Medium Publications Station */}
+               <div id="medium-insights-anchor" className="section-anchor"></div>
+               {renderSwipeStation(
+                 'medium-post',
+                 'Medium Notes',
+                 1,
+                 (post: BlogPost, index: number, isLoading: boolean) => {
+                   return (
+                     <motion.div 
+                       key={post.id} 
+                       initial={{ opacity: 0, y: 20 }} 
+                       animate={{ opacity: 1, y: 0 }} 
+                       transition={{ duration: 0.3, delay: index * 0.05 }} 
+                       className="bg-dark-200/60 backdrop-blur-sm rounded-lg border border-data/20 hover:border-data/40 transition-all p-4 md:p-6 h-[450px] md:h-[400px] flex flex-col md:flex-row gap-4 md:gap-6"
+                     >
+                       {/* Image - full width on mobile, left side on desktop */}
+                       <div className="flex-shrink-0 w-full md:w-auto overflow-hidden rounded-lg bg-dark-300/60 relative h-52 md:h-full" style={{ aspectRatio: '16/9' }}>
+                         {post.image ? (
+                           <>
+                             {/* Medium images are typically from miro.medium.com CDN */}
+                             {post.image.includes('miro.medium.com') || post.image.includes('medium.com') ? (
+                               <img 
+                                 src={post.image}
+                                 alt={post.title || "Medium post image"}
+                                 className="w-full h-full object-contain bg-dark-300/60"
+                                 loading="lazy"
+                                 onError={(e) => {
+                                   console.error(`[Medium Image] Error loading: ${post.image}`);
+                                   // Show fallback on error
+                                   const img = e.currentTarget;
+                                   img.style.display = 'none';
+                                   const fallback = img.parentElement?.querySelector('.medium-fallback') as HTMLElement;
+                                   if (fallback) {
+                                     fallback.style.display = 'flex';
+                                   }
+                                 }}
+                               />
+                             ) : (
+                               <img 
+                                 src={post.image}
+                                 alt={post.title}
+                                 className="w-full h-full object-contain bg-dark-300/60"
+                                 loading="lazy"
+                                 onError={(e) => {
+                                   console.error(`[Medium Image] Error loading non-Medium image: ${post.image}`);
+                                   const img = e.currentTarget;
+                                   img.style.display = 'none';
+                                   const fallback = img.parentElement?.querySelector('.medium-fallback') as HTMLElement;
+                                   if (fallback) {
+                                     fallback.style.display = 'flex';
+                                   }
+                                 }}
+                               />
+                             )}
+                             
+                             {/* Fallback for failed image loads */}
+                             <div className="medium-fallback h-full w-full items-center justify-center bg-gradient-to-b from-dark-300 to-dark-200 absolute inset-0" style={{ display: 'none' }}>
+                               <svg className="text-4xl text-gray-400 w-16 h-16" viewBox="0 0 24 24" fill="currentColor">
+                                 <path d="M13.54 12a6.8 6.8 0 01-6.77 6.82A6.8 6.8 0 010 12a6.8 6.8 0 016.77-6.82A6.8 6.8 0 0113.54 12zM20.96 12c0 3.54-1.51 6.42-3.38 6.42-1.87 0-3.39-2.88-3.39-6.42s1.52-6.42 3.39-6.42 3.38 2.88 3.38 6.42M24 12c0 3.17-.53 5.75-1.19 5.75-.66 0-1.19-2.58-1.19-5.75s.53-5.75 1.19-5.75C23.47 6.25 24 8.83 24 12z"/>
+                               </svg>
+                             </div>
+                           </>
+                         ) : (
+                           <div className="h-full w-full flex items-center justify-center bg-gradient-to-b from-dark-300 to-dark-200">
+                             {/* Medium's signature icon */}
+                             <svg className="text-4xl text-gray-400 w-16 h-16" viewBox="0 0 24 24" fill="currentColor">
+                               <path d="M13.54 12a6.8 6.8 0 01-6.77 6.82A6.8 6.8 0 010 12a6.8 6.8 0 016.77-6.82A6.8 6.8 0 0113.54 12zM20.96 12c0 3.54-1.51 6.42-3.38 6.42-1.87 0-3.39-2.88-3.39-6.42s1.52-6.42 3.39-6.42 3.38 2.88 3.38 6.42M24 12c0 3.17-.53 5.75-1.19 5.75-.66 0-1.19-2.58-1.19-5.75s.53-5.75 1.19-5.75C23.47 6.25 24 8.83 24 12z"/>
+                             </svg>
+                           </div>
+                         )}
+                       </div>
+
+                       {/* Content - below image on mobile, right side on desktop */}
+                       <div className="flex-1 flex flex-col">
+                         <h4 className="font-semibold text-lg md:text-xl mb-2 md:mb-4 text-white overflow-auto max-h-[60px]"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}>
+                           {highlightText(post.title, activeSearchTerms)}
+                         </h4>
+                         
+                         <p className="text-gray-300 text-xs md:text-sm mb-3 md:mb-6 flex-grow overflow-auto"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}>
+                           {highlightText(post.excerpt || '', activeSearchTerms)}
+                         </p>
+                         
+                         <div className="mt-auto">
+                           <div className="flex justify-between items-center">
+                             <a 
+                               href={post.link || post.url || '#'}
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               className="py-1.5 px-3 md:py-2 md:px-5 bg-data/20 hover:bg-data/30 text-data rounded-md inline-flex items-center justify-center transition-colors text-xs md:text-sm"
+                             >
+                               Read on Medium <FaExternalLinkAlt className="ml-1.5 md:ml-2 w-2.5 h-2.5 md:w-3 md:h-3" />
+                             </a>
+                             <span className="text-xs text-gray-400">{formatDate(post.date)}</span>
+                           </div>
+                         </div>
+                       </div>
+                     </motion.div> 
                    );
                  }
                )}

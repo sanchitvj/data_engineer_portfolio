@@ -108,14 +108,16 @@ export default async function ArchivePage() {
       'linkedin-post': 6,
       'quick-note': 6,
       'research-report': 4,
-      'comprehensive-study': 2
+      'comprehensive-study': 2,
+      'medium-post': 2
     },
     mobile: {
       'youtube-video': 3,
       'linkedin-post': 3,
       'quick-note': 3,
       'research-report': 3,
-      'comprehensive-study': 3
+      'comprehensive-study': 3,
+      'medium-post': 3
     }
   };
   
@@ -125,7 +127,8 @@ export default async function ArchivePage() {
     'linkedin-post': 0, 
     'quick-note': 0,
     'research-report': 0,
-    'comprehensive-study': 0
+    'comprehensive-study': 0,
+    'medium-post': 0
   };
   
   // Fetch all content items just for counts and categories
@@ -149,6 +152,8 @@ export default async function ArchivePage() {
         type = 'research-report';
       } else if (item.content_type === 'substack') {
         type = 'comprehensive-study';
+      } else if (item.content_type === 'medium') {
+        type = 'medium-post';
       } else if (item.content_type === 'youtube') {
         type = 'youtube-video';
       }
@@ -168,7 +173,7 @@ export default async function ArchivePage() {
       }
     });
     
-    console.log('Post counts:', postCounts);
+    // console.log('Post counts:', postCounts);
   } catch (error) {
     console.error('Error fetching content counts:', error);
     // Keep default count values
@@ -202,7 +207,7 @@ export async function generateStaticParams() {
   // use it to prefetch content for the page component
   try {
     const items = await getAllContentItems();
-    console.log(`Archive page: Retrieved ${items.length} items from DynamoDB`);
+    // console.log(`Archive page: Retrieved ${items.length} items from DynamoDB`);
 
     // Log content type counts
     const typeCounts = items.reduce((acc: Record<string, number>, item: any) => {
@@ -211,7 +216,7 @@ export async function generateStaticParams() {
       return acc;
     }, {});
     
-    console.log('Archive page: Content type counts:', typeCounts);
+    // console.log('Archive page: Content type counts:', typeCounts);
     
     return [];
   } catch (error) {

@@ -5,6 +5,7 @@ export interface Project {
   imageUrl?: string;
   githubUrl?: string;
   demoUrl?: string;
+  videoUrl?: string;
   technologies: string[];
   features?: string[];
   isExternal?: boolean;

@@ -10,10 +10,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface DataIslandProps {
   project: Project;
   index: number;
-  isFeatured?: boolean;
 }
 
-const DataIsland: React.FC<DataIslandProps> = ({ project, index, isFeatured = false }) => {
+const DataIsland: React.FC<DataIslandProps> = ({ project, index }) => {
   const [showDetails, setShowDetails] = useState(false);
   
   // Add global animations to the document head
@@ -90,7 +89,7 @@ const DataIsland: React.FC<DataIslandProps> = ({ project, index, isFeatured = fa
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
-      className={`relative group cursor-pointer ${isFeatured ? 'scale-110' : ''}`}
+      className="relative group cursor-pointer"
     >
       <div className="h-full">
         <div className="relative h-full overflow-hidden rounded-xl backdrop-blur-sm bg-gradient-to-br from-white/10 to-[#25B7D3]/10 border-2 border-[#25B7D3]/30 shadow-lg shadow-[#25B7D3]/20 group transition-all duration-300 hover:shadow-[#25B7D3]/30 hover:shadow-xl">
@@ -167,6 +166,18 @@ const DataIsland: React.FC<DataIslandProps> = ({ project, index, isFeatured = fa
                     <FileText className="h-5 w-5 text-white relative z-10" />
                   </a>
                 )}
+
+                {project.videoUrl && (
+                  <a 
+                    href={project.videoUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="relative rounded-full bg-white/10 p-2 overflow-hidden group"
+                  >
+                    <div className="absolute inset-0 bg-white/20 rounded-full scale-0 group-hover:scale-100 transition-transform duration-300 origin-center"></div>
+                    <Youtube className="h-5 w-5 text-white relative z-10" />
+                  </a>
+                )}
                 
                 {!project.isExternal && (
                   <Link 
@@ -174,7 +185,7 @@ const DataIsland: React.FC<DataIslandProps> = ({ project, index, isFeatured = fa
                     className="relative rounded-full bg-white/10 p-2 overflow-hidden group"
                   >
                     <div className="absolute inset-0 bg-white/20 rounded-full scale-0 group-hover:scale-100 transition-transform duration-300 origin-center"></div>
-                    <span className="flex h-5 w-5 items-center justify-center text-white relative z-10">→</span>
+                    <ExternalLink className="h-5 w-5 text-white relative z-10" />
                   </Link>
                 )}
               </div>
@@ -366,6 +377,17 @@ const DataIsland: React.FC<DataIslandProps> = ({ project, index, isFeatured = fa
                               >
                                 <FileText className="h-4 w-4 md:h-5 md:w-5" />
                                 <span>Research Paper</span>
+                              </a>
+                            )}
+                            {project.videoUrl && (
+                              <a 
+                                href={project.videoUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 md:gap-3 rounded-lg bg-white/10 px-3 md:px-4 py-2 md:py-3 text-[#25B7D3] hover:bg-white/20 transition-colors text-sm md:text-base border border-[#25B7D3]/30"
+                              >
+                                <Youtube className="h-4 w-4 md:h-5 md:w-5" />
+                                <span>Demo Video</span>
                               </a>
                             )}
                           </div>

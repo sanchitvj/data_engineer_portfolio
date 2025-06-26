@@ -49,6 +49,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       { id: 'lol-hub', label: 'LOL Hub' },
       { id: 'linkedin-articles', label: 'LinkedIn Articles' },
       { id: 'substack-unpacked', label: 'Substack Unpacked' },
+      { id: 'medium-insights', label: 'Medium Notes' },
     ] : []
   ) : [];
 

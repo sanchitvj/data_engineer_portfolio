@@ -40,15 +40,19 @@ const categorizedProjects = [
     category: 'Data Engineering',
   },
   {
-    ...projects[1], // GRAG
+    ...projects[1], // DARE
+    category: 'Data Engineering',
+  },
+  {
+    ...projects[2], // GRAG
     category: 'AI',
   },
   {
-    ...projects[2], // rsppUnet
+    ...projects[3], // rsppUnet
     category: ['Deep Learning', 'Research'],
   },
   {
-    ...projects[3], // Image-Dehazing
+    ...projects[4], // Image-Dehazing
     category: ['Deep Learning'],
   },
 ] as Array<Project & { category: string | string[] }>;
