@@ -79,11 +79,19 @@ export async function GET(request: NextRequest) {
         type = 'youtube-video';
       }
       
-      // Handle media links (may be comma-separated)
+      // Handle media links (now separated by !.!)
       let mediaLink = '';
+      let allMediaLinks: string[] = [];
       if (item.media_link) {
-        const links = item.media_link.split(',');
-        mediaLink = links[0].trim(); // Get first image if multiple
+        // Split on !.! to get all image links
+        const links = item.media_link.split('!.!')
+          .map((link: string) => link.trim())
+          .filter(Boolean);
+        
+        if (links.length > 0 && links[0]) {
+          mediaLink = links[0];
+          allMediaLinks = links;
+        }
       }
       
       // For YouTube videos, ensure we have a thumbnail
@@ -148,6 +156,8 @@ export async function GET(request: NextRequest) {
         featured: false,
         readTime: '3 min read',
         embed_link: item.embed_link || null, // Preserve the embed_link for iframe display
+        // Store all media links for access in components
+        media_link: allMediaLinks.length > 0 ? allMediaLinks : undefined,
         // Add raw tags for better searching
         raw_tags: tags,
         generated_tags: generatedTags,

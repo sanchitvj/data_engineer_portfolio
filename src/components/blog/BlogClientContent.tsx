@@ -1369,10 +1369,22 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                                // Parse multiple image URLs from media_link field
                                let imageUrls: string | string[] | undefined = undefined;
                                
-                               // First try to get multiple images from media_link
-                               if (post.media_link && typeof post.media_link === 'string' && post.media_link.includes(',')) {
-                                 // Handle comma-separated URLs
-                                 const links = post.media_link.split(',')
+                               // First try to get multiple images from media_link array
+                               if (post.media_link && Array.isArray(post.media_link)) {
+                                 // Handle media_link as array of URLs
+                                 const links = post.media_link
+                                   .filter(url => url && url.length > 0 && url.startsWith('http'))
+                                   .slice(0, 2); // Get up to 2 images
+                                   
+                                   if (links.length > 0) {
+                                     imageUrls = links;
+                                     // console.log('Using multiple image URLs:', links);
+                                   }
+                               } 
+                               // Fallback to string parsing if media_link is still a string
+                               else if (post.media_link && typeof post.media_link === 'string' && post.media_link.includes('!.!')) {
+                                 // Handle !.! separated URLs
+                                 const links = post.media_link.split('!.!')
                                    .map(url => url.trim())
                                    .filter(url => url.length > 0 && url.startsWith('http'))
                                    .slice(0, 2); // Get up to 2 images
@@ -1381,7 +1393,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                                      imageUrls = links;
                                      // console.log('Using multiple image URLs:', links);
                                    }
-                               } 
+                               }
                                // If no multiple images, fallback to single image
                                else if (post.image && post.image !== '/images/oops_penguin.png') {
                                  imageUrls = post.image;
@@ -1489,10 +1501,22 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                                // Parse multiple image URLs from media_link field
                                let imageUrls: string | string[] | undefined = undefined;
                                
-                               // First try to get multiple images from media_link
-                               if (post.media_link && typeof post.media_link === 'string' && post.media_link.includes(',')) {
-                                 // Handle comma-separated URLs
-                                 const links = post.media_link.split(',')
+                               // First try to get multiple images from media_link array
+                               if (post.media_link && Array.isArray(post.media_link)) {
+                                 // Handle media_link as array of URLs
+                                 const links = post.media_link
+                                   .filter(url => url && url.length > 0 && url.startsWith('http'))
+                                   .slice(0, 2); // Get up to 2 images
+                                   
+                                   if (links.length > 0) {
+                                     imageUrls = links;
+                                     // console.log('Using multiple image URLs:', links);
+                                   }
+                               } 
+                               // Fallback to string parsing if media_link is still a string
+                               else if (post.media_link && typeof post.media_link === 'string' && post.media_link.includes('!.!')) {
+                                 // Handle !.! separated URLs
+                                 const links = post.media_link.split('!.!')
                                    .map(url => url.trim())
                                    .filter(url => url.length > 0 && url.startsWith('http'))
                                    .slice(0, 2); // Get up to 2 images
@@ -1501,7 +1525,7 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
                                      imageUrls = links;
                                      // console.log('Using multiple image URLs:', links);
                                    }
-                               } 
+                               }
                                // If no multiple images, fallback to single image
                                else if (post.image && post.image !== '/images/oops_penguin.png') {
                                  imageUrls = post.image;
