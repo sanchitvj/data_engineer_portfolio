@@ -816,6 +816,16 @@ const BlogClientContent: React.FC<BlogClientContentProps> = ({
       // console.log(`[LinkedIn Debug] Found ${postsOfType.length} posts of type ${type}`);
       // console.log(`[LinkedIn Debug] Post IDs: ${postsOfType.map(p => p.id).join(', ')}`);
     }
+    
+    // Add debug logging for Medium Notes section
+    if (type === 'medium-post') {
+      // console.log(`[Medium Notes Debug] Found ${postsOfType.length} posts of type ${type}`);
+      // console.log(`[Medium Notes Debug] Post IDs: ${postsOfType.map(p => p.id).join(', ')}`);
+      if (postsOfType.length > 0) {
+        // console.log(`[Medium Notes Debug] First post title: "${postsOfType[0].title}"`);
+        // console.log(`[Medium Notes Debug] Last post title: "${postsOfType[postsOfType.length - 1].title}"`);
+      }
+    }
       
     const isLoading = loadingPosts[type] || false;
     const hasMore = hasMorePosts[type] && postsOfType.length < (postCounts[type] || 0);

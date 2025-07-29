@@ -46,7 +46,8 @@ export async function GET(request: NextRequest) {
     let safeLimit = Math.min(limit, 20); // Maximum 20 posts per request
     
     // Special handling for sections that tend to have display issues
-    if (postType === 'quick-note' || postType === 'research-report' || postType === 'linkedin-post') {
+    // These post types need higher limits to prevent "missing first card" issues in production
+    if (postType === 'quick-note' || postType === 'research-report' || postType === 'linkedin-post' || postType === 'medium-post' || postType === 'comprehensive-study') {
       safeLimit = Math.min(limit, 50); // Allow more posts for these sections
     }
     
