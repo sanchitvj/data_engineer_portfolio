@@ -32,25 +32,23 @@ const experiences: Experience[] = [
     base_description: "Modernized healthcare analytics for medical device data, designing cloud-native pipelines with predictive ML algorithms to process 50M+ daily records with 85% faster insights. Built scalable serverless systems and Spark optimizations to reduce costs by 30% while ensuring HIPAA compliance and enabling ML-powered utilization tracking for device maintenance and operational decisions.",
     detail_description: {
       data_engineering: [
-        "Architected lakehouse pipeline for 50M+/day medical device data, reducing predictive analysis latency by 85%.",
-        "Built serverless ingestion (Lambda/Fargate) processing 50M+ points/trial with DynamoDB-managed deduplication and fault isolation.",
-        "Automated timestamp tracking via DynamoDB to flag modified source files, reducing reprocessing errors by 92%.",
-        "Optimized Spark ETL workflows on AWS EMR, cutting processing time by 80% for Redshift integration.",
-        "Deployed Airflow-monitored data validation (AWS Glue/Iceberg), reducing errors by 92% via automated checks.",
-        "Accelerated Athena queries by 40% via Iceberg schema optimization for ad-hoc analytics.",
-        "Automated CI/CD (GitHub Actions/Terraform), 3x deployment frequency and slashing cloud costs by 30%."
+        "Designed infrastructure for transforming terabyte-scale operational telemetry data, reducing processing latency by 85% through lakehouse architecture.",
+        "Engineered serverless data ingestion for processing 50M+ records/trial, leveraging NoSQL databases for timestamp tracking, deduplication, and fault logging, ensuring 99.9% reliability",
+        "Optimized Spark ETL pipelines, reducing processing time by 80% and enabling cross-functional teams to access analytics-ready datasets.",
+        "Designed data quality frameworks and lineage tracking using Airflow, ensuring 99.9% data integrity and supporting strategic data governance initiatives.",
+        "Architected data federation solution enabling Databricks Unity Catalog to query foreign-cataloged tables, cutting latency by 70% and eliminating need for data migration.",
+        "Implemented data lineage tracking across Lake Formation and Unity Catalog, ensuring full data flow visibility for governance."
       ],
       machine_learning: [
-        "Engineered Spark pipelines to process 300M+ records (100+ GB) with 40% improved throughput on Databricks.",
-        "Designed multi-trial feature store separating 60% training/40% evaluation data, enabling robust model validation protocols.",
-        "Implemented MLflow tracking across 35+ experiments, reducing model debugging time by 25% and ensuring reproducibility.",
-        "Developed temporal component preservation technique for A/B testing across 20+ device trials and multiple states.",
-        "Boosted prediction accuracy by 15% through temporal context retention, saving $120K annually in false negative costs.",
+        "Created Databricks pipeline jobs to update the Delta Lake feature store with 300M+ records, ensuring reliable data availability for model training and reducing manual data prep overhead.",
+        "Implemented analyst-driven pipeline scheduling in Databricks, automating feature store refreshes as gold layer data updates, aligning data with model training needs.",
+        "Implemented end-to-end MLOps framework for 6 medical device models using TensorFlow and MLflow, enabling automated retraining workflows, improving accuracy by 15%.",
+        "Built production-grade model monitoring system using MLflow and TensorFlow Serving, tracking model drift across 6 device categories and implementing automated retraining triggers that maintained 90%+ model performance consistency.",
         "Achieved 90% accuracy in device state prediction, a 30% improvement over previous rule-based system implementation.",
         "Reduced incorrect state transition latency from 3 seconds to 0.2 seconds, decreasing operational errors by 93%."
       ]
     },
-    technologies: ["Apache Spark", "Databricks", "AWS", "Airflow", "GitHub Actions", "Terraform", "Iceberg", "Athena", "Glue", "DynamoDB", "EMR", "ECS Fargate"]
+    technologies: ["Apache Spark", "Databricks", "Airflow", "GitHub Actions", "Terraform", "Athena", "Glue", "DynamoDB", "EMR", "ECS Fargate"]
   },
   // {
   //   title: "Creator",
@@ -493,10 +491,10 @@ const ResumeSection = () => {
               >
                 <div className="flex items-center mb-4">
                   <FaCloud className="text-2xl text-data mr-2" />
-                  <h4 className="text-xl font-semibold text-white">Cloud Services (AWS)</h4>
+                  <h4 className="text-xl font-semibold text-white">Cloud Services (AWS, Azure)</h4>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {['EMR', 'Glue', 'Athena', 'Redshift', 'IAM', 'Amplify', 'ECS', 'Lambda', 'Sagemaker', 'DynamoDB'].map((skill, i) => (
+                  {['EMR', 'Glue', 'Athena', 'Redshift', 'IAM', 'Amplify', 'ECS', 'Lambda', 'Sagemaker', 'DynamoDB', 'Synapse', 'Fabric', 'Data Factory', 'Azure Containers', 'CosmosDB'].map((skill, i) => (
                     <span
                       key={i}
                       className="px-3 py-1 bg-data/10 text-data rounded-full text-sm"
