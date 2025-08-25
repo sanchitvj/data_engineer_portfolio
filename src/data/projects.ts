@@ -51,6 +51,31 @@ export const projects: Project[] = [
     isExternal: false
   },
   {
+    id: 'stacktrend',
+    title: 'Stacktrend',
+    description: 'A data engineering solution for analyzing GitHub repository trends and technology adoption patterns using Fabric, Power BI, and analytics pipelines.',
+    objective: 'Track open source technology adoption across developer ecosystems by combining automated data collection, LLM-powered classification, and real-time analytics to provide insights into technology trends and market intelligence.',
+    features: [
+      'Intelligent LLM-powered repository classification with Azure OpenAI',
+      'Real-time analytics pipeline with automated data collection every 2 hours',
+      'Medallion architecture with Bronze, Silver, and Gold data layers',
+      'Cost-optimized smart classification reducing API calls by 90%',
+      'Power BI dashboards with real-time KPI monitoring and mobile optimization'
+    ],
+    architecture: 'Modern medallion architecture pattern within Microsoft Fabric, creating seamless flow from GitHub API data collection through Delta Lake storage layers to Power BI dashboards, with Azure OpenAI integration for intelligent classification.',
+    challenges: 'Implementing cost-effective LLM classification at scale, ensuring data quality across processing layers, and optimizing performance for real-time analytics while maintaining operational excellence in a unified Fabric environment.',
+    technologies: ['Microsoft Fabric', 'Azure OpenAI', 'Delta Lake', 'Apache Spark', 'Power BI'],
+    metrics: [
+      { label: 'API Cost Reduction', value: '90%' },
+      { label: 'Data Refresh Interval', value: '2 hours' },
+      { label: 'Storage Format', value: 'Delta Lake' },
+    ],
+    imageUrl: '/images/projects/stacktrend.gif',
+    githubUrl: 'https://github.com/sanchitvj/stacktrend',
+    videoUrl: 'https://youtu.be/_owR-jd8nlY',
+    isExternal: true
+  },
+  {
     id: 'grag',
     title: 'GRAG',
     description: 'GRAG is a simple python package that provides an easy end-to-end solution for implementing Retrieval Augmented Generation (RAG).',

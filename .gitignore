@@ -43,5 +43,5 @@ image-test
 proxy-debug
 test-image
 
-**/*.gif
+# **/*.gif
 **/*.mov

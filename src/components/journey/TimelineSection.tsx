@@ -137,7 +137,7 @@ const timelineData: TimelineEntry[] = [
       },
       {
         title: 'Open Source Contribution',
-        description: 'Launched Betflow, an open-source project leveraging data engineering to build scalable data pipelines and analytics solutions.',
+        description: 'Came up with Betflow, an open-source project leveraging data engineering to build scalable data pipelines and analytics solutions.',
         links: [
           {
             url: 'https://github.com/sanchitvj/betflow',
@@ -156,12 +156,12 @@ const timelineData: TimelineEntry[] = [
         description: 'Focusing on establishing personal brand as a data engineer through articles and technical content writing.',
       },
       {
-        title: 'Full-Stack Evolution',
-        description: 'Expanding skillset beyond data engineering, working towards adding full-stack development to my skillset.',
+        title: 'AI and Full-Stack Evolution',
+        description: 'Expanding beyond traditional data engineering to integrate AI capabilities and full-stack development skills into my technical repertoire.',
       },
       {
-        title: 'Project Portfolio',
-        description: 'Actively working on multiple projects, embracing the journey while exploring new opportunities.',
+        title: 'Speaking at Events',
+        description: 'Presenting technical talks at conferences and industry events, sharing insights on data engineering and AI implementation with developer communities.',
       }
     ]
   },

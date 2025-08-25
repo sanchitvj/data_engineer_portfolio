@@ -450,7 +450,7 @@ const ResumeSection = () => {
                   <h4 className="text-xl font-semibold text-white">Programming & Data Analysis</h4>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {['Python', 'R', 'SQL', 'NoSQL', 'Postgres', 'Tableau', 'MS Excel', 'PySpark'].map((skill, i) => (
+                  {['Python', 'R', 'SQL', 'NoSQL', 'Postgres', 'Tableau', 'Power BI', 'Go', 'Rust'].map((skill, i) => (
                     <span
                       key={i}
                       className="px-3 py-1 bg-data/10 text-data rounded-full text-sm"

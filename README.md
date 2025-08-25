@@ -18,4 +18,8 @@ The backend demonstrates how I approach data systems professionally: Lambda func
 
 You can explore my sports analytics platform, see how I benchmark modern data tools, or try the document analysis system I built with vector databases. Each project includes the actual architecture diagrams and performance metrics.
 
-Built with Next.js 14, TypeScript, AWS, and an unreasonable attention to detail.
+The archive page automatically updates whenever I publish content on LinkedIn, Substack, or YouTube. I got tired of manually copying content everywhere, so I built a pipeline that watches a Google Sheet, processes new entries through AWS Lambda functions, enhances them with AI, and updates the website in milliseconds. The whole system costs under $2 per month and saved me from boring copy-paste work.
+
+![Content Automation Pipeline](public/pdb_content_arch.gif)
+
+Read the full breakdown: [Content Automation Pipeline behind penguindb.me](https://sanchitvj.substack.com/p/content-automation-pipeline-behind?r=4mtvza)

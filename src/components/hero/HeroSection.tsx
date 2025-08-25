@@ -56,7 +56,7 @@ const HeroSection: React.FC = () => {
           
           <p className="text-data-light mb-2">$ <span className="text-white">cat role.txt</span></p>
           <h2 className="text-2xl md:text-3xl text-data mb-6">
-            Data Engineer
+            AI and Data Engineer
           </h2>
           
           <p className="text-data-light mb-2">$ <span className="text-white">cat description.txt</span></p>
