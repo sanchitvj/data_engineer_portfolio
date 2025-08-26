@@ -36,23 +36,27 @@ const projectCategories = [
 // Assign categories to projects and ensure required category field
 const categorizedProjects = [
   {
-    ...projects[0], // Betflow
+    ...projects[0], // DARE
     category: 'Data Engineering',
   },
   {
-    ...projects[1], // DARE
+    ...projects[1], // Betflow
     category: 'Data Engineering',
   },
   {
-    ...projects[2], // GRAG
+    ...projects[2], // StackTrend
+    category: 'Data Engineering',
+  },
+  {
+    ...projects[3], // GRAG
     category: 'AI',
   },
   {
-    ...projects[3], // rsppUnet
+    ...projects[4], // rsppUnet
     category: ['Deep Learning', 'Research'],
   },
   {
-    ...projects[4], // Image-Dehazing
+    ...projects[5], // Image-Dehazing
     category: ['Deep Learning'],
   },
 ] as Array<Project & { category: string | string[] }>;
