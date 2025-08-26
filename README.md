@@ -1,10 +1,8 @@
-# PenguinDB - Data Engineer Portfolio
+Data Engineer Portfolio
 
 [![Build Check](https://github.com/sanchitvj/data_engineer_portfolio/actions/workflows/build_check.yml/badge.svg)](https://github.com/sanchitvj/data_engineer_portfolio/actions/workflows/build_check.yml)
 
 My portfolio website built with Next.js 14 and AWS, showcasing AI and data engineering projects.
-
-**Visit [penguindb.me](https://penguindb.me)**
 
 ## Why I built this
 
